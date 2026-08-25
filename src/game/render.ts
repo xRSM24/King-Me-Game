@@ -80,23 +80,14 @@ function drawTile(
     ctx.strokeRect(px + 1, py + 1, TILE - 2, TILE - 2);
     const deco = (x * 13 + y * 29) % 8;
     if (deco === 0) {
-      ctx.fillStyle = "#ff7aa0";
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.beginPath();
-      ctx.arc(px + 14, py + 16, 3, 0, Math.PI * 2);
+      ctx.arc(px + 14, py + 16, 2.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#ffe566";
-      ctx.fillRect(px + 13, py + 10, 2, 6);
     } else if (deco === 3) {
       ctx.fillStyle = "#7ed957";
       ctx.beginPath();
-      ctx.arc(px + 34, py + 32, 4, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (deco === 6) {
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.beginPath();
-      ctx.moveTo(px + 36, py + 12);
-      ctx.lineTo(px + 38, py + 17);
-      ctx.lineTo(px + 34, py + 17);
+      ctx.arc(px + 34, py + 32, 3, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -111,12 +102,24 @@ function drawTile(
   }
 
   if (t === "stairs") {
-    ctx.fillStyle = vis ? "#ff7aa0" : "#c06080";
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(px + 10 + i * 2, py + 12 + i * 7, TILE - 20 - i * 4, 5);
-    }
+    const pulse = 0.7 + Math.sin(time / 120) * 0.3;
+    ctx.fillStyle = vis ? `rgba(61,204,106,${pulse})` : "#2a8a4a";
+    ctx.beginPath();
+    ctx.arc(px + TILE / 2, py + TILE / 2, 16, 0, Math.PI * 2);
+    ctx.fill();
     ctx.strokeStyle = "#3b2152";
-    ctx.strokeRect(px + 10, py + 12, TILE - 20, 26);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(px + TILE / 2, py + TILE / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+    if (vis) {
+      ctx.fillStyle = "#3b2152";
+      ctx.font = "800 9px Fredoka, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("NEXT", px + TILE / 2, py + 44);
+    }
   }
   if (t === "shrine") {
     ctx.fillStyle = vis ? "#9ae8ff" : "#5aa8c8";
@@ -200,24 +203,42 @@ function drawMinimap(
       if (!revealAll && !state.seen[y]![x]) continue;
       const t = state.tiles[y]![x];
       if (t === "wall") continue;
-      let col = state.vis[y]![x] ? "#ffd27a" : "#f0d8a0";
-      if (t === "stairs") col = "#ff7aa0";
+      let col = state.vis[y]![x] ? "#ffd27a" : "#e8c070";
+      if (t === "stairs") col = "#3dcc6a";
       if (t === "shrine") col = "#9ae8ff";
       if (t === "shop") col = "#d07cff";
       ctx.fillStyle = col;
       ctx.fillRect(x0 + 8 + x * sx, y0 + 8 + y * sy, Math.max(1.2, sx), Math.max(1.2, sy));
     }
   }
+  if (state.floor < LAST_FLOOR) {
+    ctx.fillStyle = state.stairsOpen ? "#3dcc6a" : "#7a5ad0";
+    ctx.beginPath();
+    ctx.arc(
+      x0 + 8 + (state.exitX + 0.5) * sx,
+      y0 + 8 + (state.exitY + 0.5) * sy,
+      4,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle = "#3b2152";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
   ctx.fillStyle = def(state.player.stack[0] ?? "vagabond").color;
   ctx.beginPath();
   ctx.arc(
     x0 + 8 + state.player.x * sx,
     y0 + 8 + state.player.y * sy,
-    3,
+    4,
     0,
     Math.PI * 2,
   );
   ctx.fill();
+  ctx.strokeStyle = "#3b2152";
+  ctx.lineWidth = 2;
+  ctx.stroke();
   for (const e of state.enemies) {
     if (!revealAll && !state.seen[Math.floor(e.y)]?.[Math.floor(e.x)]) continue;
     ctx.fillStyle = e.id === "hollow" ? "#c8b6ff" : def(e.id).color;
@@ -288,16 +309,16 @@ export function drawWorld(
     const lx = state.exitX * TILE;
     const ly = state.exitY * TILE;
     if (state.seen[state.exitY]?.[state.exitX]) {
-      ctx.fillStyle = "rgba(59,33,82,0.35)";
-      roundRect(ctx, lx + 10, ly + 10, TILE - 20, TILE - 20, 8);
+      ctx.fillStyle = "#c48ad6";
+      roundRect(ctx, lx + 8, ly + 8, TILE - 16, TILE - 16, 8);
       ctx.fill();
       ctx.strokeStyle = "#3b2152";
       ctx.lineWidth = 3;
       ctx.stroke();
       ctx.fillStyle = "#ffe566";
-      ctx.font = "800 16px Fredoka, sans-serif";
+      ctx.font = "800 18px Fredoka, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("?", lx + TILE / 2, ly + 30);
+      ctx.fillText("🔒", lx + TILE / 2, ly + 32);
     }
   }
 

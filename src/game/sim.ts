@@ -209,28 +209,64 @@ function hurtEnemy(state: RunState, e: Enemy, dmg: number, canLoot: boolean): bo
   return true;
 }
 
+function stampStairs(state: RunState, x: number, y: number): void {
+  for (const [dx, dy] of [
+    [0, 0],
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]) {
+    const tx = x + dx;
+    const ty = y + dy;
+    if (isWalkable(state.tiles, tx, ty) || state.tiles[ty]?.[tx] === "wall") {
+      if (state.tiles[ty]) state.tiles[ty]![tx] = "stairs";
+    }
+  }
+}
+
 function noteGoal(state: RunState): void {
   if (state.floor >= LAST_FLOOR) return;
   if (state.goalHave < state.goalNeed) {
     const left = state.goalNeed - state.goalHave;
-    log(state, left === 1 ? "One more costume and the stairs pop open." : `${left} costumes left to open the stairs.`);
+    log(state, left === 1 ? "One more costume and the next-closet hole pops open." : `${left} costumes left to open the hole.`);
     return;
   }
   if (state.stairsOpen) return;
   state.stairsOpen = true;
-  const x = state.exitX;
-  const y = state.exitY;
-  if (isWalkable(state.tiles, x, y) || state.tiles[y]?.[x] === "wall") {
-    state.tiles[y]![x] = "stairs";
+  let x = state.exitX;
+  let y = state.exitY;
+  if (!isWalkable(state.tiles, x, y)) {
+    const room = state.rooms.find((r) => r.kind === "exit");
+    if (room) {
+      const spot = floorTiles(room).find((p) => isWalkable(state.tiles, p.x, p.y));
+      if (spot) {
+        x = spot.x;
+        y = spot.y;
+      }
+    }
   }
+  state.exitX = x;
+  state.exitY = y;
+  stampStairs(state, x, y);
   state.fx.push({
     kind: "banner",
-    text: "Stairs popped open!",
-    sub: "Keep going. King Empty is still far.",
-    color: "#ff7aa0",
+    text: "Green hole is open!",
+    sub: "Run onto the glowing hole to the next closet.",
+    color: "#3dcc6a",
   });
   state.fx.push({ kind: "sfx", name: "stairs" });
-  log(state, "The stairs pop out of the floor. Next closet!");
+  log(state, "A big green hole popped open. Run onto it!");
+}
+
+function tryDescend(state: RunState): boolean {
+  if (!state.stairsOpen || state.floor >= LAST_FLOOR) return false;
+  if (dist(state.player.x, state.player.y, state.exitX + 0.5, state.exitY + 0.5) > 1.05) {
+    const t = tileOf(state.player.x, state.player.y);
+    if (state.tiles[t.y]?.[t.x] !== "stairs") return false;
+  }
+  descend(state);
+  return true;
 }
 
 function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
@@ -563,13 +599,10 @@ function descend(state: RunState): void {
 function afterMove(state: RunState, fromX: number, fromY: number): void {
   pickupGold(state);
   if (hasRes(state, "cinderstep")) ignite(state, fromX, fromY, 1.6);
+  if (tryDescend(state)) return;
   const t = tileOf(state.player.x, state.player.y);
   const kind = state.tiles[t.y]![t.x];
   const k = key(t.x, t.y);
-  if (kind === "stairs" && state.stairsOpen) {
-    descend(state);
-    return;
-  }
   if (state.interactLock) {
     const from = tileOf(fromX, fromY);
     if (from.x !== t.x || from.y !== t.y) state.interactLock = false;
@@ -1074,6 +1107,7 @@ export function tickWorld(state: RunState, dt: number, ax: number, ay: number): 
     refreshVision(state);
   } else {
     state.movedThisTurn = false;
+    tryDescend(state);
   }
 
   if (state.atkCd <= 0) {
@@ -1098,7 +1132,7 @@ export { refreshVision, effectiveMax, harvestGoldFor };
 
 export function goalLabel(state: RunState): string {
   if (state.floor >= LAST_FLOOR) return "Goal: boop King Empty";
-  if (state.stairsOpen) return "Goal: take the stairs";
+  if (state.stairsOpen) return "Goal: run onto the green hole";
   const left = Math.max(0, state.goalNeed - state.goalHave);
   return left === 1 ? "Goal: boop 1 more costume" : `Goal: boop ${left} more costumes`;
 }

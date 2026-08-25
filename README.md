@@ -13,7 +13,7 @@ You will get sent home a lot. That is the point. Stickers from those tries buy t
 1. Run around a candy closet. Hold WASD or arrows (or tap the floor).
 2. Bump a costume. When they flop, **Wear** or **Snack**.
 3. Wear: put the outfit on. Snack: take coins, and King Empty keeps that costume.
-4. Boop enough costumes on the floor. The stairs pop open. Go deeper.
+4. Boop enough costumes on the floor. A glowing green hole pops open. Run onto it.
 5. Closet 10 is King Empty — a giant raincoat made of every outfit you didn't wear.
 
 ## Run locally
