@@ -320,22 +320,34 @@ export function drawWorld(
     });
   }
 
-  for (const s of state.shots) {
-    ctx.fillStyle = s.color;
-    ctx.beginPath();
-    ctx.arc(s.x * TILE, s.y * TILE, Math.max(5, s.r * TILE * 2.4), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#3b2152";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
   const glow = ctx.createRadialGradient(pcx, pcy, 8, pcx, pcy, TILE * 3.2);
   const rgb = hexToRgb(def(stack[0] ?? "vagabond").color);
   glow.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.16)`);
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(pcx - TILE * 3.2, pcy - TILE * 3.2, TILE * 6.4, TILE * 6.4);
+
+  for (const s of state.shots) {
+    const px = s.x * TILE;
+    const py = s.y * TILE;
+    const ang = Math.atan2(s.vy, s.vx);
+    const len = Math.max(14, s.r * TILE * 8);
+    const thick = Math.max(7, s.r * TILE * 3.2);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(ang);
+    ctx.fillStyle = "#fffdf6";
+    roundRect(ctx, -len * 0.35, -thick * 0.5, len, thick, thick / 2);
+    ctx.fill();
+    ctx.fillStyle = s.color;
+    roundRect(ctx, -len * 0.2, -thick * 0.32, len * 0.85, thick * 0.64, thick / 2);
+    ctx.fill();
+    ctx.strokeStyle = "#3b2152";
+    ctx.lineWidth = 2;
+    roundRect(ctx, -len * 0.35, -thick * 0.5, len, thick, thick / 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   ctx.restore();
 

@@ -61,15 +61,15 @@ interface Gun {
 }
 
 const GUNS: Record<IdentityId, Gun> = {
-  vagabond: { name: "Pin Pop", pattern: "forward", dmg: 1, rate: 0.38, speed: 9.2, life: 0.7 },
-  rat: { name: "Crumb Fan", pattern: "spread3", dmg: 1, rate: 0.3, speed: 8.4, life: 0.55 },
-  guard: { name: "Pan Blast", pattern: "shotgun", dmg: 1, rate: 0.62, speed: 7.2, life: 0.4 },
-  archer: { name: "Rubber Bolt", pattern: "bolt", dmg: 2, rate: 0.4, speed: 13, life: 0.9 },
-  thief: { name: "Sneak X", pattern: "diag", dmg: 1, rate: 0.34, speed: 9.5, life: 0.6 },
-  priest: { name: "Soap Ring", pattern: "ring", dmg: 1, rate: 0.7, speed: 6.5, life: 0.5 },
-  pyromancer: { name: "Chili Stream", pattern: "twin", dmg: 2, rate: 0.28, speed: 8, life: 0.45 },
-  knight: { name: "Boop Cross", pattern: "plus", dmg: 2, rate: 0.5, speed: 8.8, life: 0.55 },
-  hollow: { name: "Empty Ring", pattern: "ring", dmg: 2, rate: 0.55, speed: 7.5, life: 0.6 },
+  vagabond: { name: "Pin Pop", pattern: "forward", dmg: 1, rate: 0.38, speed: 6.4, life: 0.9 },
+  rat: { name: "Crumb Fan", pattern: "spread3", dmg: 1, rate: 0.3, speed: 6, life: 0.7 },
+  guard: { name: "Pan Blast", pattern: "shotgun", dmg: 1, rate: 0.62, speed: 5.4, life: 0.55 },
+  archer: { name: "Rubber Bolt", pattern: "bolt", dmg: 2, rate: 0.4, speed: 9.2, life: 1.05 },
+  thief: { name: "Sneak X", pattern: "diag", dmg: 1, rate: 0.34, speed: 6.6, life: 0.75 },
+  priest: { name: "Soap Ring", pattern: "ring", dmg: 1, rate: 0.7, speed: 5, life: 0.7 },
+  pyromancer: { name: "Chili Stream", pattern: "twin", dmg: 2, rate: 0.28, speed: 5.8, life: 0.6 },
+  knight: { name: "Boop Cross", pattern: "plus", dmg: 2, rate: 0.5, speed: 6.2, life: 0.7 },
+  hollow: { name: "Empty Ring", pattern: "ring", dmg: 2, rate: 0.55, speed: 5.6, life: 0.75 },
 };
 
 export function gunOf(id: IdentityId): Gun {
