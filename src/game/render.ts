@@ -57,38 +57,81 @@ function drawTile(
   }
 
   if (t === "wall") {
-    ctx.fillStyle = vis ? "#b07cff" : "#8a5ad0";
-    ctx.fillRect(px, py, TILE, TILE);
-    ctx.fillStyle = vis ? "#f4c6ff" : "#c090e0";
-    ctx.fillRect(px, py, TILE, 12);
-    if (vis && (x + y) % 3 === 0) {
-      ctx.fillStyle = "#ffe566";
+    const icing = vis ? "#fff1ff" : "#d0b0e8";
+    ctx.fillStyle = vis ? "#9a62d8" : "#6d3ea8";
+    roundRect(ctx, px + 2, py + 6, TILE - 4, TILE - 8, 10);
+    ctx.fill();
+    ctx.fillStyle = vis ? "#c48cff" : "#8a5ad0";
+    roundRect(ctx, px + 2, py + 2, TILE - 4, TILE - 14, 12);
+    ctx.fill();
+    ctx.fillStyle = icing;
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py + 14);
+    ctx.quadraticCurveTo(px + 10, py + 4, px + TILE / 2, py + 8);
+    ctx.quadraticCurveTo(px + TILE - 10, py + 4, px + TILE - 4, py + 14);
+    ctx.lineTo(px + TILE - 4, py + 18);
+    ctx.quadraticCurveTo(px + TILE * 0.7, py + 12, px + TILE / 2, py + 16);
+    ctx.quadraticCurveTo(px + TILE * 0.3, py + 12, px + 4, py + 18);
+    ctx.closePath();
+    ctx.fill();
+    if (vis) {
+      const sprinkle = (x * 17 + y * 11) % 5;
+      ctx.fillStyle = sprinkle === 0 ? "#ffe566" : sprinkle === 1 ? "#ff7aa0" : "#9ae8ff";
       ctx.beginPath();
-      ctx.arc(px + TILE / 2, py + 22, 5, 0, Math.PI * 2);
+      ctx.ellipse(px + 14 + (y % 3) * 8, py + 22, 2.2, 1.2, 0.6, 0, Math.PI * 2);
       ctx.fill();
+      if ((x + y) % 4 === 0) {
+        ctx.fillStyle = "#ffe566";
+        ctx.beginPath();
+        ctx.arc(px + TILE / 2, py + 26, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#3b2152";
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      }
     }
-    ctx.strokeStyle = vis ? "#3b2152" : "rgba(59,33,82,0.35)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px + 1, py + 1, TILE - 2, TILE - 2);
+    ctx.strokeStyle = vis ? "#3b2152" : "rgba(59,33,82,0.4)";
+    ctx.lineWidth = 2.4;
+    roundRect(ctx, px + 2, py + 2, TILE - 4, TILE - 6, 12);
+    ctx.stroke();
     return;
   }
 
   const alt = (x + y) % 2 === 0;
-  ctx.fillStyle = vis ? (alt ? "#ffe9a8" : "#ffd27a") : "#e8c878";
+  ctx.fillStyle = vis ? (alt ? "#ffe7b0" : "#ffd07a") : "#e2c070";
   ctx.fillRect(px, py, TILE, TILE);
   if (vis) {
-    ctx.strokeStyle = "rgba(59,33,82,0.12)";
-    ctx.strokeRect(px + 1, py + 1, TILE - 2, TILE - 2);
-    const deco = (x * 13 + y * 29) % 8;
+    ctx.fillStyle = alt ? "rgba(255,255,255,0.22)" : "rgba(255,170,80,0.12)";
+    ctx.beginPath();
+    ctx.ellipse(px + TILE * 0.5, py + TILE * 0.55, 16, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const deco = (x * 13 + y * 29) % 7;
     if (deco === 0) {
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.beginPath();
-      ctx.arc(px + 14, py + 16, 2.4, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (deco === 3) {
+      ctx.fillStyle = "#ff7aa0";
+      ctx.save();
+      ctx.translate(px + 14, py + 16);
+      ctx.rotate(0.5);
+      ctx.fillRect(-3, -1.2, 6, 2.4);
+      ctx.restore();
+    } else if (deco === 2) {
+      ctx.fillStyle = "#6ec8ff";
+      ctx.save();
+      ctx.translate(px + 32, py + 28);
+      ctx.rotate(-0.4);
+      ctx.fillRect(-3, -1.2, 6, 2.4);
+      ctx.restore();
+    } else if (deco === 4) {
       ctx.fillStyle = "#7ed957";
       ctx.beginPath();
-      ctx.arc(px + 34, py + 32, 3, 0, Math.PI * 2);
+      ctx.arc(px + 34, py + 18, 3.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#3b2152";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    } else if (deco === 6) {
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(px + 18, py + 32, 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -279,7 +322,12 @@ export function drawWorld(
       });
       ctx.save();
       if (e.flash > 0) ctx.globalCompositeOperation = "lighter";
-      drawSoul(ctx, "hollow", cx, cy - 8, TILE * 0.95, time, { elite: true, facing: e.facing });
+      drawSoul(ctx, "hollow", cx, cy - 8, TILE * 0.95, time, {
+        elite: true,
+        facing: e.facing,
+        gait: e.gait,
+        speed: 1.1,
+      });
       ctx.restore();
       const ratio = e.hp / e.maxHp;
       ctx.fillStyle = "#3b2152";
@@ -289,7 +337,12 @@ export function drawWorld(
     } else {
       ctx.save();
       if (e.flash > 0) ctx.filter = "brightness(2)";
-      drawSoul(ctx, e.id, cx, cy, TILE * 0.88, time, { elite: e.elite, facing: e.facing });
+      drawSoul(ctx, e.id, cx, cy, TILE * 0.88, time, {
+        elite: e.elite,
+        facing: e.facing,
+        gait: e.gait,
+        speed: 1.6,
+      });
       ctx.restore();
       if (e.hp < e.maxHp || e.elite) {
         const ratio = e.hp / e.maxHp;
@@ -306,10 +359,13 @@ export function drawWorld(
   const pcy = p.y * TILE + 4;
   const stack = p.stack;
   const ghost = p.iFrames > 0 && Math.sin(time / 40) > 0;
+  const pSpeed = Math.hypot(p.vx, p.vy);
   for (let i = stack.length - 1; i >= 1; i--) {
     drawSoul(ctx, stack[i]!, pcx + i * 2, pcy + i * 3, TILE * 0.72 - i, time, {
       ghost: true,
       facing: p.facing,
+      gait: p.gait - i * 0.4,
+      speed: pSpeed,
     });
   }
   if (stack[0]) {
@@ -317,6 +373,9 @@ export function drawWorld(
       player: true,
       facing: p.facing,
       ghost,
+      gait: p.gait,
+      speed: pSpeed,
+      recoil: p.recoil,
     });
   }
 
@@ -419,7 +478,7 @@ export function drawWorld(
   ctx.textAlign = "center";
   ctx.fillStyle = face.color;
   ctx.font = "800 16px Fredoka, Nunito, sans-serif";
-  const power = `Hold WASD to run · hold Space to ${gun.name}${state.spark ? ` · Spark +${Math.round(perm.dmg * 100)}%` : ""}`;
+  const power = `Hold WASD to run · guns auto-fire${state.spark ? ` · Spark +${Math.round(perm.dmg * 100)}%` : ""}`;
   ctx.strokeText(power, viewW / 2, viewH - 22);
   ctx.fillText(power, viewW / 2, viewH - 22);
 }

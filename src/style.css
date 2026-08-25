@@ -519,6 +519,16 @@ button:not(:disabled):active {
 .pad .mid {
   display: flex;
   gap: 6px;
+  align-items: center;
+}
+
+.pad-star {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: #ff7aa0;
 }
 
 @media (prefers-reduced-motion: reduce) {

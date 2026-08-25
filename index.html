@@ -30,12 +30,11 @@
           <button type="button" data-hold="up">↑</button>
           <div class="mid">
             <button type="button" data-hold="left">←</button>
-            <button type="button" data-hold="fire">★</button>
+            <span class="pad-star" aria-hidden="true">★</span>
             <button type="button" data-hold="right">→</button>
           </div>
           <button type="button" data-hold="down">↓</button>
         </div>
-        <button type="button" class="power" data-hold="fire">Pew</button>
       </div>
 
       <div id="modal" class="hidden"></div>
@@ -50,7 +49,7 @@
             <p class="kicker">A goofy roguelike</p>
             <h1>Soulstack</h1>
             <p class="tag">
-              <b>Goal every run:</b> follow the trail to King Empty. Hold Space to shoot.
+              <b>Goal every run:</b> follow the trail to King Empty. Guns auto-fire.
               You will get sent home a lot. Each try leaves Spark, which makes guns a little
               stronger — and then stops, so you never go god-mode.
             </p>
@@ -79,8 +78,8 @@
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Hold WASD to run. Hold Space to shoot.</b> Each costume gun fires a different
-              pattern — pins, fans, shotguns, rings. Bump someone only if you're already on top of them.
+              <b>Hold WASD to run.</b> Your costume gun auto-fires — pins, fans, shotguns, rings —
+              and leans toward the nearest costume. Just steer.
             </li>
             <li>
               <b>No hearts.</b> Bonks knock costumes off the pile. Last one gone = sent home.

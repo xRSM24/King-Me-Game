@@ -1,6 +1,5 @@
 import { def } from "./identities.ts";
-import type { Dir, IdentityId, Shot } from "./types.ts";
-import { DIRS } from "./types.ts";
+import type { IdentityId, Shot } from "./types.ts";
 
 /**
  * XP is split on purpose so you get stronger each death without ever going god-mode.
@@ -76,10 +75,6 @@ export function gunOf(id: IdentityId): Gun {
   return GUNS[id];
 }
 
-function facingVec(facing: Dir): { x: number; y: number } {
-  return DIRS[facing];
-}
-
 function shot(x: number, y: number, vx: number, vy: number, dmg: number, color: string, life: number, r = 0.14): Shot {
   return { x, y, vx, vy, dmg, life, color, r };
 }
@@ -88,14 +83,16 @@ export function makeShots(
   id: IdentityId,
   x: number,
   y: number,
-  facing: Dir,
+  aimx: number,
+  aimy: number,
   runXp: number,
   spark: number,
 ): Shot[] {
   const gun = gunOf(id);
   const dmg = weaponDmg(gun.dmg, runXp, spark);
   const color = def(id).color;
-  const f = facingVec(facing);
+  const n0 = Math.hypot(aimx, aimy) || 1;
+  const f = { x: aimx / n0, y: aimy / n0 };
   const spd = gun.speed;
   const life = gun.life;
   const out: Shot[] = [];

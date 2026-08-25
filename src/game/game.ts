@@ -361,16 +361,17 @@ export class Game {
     if (this.screen === "playing" && this.run) {
       if (this.run.phase === "playing") {
         const axis = this.input.axis();
-        tickWorld(this.run, dt, axis.x, axis.y, this.input.heldFire());
+        tickWorld(this.run, dt, axis.x, axis.y);
         this.drainFx();
       }
       this.handlePlaying();
       const r = this.run;
       if (r) {
-        const tx = r.player.x * TILE - this.viewW / 2;
-        const ty = r.player.y * TILE - this.viewH / 2;
-        this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 10);
-        this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 10);
+        const look = 20;
+        const tx = r.player.x * TILE + r.player.vx * look - this.viewW / 2;
+        const ty = r.player.y * TILE + r.player.vy * look - this.viewH / 2;
+        this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 8);
+        this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 8);
       }
     } else if (this.screen === "pause" && this.input.consume(KEY_ESC)) {
       this.showScreen("playing");

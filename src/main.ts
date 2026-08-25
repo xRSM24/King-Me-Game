@@ -40,37 +40,23 @@ document.addEventListener("pointerdown", (e) => {
     game.input.holdTouch(dir);
     if (e instanceof PointerEvent) btn.setPointerCapture(e.pointerId);
   }
-  if (dir === "fire") {
-    e.preventDefault();
-    game.unlock();
-    game.input.holdFire(true);
-    if (e instanceof PointerEvent) btn.setPointerCapture(e.pointerId);
-  }
 });
 
 const releaseHold = (e: Event): void => {
   const btn = holdFromEvent(e);
   if (!btn) {
     game.input.holdTouch("clear");
-    game.input.holdFire(false);
     return;
   }
   const dir = btn.getAttribute("data-hold");
   if (dir === "up" || dir === "down" || dir === "left" || dir === "right") {
     game.input.releaseTouch(dir);
   }
-  if (dir === "fire") game.input.holdFire(false);
 };
 
 document.addEventListener("pointerup", releaseHold);
-document.addEventListener("pointercancel", () => {
-  game.input.holdTouch("clear");
-  game.input.holdFire(false);
-});
-window.addEventListener("blur", () => {
-  game.input.holdTouch("clear");
-  game.input.holdFire(false);
-});
+document.addEventListener("pointercancel", () => game.input.holdTouch("clear"));
+window.addEventListener("blur", () => game.input.holdTouch("clear"));
 
 function loop(): void {
   game.update();

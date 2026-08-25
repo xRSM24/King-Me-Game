@@ -1,6 +1,6 @@
 # Soulstack
 
-A goofy costume-pile roguelike. You play **Pip**, a pajama ghost with no hearts — only a wobbly pile of outfits. Hold WASD to run. Hold Space to shoot. Outfits you skip go to **King Empty**.
+A goofy costume-pile roguelike. You play **Pip**, a pajama ghost with no hearts — only a wobbly pile of outfits. Hold WASD to run. Costume guns auto-fire. Outfits you skip go to **King Empty**.
 
 ## The goal
 
@@ -41,7 +41,7 @@ Stickers still buy Lucky Pins and pile size between runs. Spark is only for guns
 ## The loop
 
 1. Run the candy trail. Hold WASD or arrows (or tap the floor).
-2. Hold Space (or Pew on a phone) to auto-fire the costume on top of the pile.
+2. Your costume gun auto-fires and leans toward the nearest foe.
 3. When a costume flops, **Wear** or **Snack**.
 4. Wear: put the outfit on and use its gun. Snack: take coins, and King Empty keeps that costume.
 5. Follow the trail. King Empty waits at the end, wearing every outfit you skipped.
@@ -68,11 +68,11 @@ Progress lives in the browser (`localStorage`). Stickers and Spark both persist 
 | --- | --- |
 | Run | Hold WASD, arrows, or vim hjkl |
 | Walk toward a spot | Click the floor |
-| Shoot | Hold Space or F |
+| Shoot | Automatic — aims at the nearest costume |
 | Wear / Snack | 1 / 2 |
 | Pause | Esc |
 
-On a phone, hold the d-pad and hold **Pew**.
+On a phone, hold the d-pad. Guns fire on their own.
 
 ## License
 

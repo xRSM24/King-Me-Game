@@ -57,6 +57,10 @@ export interface Player {
   facing: Dir;
   stack: IdentityId[];
   iFrames: number;
+  vx: number;
+  vy: number;
+  gait: number;
+  recoil: number;
 }
 
 export interface Enemy {
@@ -71,6 +75,7 @@ export interface Enemy {
   elite: boolean;
   atkCd: number;
   pathIndex: number;
+  gait: number;
 }
 
 export interface Shot {

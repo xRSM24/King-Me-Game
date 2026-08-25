@@ -107,12 +107,6 @@ function ignite(state: RunState, x: number, y: number, seconds = 2.4): void {
   state.fire[k] = Math.max(state.fire[k] ?? 0, seconds);
 }
 
-function meleeDamage(state: RunState): number {
-  let d = def(top(state)).damage;
-  if (hasRes(state, "honorless") && state.movedThisTurn) d += 2;
-  return d;
-}
-
 function pickupGold(state: RunState): void {
   const t = tileOf(state.player.x, state.player.y);
   const k = key(t.x, t.y);
@@ -331,6 +325,7 @@ function spawnEnemy(state: RunState, x: number, y: number, id: IdentityId, elite
     elite,
     atkCd: 0.4,
     pathIndex,
+    gait: 0,
   });
 }
 
@@ -436,7 +431,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     w: 0,
     h: 0,
     rooms: [],
-    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"], iFrames: 0 },
+    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"], iFrames: 0, vx: 0, vy: 0, gait: 0, recoil: 0 },
     enemies: [],
     goldMap: {},
     fire: {},
@@ -444,7 +439,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     vis: [],
     blood: {},
     grave: [],
-    log: ["Goal: follow the trail to King Empty. Hold Space to shoot. Spark from getting sent home makes the next gun a little stronger."],
+    log: ["Goal: follow the trail to King Empty. Guns auto-fire. Spark from getting sent home makes the next gun a little stronger."],
     fx: [],
     pending: null,
     maxStack,
@@ -486,7 +481,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
   state.fx.push({
     kind: "banner",
     text: "Goal: King Empty",
-    sub: "Follow the trail. Hold Space to shoot. Getting sent home leaves Spark.",
+    sub: "Follow the trail. Guns auto-fire. Getting sent home leaves Spark.",
     color: "#ff5a8a",
   });
   return state;
@@ -563,25 +558,6 @@ function afterMove(state: RunState, fromX: number, fromY: number): void {
     state.phase = "shop";
     state.interactLock = true;
   }
-}
-
-function knock(state: RunState, e: Enemy, fromX: number, fromY: number, force: number): void {
-  const d = dist(e.x, e.y, fromX, fromY) || 1;
-  const dx = ((e.x - fromX) / d) * force;
-  const dy = ((e.y - fromY) / d) * force;
-  const n = slide(state.tiles, e.x, e.y, dx, dy, 0.3);
-  e.x = n.x;
-  e.y = n.y;
-}
-
-function attackMelee(state: RunState, e: Enemy): void {
-  const dmg = meleeDamage(state);
-  state.fx.push({ kind: "sfx", name: "hit" });
-  state.fx.push({ kind: "hitstop", ms: 40 });
-  state.fx.push({ kind: "shake", mag: 3 });
-  if (echoSet(state).has("pyromancer") || top(state) === "pyromancer") ignite(state, e.x, e.y, 1.8);
-  const dead = hurtEnemy(state, e, dmg, true);
-  if (!dead) knock(state, e, state.player.x, state.player.y, 0.55);
 }
 
 function enemySpeed(e: Enemy): number {
@@ -692,6 +668,7 @@ export function shopPick(state: RunState, choice: number): void {
       elite: false,
       atkCd: 0,
       pathIndex: Math.max(0, state.pathProgress),
+      gait: 0,
     };
     wearEnemy(state, fake);
     log(state, `Mystery box! You're ${def(id).name} now.`);
@@ -831,15 +808,41 @@ function actEnemy(state: RunState, e: Enemy, dt: number): void {
   if (other) return;
   e.x = n.x;
   e.y = n.y;
+  e.gait += dt * 10;
 }
 
-function tryFire(state: RunState, firing: boolean): void {
-  if (!firing || state.atkCd > 0) return;
+function aimFoe(state: RunState): Enemy | undefined {
+  let best: Enemy | undefined;
+  let bestD = 8.2;
+  const pt = tileOf(state.player.x, state.player.y);
+  for (const e of state.enemies) {
+    const d = dist(e.x, e.y, state.player.x, state.player.y);
+    if (d >= bestD) continue;
+    if (!lineOfSight(state.tiles, pt.x, pt.y, Math.floor(e.x), Math.floor(e.y))) continue;
+    best = e;
+    bestD = d;
+  }
+  return best;
+}
+
+function tryFire(state: RunState): void {
+  if (state.atkCd > 0) return;
   const id = top(state);
   const gun = gunOf(id);
+  const foe = aimFoe(state);
+  let aimx = DIRS[state.player.facing].x;
+  let aimy = DIRS[state.player.facing].y;
+  if (foe) {
+    aimx = foe.x - state.player.x;
+    aimy = foe.y - state.player.y;
+    state.player.facing = dirFromDelta(aimx, aimy);
+  }
   state.atkCd = weaponRate(gun.rate, state.runXp, state.spark);
-  const shots = makeShots(id, state.player.x, state.player.y, state.player.facing, state.runXp, state.spark);
+  const shots = makeShots(id, state.player.x, state.player.y, aimx, aimy, state.runXp, state.spark);
   state.shots.push(...shots);
+  state.player.recoil = 1;
+  const v = DIRS[state.player.facing];
+  fxBurst(state, state.player.x + v.x * 0.35, state.player.y + v.y * 0.35, def(id).color, 6);
   state.fx.push({ kind: "sfx", name: "pew" });
 }
 
@@ -878,14 +881,14 @@ export function setMoveTarget(state: RunState, x: number, y: number): void {
   state.moveTarget = { x, y };
 }
 
-export function tickWorld(state: RunState, dt: number, ax: number, ay: number, firing = false): void {
+export function tickWorld(state: RunState, dt: number, ax: number, ay: number): void {
   if (state.phase !== "playing") return;
   state.turn += dt;
-  state.fireHeld = firing ? 1 : 0;
   if (state.player.iFrames > 0) state.player.iFrames = Math.max(0, state.player.iFrames - dt);
   if (state.atkCd > 0) state.atkCd = Math.max(0, state.atkCd - dt);
   if (state.powerCd > 0) state.powerCd = Math.max(0, state.powerCd - dt);
   if (state.braceCd > 0) state.braceCd = Math.max(0, state.braceCd - dt);
+  state.player.recoil = Math.max(0, state.player.recoil - dt * 7);
 
   if (ax !== 0 || ay !== 0) state.moveTarget = null;
   if (ax === 0 && ay === 0 && state.moveTarget) {
@@ -899,33 +902,54 @@ export function tickWorld(state: RunState, dt: number, ax: number, ay: number, f
     }
   }
 
+  const accel = 22;
+  const maxSpd = 4.8;
+  const friction = 14;
+  if (ax !== 0 || ay !== 0) {
+    state.player.vx += ax * accel * dt;
+    state.player.vy += ay * accel * dt;
+    const sp = Math.hypot(state.player.vx, state.player.vy);
+    if (sp > maxSpd) {
+      state.player.vx = (state.player.vx / sp) * maxSpd;
+      state.player.vy = (state.player.vy / sp) * maxSpd;
+    }
+    state.player.facing = dirFromDelta(ax, ay);
+  } else {
+    const damp = Math.exp(-friction * dt);
+    state.player.vx *= damp;
+    state.player.vy *= damp;
+    if (Math.hypot(state.player.vx, state.player.vy) < 0.12) {
+      state.player.vx = 0;
+      state.player.vy = 0;
+    }
+  }
+
   const fromX = state.player.x;
   const fromY = state.player.y;
-  if (ax !== 0 || ay !== 0) {
-    state.player.facing = dirFromDelta(ax, ay);
-    state.movedThisTurn = true;
-    const n = slide(state.tiles, state.player.x, state.player.y, ax * 4.4 * dt, ay * 4.4 * dt, 0.28);
+  const spd = Math.hypot(state.player.vx, state.player.vy);
+  if (spd > 0) {
+    state.player.gait += dt * (7 + spd * 2.2);
+    const n = slide(state.tiles, state.player.x, state.player.y, state.player.vx * dt, state.player.vy * dt, 0.28);
+    if (Math.abs(n.x - state.player.x) < 0.0001) state.player.vx = 0;
+    if (Math.abs(n.y - state.player.y) < 0.0001) state.player.vy = 0;
     state.player.x = n.x;
     state.player.y = n.y;
-    afterMove(state, fromX, fromY);
-    if (state.phase !== "playing") return;
-    refreshVision(state);
+    state.movedThisTurn = true;
+    if (n.x !== fromX || n.y !== fromY) {
+      afterMove(state, fromX, fromY);
+      if (state.phase !== "playing") return;
+      refreshVision(state);
+      if (rng.chance(Math.min(0.35, spd * 0.08))) {
+        fxBurst(state, fromX, fromY + 0.22, "#ffe9a8", 3);
+      }
+    }
   } else {
     state.movedThisTurn = false;
   }
 
-  tryFire(state, firing);
+  tryFire(state);
   tickShots(state, dt);
   if (state.phase !== "playing") return;
-
-  if (!firing && state.atkCd <= 0) {
-    const foe = enemyNear(state, state.player.x, state.player.y, 0.66);
-    if (foe) {
-      attackMelee(state, foe);
-      state.atkCd = 0.42;
-      if (state.phase !== "playing") return;
-    }
-  }
 
   tickFire(state, dt);
   if (state.phase !== "playing") return;

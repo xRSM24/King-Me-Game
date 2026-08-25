@@ -6,6 +6,9 @@ export interface DrawOpts {
   elite?: boolean;
   facing?: Dir;
   player?: boolean;
+  speed?: number;
+  gait?: number;
+  recoil?: number;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -33,16 +36,23 @@ export function drawSoul(
   time: number,
   opts?: DrawOpts,
 ): void {
-  const bounce = Math.sin(time / 140 + x * 0.03) * (opts?.ghost ? 0.8 : 3.2);
-  const squash = 1 + Math.sin(time / 180 + x * 0.03) * 0.04;
+  const speed = opts?.speed ?? 0;
+  const moving = speed > 0.35;
+  const gait = opts?.gait ?? time / 90;
+  const recoil = opts?.recoil ?? 0;
+  const hop = moving ? Math.abs(Math.sin(gait)) * (5.5 + speed * 1.4) : Math.sin(time / 160 + x * 0.03) * (opts?.ghost ? 0.8 : 3.2);
+  const squashX = 1 + Math.sin(gait) * (moving ? 0.08 : 0.03) + recoil * 0.16;
+  const squashY = 1 - Math.sin(gait) * (moving ? 0.07 : 0.03) - recoil * 0.12;
+  const lean = moving ? (opts?.facing === "left" ? 0.14 : opts?.facing === "right" ? -0.14 : opts?.facing === "up" ? -0.05 : 0.08) : 0;
   ctx.save();
-  ctx.translate(x, y + bounce);
-  ctx.scale(opts?.facing === "left" ? -squash : squash, 2 - squash);
+  ctx.translate(x, y + hop);
+  ctx.rotate(lean);
+  ctx.scale(opts?.facing === "left" ? -squashX : squashX, squashY);
   if (opts?.ghost) ctx.globalAlpha *= 0.55;
 
-  ctx.fillStyle = "rgba(40,20,60,0.25)";
+  ctx.fillStyle = "rgba(40,20,60,0.22)";
   ctx.beginPath();
-  ctx.ellipse(0, s * 0.48, s * 0.28, s * 0.09, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, s * 0.5 - hop * 0.35, s * (0.26 + (moving ? 0.06 : 0)), s * 0.08, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (id === "hollow") {
@@ -51,10 +61,10 @@ export function drawSoul(
     return;
   }
 
-  drawBody(ctx, id, s);
+  drawBody(ctx, id, s, gait, moving);
   drawCostume(ctx, id, s, time);
   drawFace(ctx, id, s, time);
-  drawHeld(ctx, id, s, time);
+  drawHeld(ctx, id, s, time, recoil);
 
   if (opts?.elite) {
     ctx.fillStyle = "#ffe566";
@@ -86,22 +96,23 @@ function outlineFill(ctx: CanvasRenderingContext2D, color: string): void {
   ctx.stroke();
 }
 
-function drawBody(ctx: CanvasRenderingContext2D, id: IdentityId, s: number): void {
+function drawBody(ctx: CanvasRenderingContext2D, id: IdentityId, s: number, gait: number, moving: boolean): void {
   const c = def(id).color;
+  const swing = Math.sin(gait) * (moving ? s * 0.09 : s * 0.02);
   ctx.fillStyle = shade(c, 20);
   ctx.beginPath();
-  ctx.ellipse(-s * 0.16, s * 0.28, s * 0.09, s * 0.14, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(-s * 0.16 + swing, s * 0.28, s * 0.09, s * 0.14, 0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(s * 0.16, s * 0.28, s * 0.09, s * 0.14, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(s * 0.16 - swing, s * 0.3, s * 0.09, s * 0.14, -0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#3b2152";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.ellipse(-s * 0.16, s * 0.28, s * 0.09, s * 0.14, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(-s * 0.16 + swing, s * 0.28, s * 0.09, s * 0.14, 0.2, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.ellipse(s * 0.16, s * 0.28, s * 0.09, s * 0.14, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(s * 0.16 - swing, s * 0.3, s * 0.09, s * 0.14, -0.2, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.beginPath();
@@ -301,10 +312,14 @@ function drawHeld(
   id: IdentityId,
   s: number,
   time: number,
+  recoil = 0,
 ): void {
   ctx.lineCap = "round";
   ctx.strokeStyle = "#3b2152";
   ctx.lineWidth = 2;
+  const kick = recoil * s * 0.12;
+  ctx.save();
+  ctx.translate(kick, -kick * 0.4);
   ctx.beginPath();
   ctx.ellipse(s * 0.26, s * 0.04, s * 0.07, s * 0.09, 0.4, 0, Math.PI * 2);
   outlineFill(ctx, "#fff6c8");
@@ -367,6 +382,7 @@ function drawHeld(
       ctx.stroke();
     }
   }
+  ctx.restore();
 }
 
 function drawKingEmpty(
