@@ -20,145 +20,145 @@ export interface IdentityDef {
 export const IDENTITIES: Record<IdentityId, IdentityDef> = {
   vagabond: {
     id: "vagabond",
-    name: "Vagabond",
-    title: "The First Face",
-    color: "#c4b39a",
-    glow: "#7a6a52",
+    name: "Pip",
+    title: "Pajama Ghost",
+    color: "#ffe566",
+    glow: "#6ec8ff",
     damage: 1,
     ranged: 0,
     hp: 2,
     gold: 2,
-    active: "Scrounge — once a floor, wait to pocket 1 gold.",
-    echo: "Harvests yield +1 gold.",
-    blurb: "A nobody with a knife. Everyone starts here. Most end here too.",
+    active: "Pocket Lint — once a floor, wait to find 1 coin.",
+    echo: "Snack harvests give +1 coin.",
+    blurb: "A round little ghost in stripey PJs. The costumes go ON Pip. That's the whole trick.",
     unlockFloor: 1,
     playable: true,
   },
   rat: {
     id: "rat",
-    name: "Rat",
-    title: "Filth With a Pulse",
-    color: "#d48962",
-    glow: "#7a3e28",
+    name: "Squeak",
+    title: "Snack Bandit",
+    color: "#ff9a62",
+    glow: "#ff6b3a",
     damage: 1,
     ranged: 0,
     hp: 1,
     gold: 1,
-    active: "Skitter — dash two tiles. Slip through enemies.",
-    echo: "20% chance a hit misses the stack entirely.",
-    blurb: "It fits through anything. Including you.",
+    active: "Zoom — dash two tiles. Slip past anybody.",
+    echo: "20% chance a bonk misses you completely. Sneaky.",
+    blurb: "A hoodie with ears. Smells like cheese. Zoomy.",
     unlockFloor: 1,
     playable: true,
   },
   guard: {
     id: "guard",
-    name: "Guard",
-    title: "Paid to Stand Still",
-    color: "#8aa4c4",
-    glow: "#3d5270",
+    name: "Sir Clank",
+    title: "Saucepan Knight",
+    color: "#8ec4ff",
+    glow: "#4a7ab8",
     damage: 2,
     ranged: 0,
     hp: 3,
     gold: 3,
-    active: "Brace — weave a stitch. Cooldown 5 turns.",
-    echo: "Begin each floor with a stitch if you have none.",
-    blurb: "Helmet, pike, a wage. The stack likes people who don't flinch.",
+    active: "Brace — slap on a Lucky Pin. Needs 5 turns to cool down.",
+    echo: "Start each floor with a Lucky Pin if you have none.",
+    blurb: "Helmet: a saucepan. Job: stand there. Personality: saucepan.",
     unlockFloor: 1,
     playable: true,
   },
   archer: {
     id: "archer",
-    name: "Archer",
-    title: "Keep Your Distance",
-    color: "#7db86c",
-    glow: "#355a30",
+    name: "Twang",
+    title: "Rubber-Band Kid",
+    color: "#7ed957",
+    glow: "#3d8a2a",
     damage: 1,
     ranged: 2,
     hp: 2,
     gold: 3,
-    active: "Loose — fire in the facing line, range 3.",
-    echo: "Ranged shots reach one tile farther.",
-    blurb: "Never lets you close. You shouldn't either.",
+    active: "Pew — shoot in the way you're facing, range 3.",
+    echo: "Pew shots fly one tile farther.",
+    blurb: "Never lets you hug them. You shouldn't either. Pew pew.",
     unlockFloor: 2,
     playable: true,
   },
   thief: {
     id: "thief",
-    name: "Thief",
-    title: "Wanted: Your Face",
-    color: "#c48ad6",
-    glow: "#5a3870",
+    name: "Nib",
+    title: "Pocket Inspector",
+    color: "#d07cff",
+    glow: "#7a38a8",
     damage: 1,
     ranged: 0,
     hp: 2,
     gold: 4,
-    active: "Flip — swap with the enemy you face.",
-    echo: "Kills drop +2 gold.",
-    blurb: "Takes the coin, then the name, then the bones underneath.",
+    active: "Swap! — trade places with whoever you face.",
+    echo: "Bonks drop +2 coins.",
+    blurb: "A raccoon mask and zero indoor voice. Yours now.",
     unlockFloor: 3,
     playable: true,
   },
   priest: {
     id: "priest",
-    name: "Priest",
-    title: "The Thread Will Hold",
-    color: "#ead58a",
-    glow: "#7a6a30",
+    name: "Bubbles",
+    title: "Soap Wizard",
+    color: "#9ae8ff",
+    glow: "#4aa0c8",
     damage: 1,
     ranged: 0,
     hp: 3,
     gold: 3,
-    active: "Bind — weave a stitch. Once per floor.",
-    echo: "When a soul is torn away, 40% chance it falls to the bottom instead.",
-    blurb: "Swears the stitches are a sacrament. The stitches disagree.",
+    active: "Pop-Pin — add a Lucky Pin. Once per floor.",
+    echo: "When a costume flies off, 40% chance it just falls to the bottom of the pile.",
+    blurb: "Casts Bless. Also casts Bubbles. Same spell, honestly.",
     unlockFloor: 4,
     playable: true,
   },
   pyromancer: {
     id: "pyromancer",
-    name: "Pyromancer",
-    title: "The Lab Accident",
-    color: "#e8833a",
-    glow: "#7a3a12",
+    name: "Chili",
+    title: "Too Spicy",
+    color: "#ff8a3a",
+    glow: "#d44500",
     damage: 2,
     ranged: 0,
     hp: 3,
     gold: 4,
-    active: "Cinder — ignite three tiles in a line.",
-    echo: "Melee hits leave fire on the target's tile.",
-    blurb: "It learned to walk. It did not learn to stop.",
+    active: "Hot Foot — light three tiles on fire. Silly fire. Still hot.",
+    echo: "Your bonks leave a spicy tile behind.",
+    blurb: "A pepper with legs. Do not lick.",
     unlockFloor: 5,
     playable: true,
   },
   knight: {
     id: "knight",
-    name: "Knight",
-    title: "Honor Is a Story",
-    color: "#e06070",
-    glow: "#6a2030",
+    name: "Sir Boop",
+    title: "Cardboard Champion",
+    color: "#ff7aa0",
+    glow: "#c04068",
     damage: 3,
     ranged: 0,
     hp: 4,
     gold: 5,
-    active: "Cleave — strike every adjacent enemy.",
-    echo: "Once per run, a fatal blow leaves you as a Vagabond instead.",
-    blurb: "They tell the story before they fall. Then you wear the story.",
+    active: "Boop Storm — bonk every neighbor at once.",
+    echo: "Once per run, a knockout sends you home as Pip instead of ending the pile.",
+    blurb: "A taped-on visor, a cardboard sword, and a very serious BOOP.",
     unlockFloor: 5,
     playable: true,
   },
   hollow: {
     id: "hollow",
-    name: "The Hollow",
-    title: "The First Wearer",
+    name: "King Empty",
+    title: "Boss of the Lost Hats",
     color: "#c8b6ff",
-    glow: "#4a387a",
+    glow: "#7a5ad0",
     damage: 2,
     ranged: 0,
     hp: 8,
     gold: 0,
-    active: "It wears whatever you refused.",
-    echo: "There is no echo. It is the echo.",
-    blurb: "Every face you sold is still in the room. It learned them from you.",
+    active: "Wears every costume you didn't.",
+    echo: "King Empty is the leftover pile.",
+    blurb: "A giant empty raincoat with googly eyes. It's made of outfits you skipped.",
     unlockFloor: 6,
     playable: false,
   },
@@ -182,57 +182,55 @@ export function def(id: IdentityId): IdentityDef {
 export function powerName(id: IdentityId): string {
   switch (id) {
     case "vagabond":
-      return "Scrounge";
+      return "Pocket Lint";
     case "rat":
-      return "Skitter";
+      return "Zoom";
     case "guard":
       return "Brace";
     case "archer":
-      return "Loose";
+      return "Pew";
     case "thief":
-      return "Flip";
+      return "Swap!";
     case "priest":
-      return "Bind";
+      return "Pop-Pin";
     case "pyromancer":
-      return "Cinder";
+      return "Hot Foot";
     case "knight":
-      return "Cleave";
+      return "Boop Storm";
     case "hollow":
-      return "Remember";
+      return "Try-On";
   }
 }
 
 export function wearLine(id: IdentityId): string {
-  const n = IDENTITIES[id].name;
   switch (id) {
     case "rat":
-      return "You pull the Rat over your bones. It fits.";
+      return "You yank on the Squeak hoodie. The ears flop. Perfect.";
     case "guard":
-      return "The Guard's helm drops over your eyes. The pike is already in your hand.";
+      return "Saucepan: ON. You are legally Sir Clank now.";
     case "archer":
-      return "You nock a stolen life. The bowstring tastes like someone else's patience.";
+      return "Twang's hood smells like acorns. Pew pew unlocked.";
     case "thief":
-      return "The Thief's grin settles on your mouth. You don't remember agreeing.";
+      return "The raccoon mask sticks. You immediately want snacks.";
     case "priest":
-      return "Gold thread cinches around the stack. The Priest starts praying in your throat.";
+      return "Bubbles puts a halo on you. It squeaks.";
     case "pyromancer":
-      return "Heat climbs the stack. You learn a new way to be a problem.";
+      return "You are Chili. Everything is spicy. Including feelings.";
     case "knight":
-      return "Plate slams shut. Honor is heavy. You can put it down later.";
+      return "Cardboard visor SLAM. Sir Boop reporting for duty.";
     case "hollow":
-      return "You wear the first wearer. The stack finally has a bottom.";
+      return "You wear King Empty like a giant raincoat. Googly eyes included.";
     default:
-      return `You wear the ${n}.`;
+      return `You put on the ${IDENTITIES[id].name} costume.`;
   }
 }
 
 export function harvestLine(id: IdentityId): string {
-  const n = IDENTITIES[id].name;
-  return `You strip the ${n} for coin. Somewhere below, something keeps the face.`;
+  return `You take ${IDENTITIES[id].name}'s snacks. King Empty keeps the costume.`;
 }
 
 export function popLine(id: IdentityId): string {
-  return `The ${IDENTITIES[id].name} is torn off the stack.`;
+  return `The ${IDENTITIES[id].name} costume goes FWOOMP off the pile.`;
 }
 
 export function enemyPool(floor: number): IdentityId[] {

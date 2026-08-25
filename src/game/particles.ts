@@ -100,9 +100,9 @@ export class Particles {
       const y = p.y - camY;
       ctx.globalAlpha = a;
       if (p.kind === "text" && p.text) {
-        ctx.font = "700 16px Palatino Linotype, Palatino, serif";
+        ctx.font = "800 16px Fredoka, Nunito, sans-serif";
         ctx.fillStyle = p.color;
-        ctx.strokeStyle = "#100818";
+        ctx.strokeStyle = "#3b2152";
         ctx.lineWidth = 4;
         ctx.strokeText(p.text, x, y);
         ctx.fillText(p.text, x, y);

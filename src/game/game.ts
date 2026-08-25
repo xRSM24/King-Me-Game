@@ -410,12 +410,16 @@ export class Game {
       ctx.save();
       ctx.globalAlpha = a;
       ctx.textAlign = "center";
-      ctx.fillStyle = "#e8c36a";
-      ctx.font = "700 42px Cinzel, Palatino Linotype, serif";
+      ctx.strokeStyle = "#3b2152";
+      ctx.lineWidth = 8;
+      ctx.lineJoin = "round";
+      ctx.fillStyle = "#ff5a8a";
+      ctx.font = "800 48px Fredoka, Nunito, sans-serif";
+      ctx.strokeText(`Floor ${this.run.floor}`, this.viewW / 2, this.viewH * 0.28);
       ctx.fillText(`Floor ${this.run.floor}`, this.viewW / 2, this.viewH * 0.28);
-      ctx.fillStyle = "#f2e6c8";
-      ctx.font = "600 20px Palatino Linotype, serif";
-      ctx.fillText(FLOOR_NAMES[this.run.floor] ?? "", this.viewW / 2, this.viewH * 0.28 + 32);
+      ctx.fillStyle = "#3b2152";
+      ctx.font = "800 22px Fredoka, Nunito, sans-serif";
+      ctx.fillText(FLOOR_NAMES[this.run.floor] ?? "", this.viewW / 2, this.viewH * 0.28 + 34);
       ctx.restore();
     }
 
@@ -425,11 +429,11 @@ export class Game {
       ctx.globalAlpha = a;
       ctx.textAlign = "center";
       ctx.fillStyle = this.banner.color;
-      ctx.font = "700 36px Cinzel, Palatino Linotype, serif";
+      ctx.font = "800 36px Fredoka, Nunito, sans-serif";
       ctx.fillText(this.banner.text, this.viewW / 2, this.viewH * 0.38);
       if (this.banner.sub) {
-        ctx.fillStyle = "#f2e6c8";
-        ctx.font = "600 16px Atkinson Hyperlegible, sans-serif";
+        ctx.fillStyle = "#3b2152";
+        ctx.font = "700 16px Nunito, sans-serif";
         ctx.fillText(this.banner.sub, this.viewW / 2, this.viewH * 0.38 + 28);
       }
       ctx.restore();
@@ -452,14 +456,14 @@ export class Game {
       m.classList.remove("hidden");
       m.innerHTML = `
         <div class="sheet">
-          <p class="kicker">${hollow ? "The first wearer kneels" : "A life comes off the bone"}</p>
+          <p class="kicker">${hollow ? "King Empty wobbles" : "Costume time!"}</p>
           <h2 style="color:${d.color}">${d.name}</h2>
           <p class="lead">${d.blurb}</p>
-          <p class="stat"><strong>Wear</strong> — become the ${d.name}. ${d.active}</p>
-          <p class="stat"><strong>Harvest</strong> — take the coin.${hollow ? " Bind it and walk out alive." : " The Hollow keeps the face."}</p>
+          <p class="stat"><strong>Wear</strong> — put on the ${d.name} outfit. ${d.active}</p>
+          <p class="stat"><strong>Snack</strong> — take the coins.${hollow ? " Or send the King home and you win." : " King Empty keeps this costume."}</p>
           <div class="row">
-            <button data-cmd="wear">${hollow ? "Wear the Hollow (1)" : "Wear (1)"}</button>
-            <button class="ghost" data-cmd="harvest">${hollow ? "Bind it and leave (2)" : "Harvest (2)"}</button>
+            <button data-cmd="wear">${hollow ? "Wear King Empty (1)" : "Wear (1)"}</button>
+            <button class="ghost" data-cmd="harvest">${hollow ? "Send him home (2)" : "Snack (2)"}</button>
           </div>
         </div>`;
       return;
@@ -468,13 +472,13 @@ export class Game {
       m.classList.remove("hidden");
       m.innerHTML = `
         <div class="sheet">
-          <p class="kicker">A shrine of misplaced names</p>
-          <h2>Reverse, offer, or weave</h2>
-          <p class="lead">The stone remembers every face that knelt here.</p>
+          <p class="kicker">A fizzy fountain</p>
+          <h2>Shuffle, trade, or pin</h2>
+          <p class="lead">The fountain burps sparkles. It likes costumes.</p>
           <div class="col">
-            <button data-cmd="shrine1">1 — Reverse the stack</button>
-            <button data-cmd="shrine2">2 — Offer your top soul for 6 gold</button>
-            <button data-cmd="shrine3">3 — Weave a stitch</button>
+            <button data-cmd="shrine1">1 — Flip the pile upside down</button>
+            <button data-cmd="shrine2">2 — Trade your top costume for 6 coins</button>
+            <button data-cmd="shrine3">3 — Get a Lucky Pin</button>
           </div>
         </div>`;
       return;
@@ -483,13 +487,13 @@ export class Game {
       m.classList.remove("hidden");
       m.innerHTML = `
         <div class="sheet">
-          <p class="kicker">A tailor of stolen skins</p>
-          <h2>Grave goods · ${r.gold} gold</h2>
+          <p class="kicker">Snack stall</p>
+          <h2>Goodies · ${r.gold} coins</h2>
           <div class="col">
-            <button data-cmd="shop1">1 — Stitch · 7g</button>
-            <button data-cmd="shop2">2 — Flask of Face · 12g</button>
-            <button data-cmd="shop3">3 — Let the seams out · 14g ${r.extraSlotBought ? "(sold)" : ""}</button>
-            <button class="ghost" data-cmd="shop0">Leave (Esc)</button>
+            <button data-cmd="shop1">1 — Lucky Pin · 7 coins</button>
+            <button data-cmd="shop2">2 — Mystery costume · 12 coins</button>
+            <button data-cmd="shop3">3 — Bigger pile · 14 coins ${r.extraSlotBought ? "(sold)" : ""}</button>
+            <button class="ghost" data-cmd="shop0">Bye (Esc)</button>
           </div>
         </div>`;
     }
@@ -509,7 +513,7 @@ export class Game {
     const max = effectiveMax(r);
     panel.innerHTML = `
       <div class="stack-head">
-        <span>The Stack</span>
+        <span>Costume pile</span>
         <span>${r.player.stack.length}/${max}</span>
       </div>
       <ol class="stack-list">
@@ -518,14 +522,14 @@ export class Game {
             const d = def(id);
             return `<li class="${i === 0 ? "top" : ""}" style="--c:${d.color}">
               <b>${d.name}</b>
-              <small>${i === 0 ? "CURRENT · " + powerName(id) : "echo · " + d.echo}</small>
+              <small>${i === 0 ? "ON TOP · " + powerName(id) : "underneath · " + d.echo}</small>
             </li>`;
           })
           .join("")}
       </ol>
       ${
         r.memories.length
-          ? `<div class="memories"><span>Memories</span>${r.memories
+          ? `<div class="memories"><span>Kept tricks</span>${r.memories
               .map((id) => `<em style="color:${def(id).color}">${def(id).name}</em>`)
               .join("")}</div>`
           : ""
@@ -535,7 +539,7 @@ export class Game {
           ? `<div class="res-list">${res
               .map((x) => `<div class="res"><b>${x.name}</b><small>${x.desc}</small></div>`)
               .join("")}</div>`
-          : `<p class="hint">Buried souls and memories resonate. Find the pairs.</p>`
+          : `<p class="hint">Pile on costumes to unlock silly combos.</p>`
       }
       <p class="power">${def(face).active}</p>
     `;
@@ -546,8 +550,8 @@ export class Game {
     const echoNote = document.getElementById("echo-note");
     if (echoNote) {
       echoNote.textContent = echoes.size
-        ? `Echoes: ${[...echoes].map((id) => def(id).name).join(", ")}`
-        : "No buried echoes yet.";
+        ? `Tricks: ${[...echoes].map((id) => def(id).name).join(", ")}`
+        : "No extra costume tricks yet.";
     }
 
     if ((r.phase === "decision" && r.pending) || r.phase === "shop" || r.phase === "shrine") {
@@ -569,17 +573,19 @@ export class Game {
           owned || !can ? "disabled" : ""
         }>
           <b>${p.name}</b>
-          <span>${owned ? "Owned" : p.cost + " rem"}</span>
+          <span>${owned ? "Got it!" : p.cost + " stickers"}</span>
           <small>${p.desc}</small>
         </button>`;
       }).join("");
     }
     const stats = document.getElementById("meta-stats");
     if (stats) {
-      stats.textContent = `${this.meta.runs} descents · ${this.meta.wins} victories · deepest ${this.meta.bestFloor}`;
+      stats.textContent = `${this.meta.runs} closet raids · ${this.meta.wins} wins · deepest floor ${this.meta.bestFloor}`;
     }
     const mute = document.querySelector("[data-cmd='mute']");
     if (mute) mute.textContent = this.meta.mute ? "Sound is off" : "Sound is on";
+    const shake = document.querySelector("[data-cmd='shake']");
+    if (shake) shake.textContent = this.meta.shake ? "Wobble on" : "Wobble off";
   }
 
   renderCodex(): void {
@@ -600,19 +606,19 @@ export class Game {
     const res = RESONANCES.map((r) => {
       const seen = this.meta.resonances.includes(r.id);
       return `<article class="card ${seen ? "" : "locked"}">
-        <h3>${seen ? r.name : "Unknown resonance"}</h3>
+        <h3>${seen ? r.name : "Mystery combo"}</h3>
         <p>${seen ? r.desc : r.hint}</p>
       </article>`;
     }).join("");
     box.innerHTML = `
-      <h3 class="sec">Faces</h3>
+      <h3 class="sec">Costumes</h3>
       <div class="grid">${faces}
         <article class="card ${hollowSeen ? "" : "locked"}" style="--c:${h.color}">
           <h3>${hollowSeen ? h.name : "????"}</h3>
-          <p>${hollowSeen ? h.blurb : "It is waiting for the faces you refuse."}</p>
+          <p>${hollowSeen ? h.blurb : "King Empty is collecting every outfit you skip."}</p>
         </article>
       </div>
-      <h3 class="sec">Resonances</h3>
+      <h3 class="sec">Silly combos</h3>
       <div class="grid">${res}</div>
     `;
   }
@@ -622,23 +628,23 @@ export class Game {
     const s = this.endStats;
     if (!box || !s) return;
     box.innerHTML = `
-      <p class="kicker">${s.win ? (s.usurper ? "Usurper ending" : "Bound ending") : "The stack collapsed"}</p>
-      <h2>${s.win ? "You walked out wearing someone" : "There is no one left to wear"}</h2>
+      <p class="kicker">${s.win ? (s.usurper ? "You wore the King!" : "You sent him home!") : "All the costumes fell off"}</p>
+      <h2>${s.win ? "Pip wins the closet" : "Pip got sent home"}</h2>
       <p class="lead">${
         s.win
           ? s.usurper
-            ? "You put on the first wearer. The Hollow is you now. The next descent will still happen — it always does."
-            : "You bound the Hollow and kept your own stolen names. Remembrance sticks to the thread."
-          : "The last face tore off. The dungeon keeps the rest. You will try again, because that is what a stack does."
+            ? "You put King Empty on like a giant raincoat. Googly eyes and all. Time for a snack."
+            : "You sent King Empty packing and kept your own silly pile. Sticker time."
+          : "The last costume went fwoomp. That's okay. Pip always tries again."
       }</p>
       <ul class="stats">
         <li>Floor ${s.floor} — ${FLOOR_NAMES[s.floor] ?? ""}</li>
-        <li>${s.kills} lives ended</li>
-        <li>${s.worn} faces worn</li>
-        <li>${s.resonances} resonances found</li>
-        <li>${s.grave} sold to the Hollow</li>
-        <li>${s.gold} gold in the pockets of the dead</li>
-        <li class="gold">+${s.rem} Remembrance</li>
+        <li>${s.kills} costumes collected</li>
+        <li>${s.worn} outfits worn</li>
+        <li>${s.resonances} combos found</li>
+        <li>${s.grave} given to King Empty</li>
+        <li>${s.gold} coins in the PJ pockets</li>
+        <li class="gold">+${s.rem} Stickers</li>
       </ul>
     `;
   }

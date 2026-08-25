@@ -90,7 +90,7 @@ function uniqueDiscover(state: RunState): void {
         color: "#e8c36a",
       });
       state.fx.push({ kind: "sfx", name: "resonate" });
-      log(state, `Resonance — ${r.name}: ${r.desc}`);
+      log(state, `Combo! ${r.name}: ${r.desc}`);
     }
   }
 }
@@ -139,7 +139,7 @@ function pickupGold(state: RunState): void {
   if (g) {
     state.gold += g;
     delete state.goldMap[k];
-    log(state, `You pocket ${g} gold.`);
+    log(state, `You pocket ${g} coins.`);
     state.fx.push({ kind: "sfx", name: "harvest" });
     state.fx.push({
       kind: "text",
@@ -161,18 +161,18 @@ function aoeOnPop(state: RunState, x: number, y: number): void {
   }
 }
 
-export function takeHit(state: RunState, src = "a blow"): void {
+export function takeHit(state: RunState, src = "a bonk"): void {
   if (state.phase === "dead" || state.phase === "won") return;
   if (state.stitches > 0) {
     state.stitches -= 1;
-    log(state, `Thread catches ${src}.`);
+    log(state, `Lucky Pin catches ${src}.`);
     state.fx.push({ kind: "sfx", name: "stitch" });
     fxBurst(state, state.player.x, state.player.y, "#e8c36a", 8);
     return;
   }
   const echoes = echoSet(state);
   if (echoes.has("rat") && rng.chance(0.2)) {
-    log(state, "The buried Rat jerks you aside.");
+    log(state, "Squeak yanks you aside. Missed!");
     fxBurst(state, state.player.x, state.player.y, "#d48962", 6);
     return;
   }
@@ -180,7 +180,7 @@ export function takeHit(state: RunState, src = "a blow"): void {
   if (echoes.has("priest") && state.player.stack.length > 1 && rng.chance(0.4)) {
     state.player.stack.shift();
     state.player.stack.push(face);
-    log(state, `The ${def(face).name} is dragged to the bottom instead of lost.`);
+    log(state, `The ${def(face).name} costume slides to the bottom. Close one!`);
     uniqueDiscover(state);
     state.fx.push({ kind: "sfx", name: "stitch" });
     return;
@@ -198,20 +198,20 @@ export function takeHit(state: RunState, src = "a blow"): void {
     if (!state.knightOathUsed && hadKnightEcho) {
       state.knightOathUsed = true;
       state.player.stack = ["vagabond"];
-      log(state, "The buried Knight holds the door. You remain — a Vagabond, barely.");
+      log(state, "Sir Boop takes the hit! Pip pops back in PJs.");
       state.fx.push({
         kind: "banner",
-        text: "Oath Kept",
-        sub: "The Knight dies in your place.",
-        color: "#e06070",
+        text: "Boop Save!",
+        sub: "Sir Boop yeeted you to safety.",
+        color: "#ff7aa0",
       });
       uniqueDiscover(state);
       return;
     }
     state.phase = "dead";
-    log(state, "The stack collapses. There is no one left to wear.");
+    log(state, "FWOOMP! Every costume fell off. Pip got sent home.");
     state.fx.push({ kind: "sfx", name: "dead" });
-    state.fx.push({ kind: "banner", text: "The Stack Collapses", color: "#e06070" });
+    state.fx.push({ kind: "banner", text: "Sent Home!", color: "#ff7aa0" });
     return;
   }
   uniqueDiscover(state);
@@ -241,7 +241,7 @@ function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
   if (e.id === "hollow") {
     state.pending = e;
     state.phase = "decision";
-    log(state, "The Hollow kneels. Its faces are all the ones you sold.");
+    log(state, "King Empty wobbles. He's wearing every outfit you skipped!");
     state.fx.push({ kind: "sfx", name: "win" });
     return;
   }
@@ -251,7 +251,7 @@ function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
   }
   state.pending = e;
   state.phase = "decision";
-  log(state, `The ${def(e.id).name} falls. Wear it, or sell the face.`);
+  log(state, `${def(e.id).name} is down! Wear the costume, or snack the coins.`);
 }
 
 function harvestGoldFor(state: RunState, e: Enemy): number {
@@ -268,7 +268,7 @@ function addAsh(state: RunState, id: IdentityId): void {
   state.ash[id] = n;
   if (n >= 3 && !state.memories.includes(id)) {
     state.memories.push(id);
-    log(state, `Memory — you keep the ${def(id).name}'s echo without wearing it.`);
+    log(state, `Memory sticker! You keep ${def(id).name}'s trick without wearing it.`);
     state.fx.push({
       kind: "banner",
       text: `${def(id).name} Memory`,
@@ -292,7 +292,7 @@ function harvestEnemy(state: RunState, e: Enemy, silentFeed: boolean): void {
       state,
       e.id,
       silentFeed
-        ? `Fire sells the ${def(e.id).name} to the Hollow.`
+        ? `The fire mailed ${def(e.id).name}'s costume to King Empty.`
         : harvestLine(e.id),
     );
   }
@@ -311,8 +311,8 @@ function wearEnemy(state: RunState, e: Enemy): void {
     log(state, wearLine("hollow"));
     state.fx.push({
       kind: "banner",
-      text: "Usurper",
-      sub: "You wear the first wearer.",
+      text: "King Costume!",
+      sub: "Googly eyes look good on you.",
       color: "#c8b6ff",
     });
     state.fx.push({ kind: "sfx", name: "win" });
@@ -325,7 +325,7 @@ function wearEnemy(state: RunState, e: Enemy): void {
     feedHollow(
       state,
       lost,
-      `The ${def(lost).name} slips off the bottom. The Hollow catches it like a coin.`,
+      `The ${def(lost).name} costume slips off the bottom. King Empty yoinked it.`,
     );
   }
   log(state, wearLine(e.id));
@@ -470,7 +470,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     vis: [],
     blood: {},
     grave: [],
-    log: ["You wake wearing a nobody. The Hollow is already listening."],
+    log: ["Pip wakes up in stripey PJs. King Empty is already collecting hats."],
     fx: [],
     pending: null,
     maxStack,
@@ -498,7 +498,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     hollowMimicTurns: 0,
   };
   loadFloor(state, meta);
-  log(state, "A stitch holds you together. Bump the living. Wear them, or sell the face.");
+  log(state, "Lucky Pin stuck on. Bump costumes. Wear them, or snack them.");
   return state;
 }
 
@@ -531,7 +531,7 @@ export function loadFloor(state: RunState, _meta?: Meta): void {
 
 function descend(state: RunState): void {
   if (state.floor >= LAST_FLOOR) {
-    log(state, "There are no more stairs. Only the Hollow.");
+    log(state, "No more stairs. King Empty's fort is this way.");
     return;
   }
   state.floor += 1;
@@ -575,10 +575,10 @@ function attackMelee(state: RunState, e: Enemy): void {
     if (isWalkable(state.tiles, nx, ny) && !occupied(state, nx, ny)) {
       e.x = nx;
       e.y = ny;
-      log(state, "Bash — they stagger back.");
+      log(state, "BONK — they hop back.");
     } else {
       e.stun = 1;
-      log(state, "Bash — they hit the wall.");
+      log(state, "BONK — they hit the wall. Clonk.");
     }
   }
 }
@@ -621,10 +621,10 @@ export function waitTurn(state: RunState): boolean {
   if (top(state) === "vagabond" && !state.scroungeUsed) {
     state.scroungeUsed = true;
     state.gold += 1;
-    log(state, "You scrounge a coin from the cracks.");
+    log(state, "You find a coin in the PJs.");
     state.fx.push({ kind: "sfx", name: "harvest" });
   } else {
-    log(state, "You wait. The stack breathes.");
+    log(state, "You wait. Pip hums a snack song.");
   }
   spendTurn(state);
   return true;
@@ -658,7 +658,7 @@ function shootLine(state: RunState): boolean {
       return true;
     }
   }
-  log(state, "The arrow finds only dark.");
+  log(state, "Pew! It hits a wall. Rude wall.");
   return true;
 }
 
@@ -675,7 +675,7 @@ function dash(state: RunState): boolean {
     if (!occupied(state, x, y)) last = { x, y };
   }
   if (!last) {
-    log(state, "No room to skitter.");
+    log(state, "No zoom room!");
     return false;
   }
   const fx = state.player.x;
@@ -693,7 +693,7 @@ function flip(state: RunState): boolean {
   const v = DIRS[state.player.facing];
   const e = enemyAt(state, state.player.x + v.x, state.player.y + v.y);
   if (!e) {
-    log(state, "No one to flip.");
+    log(state, "Nobody to swap with.");
     return false;
   }
   const px = state.player.x;
@@ -703,7 +703,7 @@ function flip(state: RunState): boolean {
   e.x = px;
   e.y = py;
   e.facing = state.player.facing;
-  log(state, "You trade places. They look confused in your old skin.");
+  log(state, "SWAP! They're wearing your old spot.");
   refreshVision(state);
   return true;
 }
@@ -716,7 +716,7 @@ function cleave(state: RunState): boolean {
     if (e) hits.push(e);
   }
   if (!hits.length) {
-    log(state, "Cleave the air. The air does not die.");
+    log(state, "Boop Storm hits... the air. The air is fine.");
     return false;
   }
   state.fx.push({ kind: "sfx", name: "hit" });
@@ -738,7 +738,7 @@ function cinder(state: RunState): boolean {
     if (e) hurtEnemy(state, e, 1, true);
   }
   state.fx.push({ kind: "sfx", name: "fire" });
-  log(state, "The floor learns fire.");
+  log(state, "Hot Foot! The floor is spicy now.");
   return true;
 }
 
@@ -755,16 +755,16 @@ export function usePower(state: RunState): boolean {
       break;
     case "guard":
       if (state.braceCd > 0) {
-        log(state, `Brace is knotting. ${state.braceCd} turns.`);
+        log(state, `Brace is recharging. ${state.braceCd} turns.`);
         return false;
       }
       if (state.stitches >= MAX_STITCH) {
-        log(state, "The thread cannot take another stitch.");
+        log(state, "Too many Lucky Pins. They'll fall off.");
         return false;
       }
       state.stitches += 1;
       state.braceCd = 5;
-      log(state, "You brace. Gold thread bites the stack together.");
+      log(state, "CLANK. Lucky Pin slapped on.");
       state.fx.push({ kind: "sfx", name: "stitch" });
       ok = true;
       break;
@@ -776,16 +776,16 @@ export function usePower(state: RunState): boolean {
       break;
     case "priest":
       if (state.priestBound) {
-        log(state, "The prayer is spent this floor.");
+        log(state, "Bubbles already popped this floor.");
         return false;
       }
       if (state.stitches >= MAX_STITCH) {
-        log(state, "Already taut.");
+        log(state, "Already covered in pins.");
         return false;
       }
       state.stitches += 1;
       state.priestBound = true;
-      log(state, "Bind. The stack hums like a choir.");
+      log(state, "Bubbles! Extra Lucky Pin.");
       state.fx.push({ kind: "sfx", name: "stitch" });
       ok = true;
       break;
@@ -830,11 +830,11 @@ export function chooseHarvest(state: RunState): void {
   state.pending = null;
   if (e.id === "hollow") {
     state.phase = "won";
-    log(state, "You bind the Hollow in gold and leave it nameless. The stack holds.");
+    log(state, "You send King Empty home. Pip keeps the pile. Snack victory!");
     state.fx.push({
       kind: "banner",
-      text: "Bound",
-      sub: "You refuse the first wearer.",
+      text: "King Sent Home!",
+      sub: "Pip keeps the pile.",
       color: "#e8c36a",
     });
     state.fx.push({ kind: "sfx", name: "win" });
@@ -851,24 +851,24 @@ export function shrinePick(state: RunState, choice: number): void {
   const k = key(state.player.x, state.player.y);
   if (choice === 1) {
     state.player.stack.reverse();
-    log(state, "The shrine turns the stack inside out.");
+    log(state, "WHOOSH. Pile flipped upside down.");
     uniqueDiscover(state);
     state.fx.push({ kind: "sfx", name: "wear" });
   } else if (choice === 2) {
     if (state.player.stack.length <= 1) {
-      log(state, "The shrine will not take your last face.");
+      log(state, "Nope — that's Pip's last costume.");
     } else {
       const lost = state.player.stack.shift()!;
       state.gold += 6;
-      feedHollow(state, lost, `You offer the ${def(lost).name}. The shrine pays. The Hollow collects.`);
+      feedHollow(state, lost, `You traded the ${def(lost).name} costume. King Empty yoinked it.`);
       uniqueDiscover(state);
       state.fx.push({ kind: "sfx", name: "harvest" });
     }
   } else if (choice === 3) {
-    if (state.stitches >= MAX_STITCH) log(state, "Already taut.");
+    if (state.stitches >= MAX_STITCH) log(state, "Already covered in Lucky Pins.");
     else {
       state.stitches += 1;
-      log(state, "The shrine weaves.");
+      log(state, "Fizz! Extra Lucky Pin.");
       state.fx.push({ kind: "sfx", name: "stitch" });
     }
   }
@@ -885,20 +885,20 @@ export function shopPick(state: RunState, choice: number): void {
   }
   if (choice === 1) {
     if (state.gold < 7) {
-      log(state, "Not enough gold.");
+      log(state, "Need more coins!");
       return;
     }
     if (state.stitches >= MAX_STITCH) {
-      log(state, "Already taut.");
+      log(state, "Already covered in Lucky Pins.");
       return;
     }
     state.gold -= 7;
     state.stitches += 1;
-    log(state, "Bought a stitch.");
+    log(state, "Bought a Lucky Pin. Stick.");
     state.fx.push({ kind: "sfx", name: "stitch" });
   } else if (choice === 2) {
     if (state.gold < 12) {
-      log(state, "Not enough gold.");
+      log(state, "Need more coins!");
       return;
     }
     state.gold -= 12;
@@ -915,27 +915,27 @@ export function shopPick(state: RunState, choice: number): void {
       elite: false,
     };
     wearEnemy(state, fake);
-    log(state, `A flask of face — you wear a ${def(id).name}.`);
+    log(state, `Mystery box! You're ${def(id).name} now.`);
     state.fx.push({ kind: "sfx", name: "wear" });
     state.fx.push({
       kind: "banner",
       text: def(id).name,
-      sub: "Bought, not bled.",
+      sub: "Bought, not booped.",
       color: def(id).color,
     });
   } else if (choice === 3) {
     if (state.extraSlotBought) {
-      log(state, "The tailor already let the seams out.");
+      log(state, "The pile is already extra-roomy.");
       return;
     }
     if (state.gold < 14) {
-      log(state, "Not enough gold.");
+      log(state, "Need more coins!");
       return;
     }
     state.gold -= 14;
     state.maxStack += 1;
     state.extraSlotBought = true;
-    log(state, "The stack can bear another life.");
+    log(state, "Bigger pile unlocked. More hats!");
     state.fx.push({ kind: "sfx", name: "resonate" });
   }
 }
@@ -981,7 +981,7 @@ function tickFire(state: RunState): void {
     const x = Number(xs);
     const y = Number(ys);
     if (state.player.x === x && state.player.y === y) {
-      log(state, "Fire climbs the stack.");
+      log(state, "Spicy! The pile is on fire.");
       takeHit(state, "the fire");
       state.fx.push({ kind: "sfx", name: "fire" });
     }
@@ -1009,10 +1009,10 @@ function actEnemy(state: RunState, e: Enemy): void {
     if (state.hollowMimicTurns <= 0 && state.grave.length && rng.chance(0.35)) {
       state.hollowMimic = rng.pick(state.grave);
       state.hollowMimicTurns = 3;
-      log(state, `The Hollow wears your ${def(state.hollowMimic).name}.`);
+      log(state, `King Empty tries on your ${def(state.hollowMimic).name}!`);
       state.fx.push({
         kind: "banner",
-        text: `Hollow: ${def(state.hollowMimic).name}`,
+        text: `King Empty: ${def(state.hollowMimic).name}`,
         color: "#c8b6ff",
       });
     }
@@ -1024,7 +1024,7 @@ function actEnemy(state: RunState, e: Enemy): void {
 
   if (archerish && cardinalLine(state, e.x, e.y, px, py, range)) {
     e.facing = dirFromDelta(px - e.x, py - e.y);
-    log(state, `An arrow from the ${def(e.id).name}.`);
+    log(state, `${def(e.id).name} pews you!`);
     takeHit(state, "an arrow");
     state.fx.push({ kind: "sfx", name: "hit" });
     return;
@@ -1040,7 +1040,7 @@ function actEnemy(state: RunState, e: Enemy): void {
       e.y = py;
       state.player.x = tx;
       state.player.y = ty;
-      log(state, "The Thief steals a coin and your footing.");
+      log(state, "Nib yoinks a coin and your spot!");
       refreshVision(state);
       return;
     }
@@ -1050,7 +1050,7 @@ function actEnemy(state: RunState, e: Enemy): void {
       hits = 1 + Math.min(5, Math.ceil(u / 2));
     }
     if (e.elite) hits += 1;
-    log(state, `The ${def(e.id).name} strikes.`);
+    log(state, `${def(e.id).name} bonks you!`);
     for (let i = 0; i < hits; i++) {
       takeHit(state, "a strike");
       if (inPhase(state, "dead")) break;

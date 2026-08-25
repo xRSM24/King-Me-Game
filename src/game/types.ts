@@ -165,12 +165,12 @@ export function opposite(d: Dir): Dir {
 
 export const FLOOR_NAMES = [
   "",
-  "The Cellars",
-  "Watch Halls",
-  "The Gallery",
-  "Reliquary",
-  "Ash Laboratories",
-  "The Hollow's Throat",
+  "Snack Cellar",
+  "Clank Hall",
+  "Silly Gallery",
+  "Sock Closet",
+  "Chili Labs",
+  "King Empty's Fort",
 ];
 
 export const TILE = 48;

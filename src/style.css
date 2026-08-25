@@ -1,12 +1,12 @@
 :root {
-  --bg: #07050c;
-  --ink: #f2e6c8;
-  --muted: #b7a58a;
-  --gold: #e8c36a;
-  --violet: #c8b6ff;
-  --line: rgba(232, 195, 106, 0.28);
-  --panel: rgba(12, 8, 18, 0.82);
-  color-scheme: dark;
+  --bg: #7ed0f5;
+  --ink: #3b2152;
+  --muted: #6b4a7a;
+  --gold: #e89a00;
+  --violet: #7a5ad0;
+  --line: rgba(59, 33, 82, 0.2);
+  --panel: rgba(255, 252, 240, 0.92);
+  color-scheme: light;
 }
 
 * {
@@ -20,7 +20,7 @@ body,
   height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+  font-family: Nunito, "Segoe UI", sans-serif;
   overflow: hidden;
   user-select: none;
   touch-action: none;
@@ -50,18 +50,19 @@ canvas#game {
   width: min(260px, 34vw);
   padding: 12px 14px 14px;
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  backdrop-filter: blur(8px);
+  border: 3px solid #3b2152;
+  border-radius: 18px;
+  box-shadow: 4px 5px 0 #3b2152;
 }
 
 .stack-head {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--violet);
+  font-weight: 800;
   margin-bottom: 8px;
 }
 
@@ -82,13 +83,13 @@ canvas#game {
 }
 
 .stack-list li.top {
-  background: rgba(232, 195, 106, 0.1);
+  background: rgba(255, 229, 102, 0.45);
 }
 
 .stack-list b {
   display: block;
-  font-family: Cinzel, Palatino, serif;
-  font-size: 14px;
+  font-family: Fredoka, Nunito, sans-serif;
+  font-size: 16px;
 }
 
 .stack-list small,
@@ -142,10 +143,11 @@ canvas#game {
   left: 16px;
   bottom: 18px;
   width: min(360px, 70vw);
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
   line-height: 1.45;
-  text-shadow: 0 1px 0 #000;
+  text-shadow: 0 1px 0 #fff6c8;
 }
 
 #echo-note {
@@ -157,13 +159,14 @@ canvas#game {
   position: absolute;
   top: 14px;
   right: 16px;
-  background: var(--panel);
+  background: #fff;
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 3px solid #3b2152;
   border-radius: 999px;
   padding: 6px 12px;
-  font: 700 12px inherit;
+  font: 800 12px Fredoka, sans-serif;
   cursor: pointer;
+  box-shadow: 0 3px 0 #3b2152;
 }
 
 .pause-btn {
@@ -180,14 +183,42 @@ canvas#game {
   touch-action: pan-y;
 }
 
+.title-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(280px, 520px);
+  gap: 24px;
+  align-items: center;
+  max-width: 920px;
+  width: 100%;
+}
+
+.hero-frame {
+  margin: 0;
+}
+
+.hero-frame img {
+  width: 100%;
+  display: block;
+  border-radius: 28px;
+  border: 4px solid #fff;
+  box-shadow: 0 18px 0 #3b2152, 0 22px 40px rgba(59, 33, 82, 0.25);
+  background: #ffe9a8;
+}
+
+.hero-frame figcaption {
+  text-align: center;
+  margin-top: 10px;
+  font: 700 13px Fredoka, sans-serif;
+  color: #3b2152;
+}
+
 .veil {
   width: min(560px, 100%);
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 20px;
+  border: 3px solid #3b2152;
+  border-radius: 24px;
   padding: 28px 28px 24px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(10px);
+  box-shadow: 8px 10px 0 #3b2152;
 }
 
 .veil.narrow {
@@ -201,15 +232,28 @@ canvas#game {
 h1,
 h2,
 h3 {
-  font-family: Cinzel, Palatino, serif;
+  font-family: Fredoka, Nunito, sans-serif;
   font-weight: 700;
   margin: 0 0 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 h1 {
+  display: inline-block;
   font-size: clamp(42px, 8vw, 64px);
-  color: var(--gold);
+  color: #ff5a8a;
+  text-shadow: 3px 3px 0 #ffe566;
+  animation: title-wobble 2.4s ease-in-out infinite;
+}
+
+@keyframes title-wobble {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2.4deg);
+  }
 }
 
 .kicker {
@@ -245,19 +289,20 @@ h1 {
 }
 
 button {
-  font: 700 14px Cinzel, Palatino, serif;
-  letter-spacing: 0.06em;
-  border: 1px solid var(--gold);
-  background: var(--gold);
-  color: #1a1020;
+  font: 700 16px Fredoka, Nunito, sans-serif;
+  letter-spacing: 0.02em;
+  border: 3px solid #3b2152;
+  background: #ffe566;
+  color: #3b2152;
   border-radius: 999px;
   padding: 10px 16px;
   cursor: pointer;
+  box-shadow: 0 4px 0 #3b2152;
 }
 
 button.ghost {
-  background: transparent;
-  color: var(--gold);
+  background: #fff;
+  color: #3b2152;
 }
 
 button:disabled {
@@ -267,6 +312,11 @@ button:disabled {
 
 button:not(:disabled):hover {
   filter: brightness(1.08);
+}
+
+button:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3b2152;
 }
 
 .meta-line {
@@ -288,14 +338,15 @@ button:not(:disabled):hover {
 
 .perk {
   text-align: left;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.03);
+  background: #fff;
   color: var(--ink);
-  border-color: var(--line);
+  border-color: #3b2152;
+  box-shadow: 0 3px 0 #3b2152;
 }
 
 .perk.owned {
@@ -303,13 +354,13 @@ button:not(:disabled):hover {
 }
 
 .perk small {
-  font: 400 11px "Atkinson Hyperlegible", sans-serif;
+  font: 700 11px Nunito, sans-serif;
   letter-spacing: 0;
   color: var(--muted);
 }
 
 .perk span {
-  font: 700 11px "Atkinson Hyperlegible", sans-serif;
+  font: 800 11px Fredoka, sans-serif;
   color: var(--gold);
 }
 
@@ -335,11 +386,12 @@ button:not(:disabled):hover {
 }
 
 .card {
-  border: 1px solid var(--line);
-  border-top: 3px solid var(--c, var(--gold));
-  border-radius: 12px;
+  border: 3px solid #3b2152;
+  border-top: 8px solid var(--c, var(--gold));
+  border-radius: 16px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: #fff;
+  box-shadow: 3px 4px 0 #3b2152;
 }
 
 .card.locked {
@@ -369,20 +421,21 @@ button:not(:disabled):hover {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(7, 5, 12, 0.45);
+  background: rgba(126, 208, 245, 0.55);
   padding: 20px;
 }
 
 .sheet {
   width: min(440px, 100%);
-  background: #140c1c;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  background: #fffdf6;
+  border: 4px solid #3b2152;
+  border-radius: 22px;
   padding: 22px;
+  box-shadow: 8px 10px 0 #3b2152;
 }
 
 .sheet h2 {
-  color: var(--gold);
+  color: #ff5a8a;
 }
 
 .stat {
@@ -399,7 +452,7 @@ button:not(:disabled):hover {
 
 .stats li {
   padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(59, 33, 82, 0.12);
 }
 
 .stats .gold {
@@ -422,9 +475,9 @@ button:not(:disabled):hover {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: rgba(12, 8, 18, 0.7);
-  color: var(--gold);
-  border-color: var(--line);
+  background: #ffe566;
+  color: #3b2152;
+  border-color: #3b2152;
   font-size: 20px;
 }
 
@@ -446,7 +499,21 @@ button:not(:disabled):hover {
   gap: 6px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  h1 {
+    animation: none;
+  }
+}
+
 @media (max-width: 720px) {
+  .title-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-frame {
+    max-width: 220px;
+    margin: 0 auto;
+  }
   #stack-panel {
     top: auto;
     bottom: 96px;

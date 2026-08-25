@@ -21,27 +21,27 @@ const EMPTY: Meta = {
 export const PERKS = [
   {
     id: "stitch",
-    name: "Spare Thread",
+    name: "Extra Pin",
     cost: 12,
-    desc: "Begin each descent with two stitches instead of one.",
+    desc: "Start with two Lucky Pins instead of one.",
   },
   {
     id: "stack5",
-    name: "Deeper Pockets",
+    name: "Bigger Backpack",
     cost: 20,
-    desc: "Max stack 5. A fifth life is a fifth argument.",
+    desc: "Max pile of 5 costumes. More hats, more problems.",
   },
   {
     id: "gold",
-    name: "Grave Change",
+    name: "Snack Money",
     cost: 10,
-    desc: "Start with 4 gold.",
+    desc: "Start with 4 coins.",
   },
   {
     id: "maps",
-    name: "Cartographer's Guilt",
+    name: "See-Through Socks",
     cost: 16,
-    desc: "The minimap reveals the whole floor.",
+    desc: "The mini-map shows the whole floor.",
   },
 ] as const;
 
