@@ -124,7 +124,7 @@ function rangeBonus(state: RunState): number {
 }
 
 function spendTurn(state: RunState): void {
-  if (state.phase === "decision" || state.phase === "dead" || state.phase === "won") return;
+  if (state.phase === "dead" || state.phase === "won") return;
   state.turn += 1;
   if (state.braceCd > 0) state.braceCd -= 1;
   state.phase = "enemies";

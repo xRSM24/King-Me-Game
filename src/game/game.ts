@@ -550,8 +550,11 @@ export class Game {
         : "No buried echoes yet.";
     }
 
-    if (r.phase === "decision" || r.phase === "shop" || r.phase === "shrine") this.syncModal();
-    else this.hideModal();
+    if ((r.phase === "decision" && r.pending) || r.phase === "shop" || r.phase === "shrine") {
+      this.syncModal();
+    } else {
+      this.hideModal();
+    }
   }
 
   renderTitleMenu(): void {
