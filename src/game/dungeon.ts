@@ -41,15 +41,19 @@ function stampFloor(tiles: TileKind[][], x: number, y: number): void {
 }
 
 function carveLine(tiles: TileKind[][], x0: number, y0: number, x1: number, y1: number): void {
-  let x = x0;
-  let y = y0;
-  while (x !== x1) {
+  let x = Math.round(x0);
+  let y = Math.round(y0);
+  const tx = Math.round(x1);
+  const ty = Math.round(y1);
+  let guard = 0;
+  const cap = MAP_W + MAP_H + 8;
+  while (x !== tx && guard++ < cap) {
     stampFloor(tiles, x, y);
-    x += x < x1 ? 1 : -1;
+    x += x < tx ? 1 : -1;
   }
-  while (y !== y1) {
+  while (y !== ty && guard++ < cap) {
     stampFloor(tiles, x, y);
-    y += y < y1 ? 1 : -1;
+    y += y < ty ? 1 : -1;
   }
   stampFloor(tiles, x, y);
 }
@@ -91,6 +95,10 @@ function tryTrail(rng: Rng): Dungeon | null {
   });
 
   for (const r of rooms) {
+    r.x = Math.max(1, Math.min(r.x, MAP_W - r.w - 2));
+    r.y = Math.max(1, Math.min(r.y, MAP_H - r.h - 2));
+    r.cx = r.x + (r.w >> 1);
+    r.cy = r.y + (r.h >> 1);
     if (r.x + r.w >= MAP_W - 1 || r.y + r.h >= MAP_H - 1) return null;
     carveRoom(tiles, r);
   }
@@ -159,23 +167,26 @@ export function bresenham(
   y1: number,
 ): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
-  const dx = Math.abs(x1 - x0);
-  const dy = Math.abs(y1 - y0);
-  const sx = x0 < x1 ? 1 : -1;
-  const sy = y0 < y1 ? 1 : -1;
+  let x = Math.trunc(x0);
+  let y = Math.trunc(y0);
+  const tx = Math.trunc(x1);
+  const ty = Math.trunc(y1);
+  const dx = Math.abs(tx - x);
+  const dy = Math.abs(ty - y);
+  const sx = x < tx ? 1 : -1;
+  const sy = y < ty ? 1 : -1;
   let err = dx - dy;
-  let x = x0;
-  let y = y0;
-  for (;;) {
+  const cap = dx + dy + 4;
+  for (let i = 0; i < cap; i++) {
     pts.push({ x, y });
-    if (x === x1 && y === y1) break;
+    if (x === tx && y === ty) break;
     const e2 = 2 * err;
     if (e2 > -dy) {
       err -= dy;
       x += sx;
     }
     if (e2 < dx) {
-      err += dy;
+      err += dx;
       y += sy;
     }
   }
