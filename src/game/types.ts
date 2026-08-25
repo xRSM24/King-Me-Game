@@ -175,5 +175,5 @@ export const FLOOR_NAMES = [
 
 export const TILE = 48;
 export const MAX_STITCH = 3;
-export const VISION = 8;
+export const VISION = 12;
 export const LAST_FLOOR = 6;

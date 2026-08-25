@@ -30,20 +30,28 @@ function carveRoom(tiles: TileKind[][], r: Room): void {
   }
 }
 
+function stampFloor(tiles: TileKind[][], x: number, y: number): void {
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = x + dx;
+      const ty = y + dy;
+      if (tiles[ty] && tiles[ty]![tx] !== undefined) tiles[ty]![tx] = "floor";
+    }
+  }
+}
+
 function carveLine(tiles: TileKind[][], x0: number, y0: number, x1: number, y1: number): void {
   let x = x0;
   let y = y0;
   while (x !== x1) {
-    if (tiles[y]) tiles[y]![x] = "floor";
-    if (tiles[y - 1]) tiles[y - 1]![x] = "floor";
+    stampFloor(tiles, x, y);
     x += x < x1 ? 1 : -1;
   }
   while (y !== y1) {
-    if (tiles[y]) tiles[y]![x] = "floor";
-    if (tiles[y]![x - 1] !== undefined) tiles[y]![x - 1] = "floor";
+    stampFloor(tiles, x, y);
     y += y < y1 ? 1 : -1;
   }
-  if (tiles[y]) tiles[y]![x] = "floor";
+  stampFloor(tiles, x, y);
 }
 
 function dist2(a: Room, b: Room): number {

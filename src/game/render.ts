@@ -1,8 +1,9 @@
 import { def } from "./identities.ts";
+import { isWalkable } from "./dungeon.ts";
 import { hasPerk, type Meta } from "./meta.ts";
 import { hollowDamagePreview } from "./sim.ts";
 import type { IdentityId, RunState } from "./types.ts";
-import { FLOOR_NAMES, TILE } from "./types.ts";
+import { DIRS, DIR_LIST, FLOOR_NAMES, TILE } from "./types.ts";
 
 export interface Cam {
   x: number;
@@ -249,39 +250,39 @@ function drawTile(
   const vis = state.vis[y]![x];
   const seen = state.seen[y]![x];
   if (!seen) {
-    ctx.fillStyle = "#07050c";
+    ctx.fillStyle = "#0b0812";
     ctx.fillRect(px, py, TILE, TILE);
     return;
   }
 
   if (t === "wall") {
-    ctx.fillStyle = vis ? "#1c1528" : "#120e18";
+    ctx.fillStyle = vis ? "#5a4a6e" : "#2e263c";
     ctx.fillRect(px, py, TILE, TILE);
-    ctx.fillStyle = vis ? "#2a203c" : "#1a1524";
-    ctx.fillRect(px, py, TILE, 8);
-    ctx.strokeStyle = vis ? "rgba(232,195,106,0.12)" : "rgba(232,195,106,0.04)";
+    ctx.fillStyle = vis ? "#7a688c" : "#3a3248";
+    ctx.fillRect(px, py, TILE, 10);
+    ctx.strokeStyle = vis ? "rgba(232,195,106,0.28)" : "rgba(232,195,106,0.08)";
     ctx.strokeRect(px + 0.5, py + 0.5, TILE - 1, TILE - 1);
-    if (vis && ((x * 13 + y * 7) % 9 === 0)) {
-      ctx.strokeStyle = "rgba(232,195,106,0.18)";
+    if (vis && ((x * 13 + y * 7) % 7 === 0)) {
+      ctx.strokeStyle = "rgba(232,195,106,0.35)";
       ctx.beginPath();
-      ctx.moveTo(px + 8, py + 14);
-      ctx.lineTo(px + TILE - 10, py + 22);
+      ctx.moveTo(px + 8, py + 16);
+      ctx.lineTo(px + TILE - 10, py + 26);
       ctx.stroke();
     }
     return;
   }
 
   const alt = (x + y) % 2 === 0;
-  ctx.fillStyle = vis ? (alt ? "#1a1424" : "#16101f") : "#100c16";
+  ctx.fillStyle = vis ? (alt ? "#4a3d5c" : "#403450") : "#221a2c";
   ctx.fillRect(px, py, TILE, TILE);
   if (vis) {
-    ctx.strokeStyle = "rgba(255,255,255,0.03)";
-    ctx.strokeRect(px + 0.5, py + 0.5, TILE - 1, TILE - 1);
+    ctx.strokeStyle = "rgba(232, 210, 160, 0.16)";
+    ctx.strokeRect(px + 1, py + 1, TILE - 2, TILE - 2);
   }
 
   const blood = state.blood[`${x},${y}`];
   if (blood) {
-    ctx.fillStyle = vis ? "rgba(120,24,40,0.35)" : "rgba(80,16,28,0.2)";
+    ctx.fillStyle = vis ? "rgba(150,36,52,0.45)" : "rgba(80,16,28,0.25)";
     ctx.beginPath();
     ctx.ellipse(px + TILE * 0.5, py + TILE * 0.55, 10 + blood * 3, 7 + blood * 2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -337,11 +338,6 @@ function drawTile(
     ctx.quadraticCurveTo(px + 36, py + 18, px + 32, py + 36);
     ctx.fill();
   }
-
-  if (!vis) {
-    ctx.fillStyle = "rgba(7,5,12,0.55)";
-    ctx.fillRect(px, py, TILE, TILE);
-  }
 }
 
 function drawMinimap(
@@ -385,10 +381,10 @@ function drawMinimap(
     Math.PI * 2,
   );
   ctx.fill();
-  const hollow = state.enemies.find((e) => e.id === "hollow");
-  if (hollow && (revealAll || state.seen[hollow.y]![hollow.x])) {
-    ctx.fillStyle = "#c8b6ff";
-    ctx.fillRect(x0 + 8 + hollow.x * sx, y0 + 8 + hollow.y * sy, 4, 4);
+  for (const e of state.enemies) {
+    if (!revealAll && !state.seen[e.y]![e.x]) continue;
+    ctx.fillStyle = e.id === "hollow" ? "#c8b6ff" : def(e.id).color;
+    ctx.fillRect(x0 + 8 + e.x * sx, y0 + 8 + e.y * sy, 3.5, 3.5);
   }
 }
 
@@ -439,7 +435,7 @@ export function drawWorld(
       if (e.flash > 0) {
         ctx.filter = "brightness(2)";
       }
-      drawSoul(ctx, e.id, cx, cy, TILE * 0.72, time, { elite: e.elite });
+      drawSoul(ctx, e.id, cx, cy, TILE * 0.82, time, { elite: e.elite });
       ctx.restore();
       if (e.hp < e.maxHp || e.elite) {
         const ratio = e.hp / e.maxHp;
@@ -460,14 +456,38 @@ export function drawWorld(
   }
   if (stack[0]) drawSoul(ctx, stack[0], pcx, pcy, TILE * 0.78, time);
 
-  const g = ctx.createRadialGradient(pcx, pcy, 20, pcx, pcy, TILE * 5.5);
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(0.55, "rgba(7,5,12,0.15)");
-  g.addColorStop(1, "rgba(7,5,12,0.72)");
-  ctx.fillStyle = g;
-  ctx.fillRect(cam.x - 20, cam.y - 20, viewW + 40, viewH + 40);
+  ctx.strokeStyle = "rgba(232,195,106,0.55)";
+  ctx.lineWidth = 2;
+  for (const dir of DIR_LIST) {
+    const v = DIRS[dir];
+    const nx = p.x + v.x;
+    const ny = p.y + v.y;
+    if (!isWalkable(state.tiles, nx, ny)) continue;
+    if (!state.vis[ny]?.[nx]) continue;
+    ctx.strokeRect(nx * TILE + 6, ny * TILE + 6, TILE - 12, TILE - 12);
+  }
+
+  const glow = ctx.createRadialGradient(pcx, pcy, 8, pcx, pcy, TILE * 3.2);
+  const rgb = hexToRgb(def(stack[0] ?? "vagabond").color);
+  glow.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.16)`);
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(pcx - TILE * 3.2, pcy - TILE * 3.2, TILE * 6.4, TILE * 6.4);
 
   ctx.restore();
+
+  const vignette = ctx.createRadialGradient(
+    viewW / 2,
+    viewH / 2,
+    Math.min(viewW, viewH) * 0.45,
+    viewW / 2,
+    viewH / 2,
+    Math.max(viewW, viewH) * 0.72,
+  );
+  vignette.addColorStop(0, "rgba(7,5,12,0)");
+  vignette.addColorStop(1, "rgba(7,5,12,0.35)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, viewW, viewH);
 
   if (flash && flash.a > 0) {
     const rgb = hexToRgb(flash.color);

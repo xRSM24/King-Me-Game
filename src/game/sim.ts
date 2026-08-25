@@ -379,7 +379,14 @@ function pickOpen(state: RunState, tiles: { x: number; y: number }[], avoid: num
 function populateFloor(state: RunState): void {
   const pool = enemyPool(state.floor);
   for (const room of state.rooms) {
-    if (room.kind === "start") continue;
+    if (room.kind === "start") {
+      const spots = floorTiles(room);
+      for (let i = 0; i < 2; i++) {
+        const p = pickOpen(state, spots, 2);
+        if (p) spawnEnemy(state, p.x, p.y, "rat");
+      }
+      continue;
+    }
     const spots = floorTiles(room);
     if (room.kind === "boss") {
       spawnEnemy(state, room.cx, room.cy, "hollow");
@@ -405,7 +412,7 @@ function populateFloor(state: RunState): void {
         : 1 + Math.floor(state.floor / 2) + rng.int(2);
     const count = Math.min(n, 4);
     for (let i = 0; i < count; i++) {
-      const p = pickOpen(state, spots, room.kind === "exit" ? 2 : 4);
+      const p = pickOpen(state, spots, room.kind === "exit" ? 2 : 2);
       if (!p) break;
       spawnEnemy(state, p.x, p.y, rng.pick(pool));
     }
@@ -429,8 +436,10 @@ function newGrid<T>(w: number, h: number, v: T): T[][] {
 function revealStart(state: RunState): void {
   const room = state.rooms.find((r) => r.kind === "start");
   if (!room) return;
-  for (const p of floorTiles(room)) {
-    if (state.seen[p.y]) state.seen[p.y]![p.x] = true;
+  for (let y = room.y - 2; y < room.y + room.h + 2; y++) {
+    for (let x = room.x - 2; x < room.x + room.w + 2; x++) {
+      if (state.seen[y] && state.seen[y]![x] !== undefined) state.seen[y]![x] = true;
+    }
   }
 }
 
