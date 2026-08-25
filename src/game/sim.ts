@@ -375,7 +375,7 @@ function populateTrail(state: RunState): void {
     }
     if (room.kind === "shrine" || room.kind === "shop") continue;
     if (room.kind === "start" || room.pathIndex === 0) {
-      spawnInRoom(state, room, "rat", false, 4);
+      spawnInRoom(state, room, "rat", false, 6);
       continue;
     }
     if (room.kind === "boss") {
@@ -431,7 +431,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     w: 0,
     h: 0,
     rooms: [],
-    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"], iFrames: 0, vx: 0, vy: 0, gait: 0, recoil: 0 },
+    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"], iFrames: 0, vx: 0, vy: 0, gait: 0, recoil: 0, armed: false },
     enemies: [],
     goldMap: {},
     fire: {},
@@ -519,7 +519,7 @@ export function loadTrail(state: RunState, _meta?: Meta): void {
   refreshVision(state);
   state.fx.push({ kind: "floorTitle" });
   state.fx.push({ kind: "sfx", name: "stairs" });
-  log(state, "Snack Cellar. One rat, then the trail gets meaner.");
+  log(state, "Snack Cellar. One rat across the room. Start running and the pin fires on its own.");
 }
 
 function afterMove(state: RunState, fromX: number, fromY: number): void {
@@ -826,7 +826,7 @@ function aimFoe(state: RunState): Enemy | undefined {
 }
 
 function tryFire(state: RunState): void {
-  if (state.atkCd > 0) return;
+  if (!state.player.armed || state.atkCd > 0) return;
   const id = top(state);
   const gun = gunOf(id);
   const foe = aimFoe(state);
@@ -900,6 +900,9 @@ export function tickWorld(state: RunState, dt: number, ax: number, ay: number): 
       ax = dx / d;
       ay = dy / d;
     }
+  }
+  if (!state.player.armed && (Math.hypot(ax, ay) > 0.2 || state.turn > 1.5)) {
+    state.player.armed = true;
   }
 
   const accel = 22;

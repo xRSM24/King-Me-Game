@@ -61,6 +61,7 @@ export interface Player {
   vy: number;
   gait: number;
   recoil: number;
+  armed: boolean;
 }
 
 export interface Enemy {
