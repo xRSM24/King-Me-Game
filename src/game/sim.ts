@@ -381,10 +381,8 @@ function populateFloor(state: RunState): void {
   for (const room of state.rooms) {
     if (room.kind === "start") {
       const spots = floorTiles(room);
-      for (let i = 0; i < 2; i++) {
-        const p = pickOpen(state, spots, 2);
-        if (p) spawnEnemy(state, p.x, p.y, "rat");
-      }
+      const p = pickOpen(state, spots, 2);
+      if (p) spawnEnemy(state, p.x, p.y, "rat");
       continue;
     }
     const spots = floorTiles(room);
@@ -409,7 +407,9 @@ function populateFloor(state: RunState): void {
     const n =
       room.kind === "exit"
         ? rng.range(1, 2)
-        : 1 + Math.floor(state.floor / 2) + rng.int(2);
+        : state.floor === 1
+          ? 1
+          : 1 + Math.floor(state.floor / 2) + rng.int(2);
     const count = Math.min(n, 4);
     for (let i = 0; i < count; i++) {
       const p = pickOpen(state, spots, room.kind === "exit" ? 2 : 2);
@@ -480,7 +480,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     worn: ["vagabond"],
     kills: 0,
     gold: hasPerk(meta, "gold") ? 4 : 0,
-    stitches: hasPerk(meta, "stitch") ? 1 : 0,
+    stitches: hasPerk(meta, "stitch") ? 2 : 1,
     priestBound: false,
     braceCd: 0,
     scroungeUsed: false,
@@ -498,9 +498,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     hollowMimicTurns: 0,
   };
   loadFloor(state, meta);
-  if (meta.runs === 0) {
-    log(state, "Bump into them. When they fall: Wear, or Harvest.");
-  }
+  log(state, "A stitch holds you together. Bump the living. Wear them, or sell the face.");
   return state;
 }
 
@@ -1063,7 +1061,7 @@ function actEnemy(state: RunState, e: Enemy): void {
   }
 
   const sees = md <= 10 && lineOfSight(state.tiles, e.x, e.y, px, py);
-  if (sees || md <= 4) {
+  if (sees) {
     const step = nextStep(
       (x, y) => blockedFor(state, x, y, e),
       e.x,

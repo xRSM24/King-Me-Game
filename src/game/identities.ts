@@ -236,9 +236,8 @@ export function popLine(id: IdentityId): string {
 }
 
 export function enemyPool(floor: number): IdentityId[] {
-  const pool: IdentityId[] = ["rat", "rat", "vagabond"];
-  if (floor >= 1) pool.push("rat", "guard");
-  if (floor >= 2) pool.push("guard", "archer", "rat");
+  const pool: IdentityId[] = ["rat", "rat", "rat", "vagabond"];
+  if (floor >= 2) pool.push("guard", "rat");
   if (floor >= 3) pool.push("archer", "thief", "guard");
   if (floor >= 4) pool.push("thief", "priest", "archer");
   if (floor >= 5) pool.push("pyromancer", "knight", "priest", "thief");

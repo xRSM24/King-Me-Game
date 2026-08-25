@@ -23,7 +23,7 @@ export const PERKS = [
     id: "stitch",
     name: "Spare Thread",
     cost: 12,
-    desc: "Begin each descent with one stitch.",
+    desc: "Begin each descent with two stitches instead of one.",
   },
   {
     id: "stack5",
