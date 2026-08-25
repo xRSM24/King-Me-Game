@@ -1,10 +1,9 @@
 import { drawSoul } from "./character.ts";
 import { def } from "./identities.ts";
-import { isWalkable } from "./dungeon.ts";
 import { hasPerk, type Meta } from "./meta.ts";
-import { hollowDamagePreview } from "./sim.ts";
+import { goalLabel } from "./sim.ts";
 import type { RunState } from "./types.ts";
-import { DIRS, DIR_LIST, FLOOR_NAMES, TILE } from "./types.ts";
+import { LAST_FLOOR, RUN_GOAL, TILE } from "./types.ts";
 
 export interface Cam {
   x: number;
@@ -212,15 +211,15 @@ function drawMinimap(
   ctx.fillStyle = def(state.player.stack[0] ?? "vagabond").color;
   ctx.beginPath();
   ctx.arc(
-    x0 + 8 + (state.player.x + 0.5) * sx,
-    y0 + 8 + (state.player.y + 0.5) * sy,
+    x0 + 8 + state.player.x * sx,
+    y0 + 8 + state.player.y * sy,
     3,
     0,
     Math.PI * 2,
   );
   ctx.fill();
   for (const e of state.enemies) {
-    if (!revealAll && !state.seen[e.y]![e.x]) continue;
+    if (!revealAll && !state.seen[Math.floor(e.y)]?.[Math.floor(e.x)]) continue;
     ctx.fillStyle = e.id === "hollow" ? "#c8b6ff" : def(e.id).color;
     ctx.fillRect(x0 + 8 + e.x * sx, y0 + 8 + e.y * sy, 3.5, 3.5);
   }
@@ -251,9 +250,11 @@ export function drawWorld(
   }
 
   for (const e of state.enemies) {
-    if (!state.vis[e.y]![e.x]) continue;
-    const cx = e.x * TILE + TILE / 2;
-    const cy = e.y * TILE + TILE / 2 + 4;
+    const etx = Math.floor(e.x);
+    const ety = Math.floor(e.y);
+    if (!state.vis[ety]?.[etx]) continue;
+    const cx = e.x * TILE;
+    const cy = e.y * TILE + 4;
     if (e.id === "hollow") {
       const faces = state.grave.slice(-5);
       faces.forEach((id, i) => {
@@ -270,9 +271,7 @@ export function drawWorld(
       ctx.fillRect(cx - 22, cy - 42, 44 * ratio, 6);
     } else {
       ctx.save();
-      if (e.flash > 0) {
-        ctx.filter = "brightness(2)";
-      }
+      if (e.flash > 0) ctx.filter = "brightness(2)";
       drawSoul(ctx, e.id, cx, cy, TILE * 0.88, time, { elite: e.elite, facing: e.facing });
       ctx.restore();
       if (e.hp < e.maxHp || e.elite) {
@@ -285,10 +284,28 @@ export function drawWorld(
     }
   }
 
+  if (!state.stairsOpen && state.floor < LAST_FLOOR) {
+    const lx = state.exitX * TILE;
+    const ly = state.exitY * TILE;
+    if (state.seen[state.exitY]?.[state.exitX]) {
+      ctx.fillStyle = "rgba(59,33,82,0.35)";
+      roundRect(ctx, lx + 10, ly + 10, TILE - 20, TILE - 20, 8);
+      ctx.fill();
+      ctx.strokeStyle = "#3b2152";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#ffe566";
+      ctx.font = "800 16px Fredoka, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("?", lx + TILE / 2, ly + 30);
+    }
+  }
+
   const p = state.player;
-  const pcx = p.x * TILE + TILE / 2;
-  const pcy = p.y * TILE + TILE / 2 + 4;
+  const pcx = p.x * TILE;
+  const pcy = p.y * TILE + 4;
   const stack = p.stack;
+  const ghost = p.iFrames > 0 && Math.sin(time / 40) > 0;
   for (let i = stack.length - 1; i >= 1; i--) {
     drawSoul(ctx, stack[i]!, pcx + i * 2, pcy + i * 3, TILE * 0.72 - i, time, {
       ghost: true,
@@ -296,18 +313,11 @@ export function drawWorld(
     });
   }
   if (stack[0]) {
-    drawSoul(ctx, stack[0], pcx, pcy, TILE * 0.92, time, { player: true, facing: p.facing });
-  }
-
-  ctx.strokeStyle = "rgba(255,90,138,0.45)";
-  ctx.lineWidth = 3;
-  for (const dir of DIR_LIST) {
-    const v = DIRS[dir];
-    const nx = p.x + v.x;
-    const ny = p.y + v.y;
-    if (!isWalkable(state.tiles, nx, ny)) continue;
-    if (!state.vis[ny]?.[nx]) continue;
-    ctx.strokeRect(nx * TILE + 6, ny * TILE + 6, TILE - 12, TILE - 12);
+    drawSoul(ctx, stack[0], pcx, pcy, TILE * 0.92, time, {
+      player: true,
+      facing: p.facing,
+      ghost,
+    });
   }
 
   const glow = ctx.createRadialGradient(pcx, pcy, 8, pcx, pcy, TILE * 3.2);
@@ -338,37 +348,37 @@ export function drawWorld(
     ctx.fillRect(0, 0, viewW, viewH);
   }
 
-  drawMinimap(ctx, state, meta, viewW);
+  if (hasPerk(meta, "maps")) drawMinimap(ctx, state, meta, viewW);
 
-  ctx.fillStyle = "#3b2152";
-  ctx.font = "800 16px Fredoka, Nunito, sans-serif";
   ctx.textAlign = "left";
   ctx.strokeStyle = "#fff6c8";
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 6;
   ctx.lineJoin = "round";
-  const hud1 = `Floor ${state.floor}  ·  ${FLOOR_NAMES[state.floor] ?? ""}  ·  Turn ${state.turn}`;
-  ctx.strokeText(hud1, 18, 28);
-  ctx.fillText(hud1, 18, 28);
+  ctx.font = "800 18px Fredoka, Nunito, sans-serif";
+  ctx.fillStyle = "#ff5a8a";
+  const goal = `${RUN_GOAL}  ·  closet ${state.floor} / ${LAST_FLOOR}`;
+  ctx.strokeText(goal, 18, 28);
+  ctx.fillText(goal, 18, 28);
+
+  ctx.font = "800 16px Fredoka, Nunito, sans-serif";
+  ctx.fillStyle = "#3b2152";
+  const floorGoal = goalLabel(state);
+  ctx.strokeText(floorGoal, 18, 52);
+  ctx.fillText(floorGoal, 18, 52);
 
   ctx.fillStyle = "#e89a00";
-  ctx.font = "800 16px Fredoka, Nunito, sans-serif";
-  ctx.strokeText(`${state.gold} coins`, 18, 50);
-  ctx.fillText(`${state.gold} coins`, 18, 50);
+  ctx.strokeText(`${state.gold} coins`, 18, 76);
+  ctx.fillText(`${state.gold} coins`, 18, 76);
   ctx.fillStyle = "#ff7aa0";
-  ctx.strokeText(`${state.stitches} lucky pin${state.stitches === 1 ? "" : "s"}`, 120, 50);
-  ctx.fillText(`${state.stitches} lucky pin${state.stitches === 1 ? "" : "s"}`, 120, 50);
-
-  const graveN = state.grave.length;
-  ctx.fillStyle = "#7a5ad0";
-  const hud3 = `King's closet ${graveN}  ·  boop ${hollowDamagePreview(state)}`;
-  ctx.strokeText(hud3, 18, 70);
-  ctx.fillText(hud3, 18, 70);
+  const pins = `${state.stitches} pin${state.stitches === 1 ? "" : "s"}`;
+  ctx.strokeText(pins, 130, 76);
+  ctx.fillText(pins, 130, 76);
 
   const face = def(stack[0] ?? "vagabond");
   ctx.textAlign = "center";
   ctx.fillStyle = face.color;
   ctx.font = "800 16px Fredoka, Nunito, sans-serif";
-  const power = `Space — ${face.active.split("—")[0]!.trim()}`;
+  const power = `Hold WASD to run · Space ${face.active.split("—")[0]!.trim()}`;
   ctx.strokeText(power, viewW / 2, viewH - 22);
   ctx.fillText(power, viewW / 2, viewH - 22);
 }

@@ -45,10 +45,10 @@ canvas#game {
 #stack-panel {
   pointer-events: none;
   position: absolute;
-  top: 84px;
+  top: 96px;
   left: 16px;
-  width: min(260px, 34vw);
-  padding: 12px 14px 14px;
+  width: min(200px, 30vw);
+  padding: 10px 12px 12px;
   background: var(--panel);
   border: 3px solid #3b2152;
   border-radius: 18px;

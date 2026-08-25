@@ -28,7 +28,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 2,
     gold: 2,
-    active: "Pocket Lint — once a floor, wait to find 1 coin.",
+    active: "Pocket Lint — find a coin. Needs a rest first.",
     echo: "Snack harvests give +1 coin.",
     blurb: "A round little ghost in stripey PJs. The costumes go ON Pip. That's the whole trick.",
     unlockFloor: 1,
@@ -236,8 +236,12 @@ export function popLine(id: IdentityId): string {
 export function enemyPool(floor: number): IdentityId[] {
   const pool: IdentityId[] = ["rat", "rat", "rat", "vagabond"];
   if (floor >= 2) pool.push("guard", "rat");
-  if (floor >= 3) pool.push("archer", "thief", "guard");
-  if (floor >= 4) pool.push("thief", "priest", "archer");
-  if (floor >= 5) pool.push("pyromancer", "knight", "priest", "thief");
+  if (floor >= 3) pool.push("archer", "guard");
+  if (floor >= 4) pool.push("thief", "archer");
+  if (floor >= 5) pool.push("thief", "priest");
+  if (floor >= 6) pool.push("priest", "archer");
+  if (floor >= 7) pool.push("pyromancer", "thief");
+  if (floor >= 8) pool.push("knight", "pyromancer", "priest");
+  if (floor >= 9) pool.push("knight", "knight", "thief");
   return pool;
 }

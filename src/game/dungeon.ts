@@ -1,6 +1,6 @@
 import { Rng } from "./rng.ts";
 import type { Room, RoomKind, TileKind } from "./types.ts";
-import { key } from "./types.ts";
+import { LAST_FLOOR, key } from "./types.ts";
 
 export const MAP_W = 54;
 export const MAP_H = 40;
@@ -92,7 +92,7 @@ function tryGenerate(rng: Rng, floor: number): Dungeon | null {
     }
   }
 
-  const want = floor === 6 ? 6 : floor >= 3 ? 6 : 5;
+  const want = floor >= LAST_FLOOR ? 6 : floor >= 6 ? 6 : floor >= 3 ? 5 : 4;
   const chosen: typeof slots = [];
   const startSlot = slots[4]!;
   chosen.push(startSlot);
@@ -148,25 +148,21 @@ function tryGenerate(rng: Rng, floor: number): Dungeon | null {
   }
 
   start.kind = "start";
-  farthest.kind = floor === 6 ? "boss" : "exit";
+  farthest.kind = floor >= LAST_FLOOR ? "boss" : "exit";
 
   const rest = rooms.filter((r) => r !== start && r !== farthest);
   rng.shuffle(rest);
 
   const assign: RoomKind[] = [];
-  if (floor === 3 || floor === 5) assign.push("shop");
-  else if (rng.chance(0.45) && floor > 1) assign.push("shop");
-  assign.push("shrine");
+  if (floor >= 4 && (floor === 4 || floor === 7 || rng.chance(0.4))) assign.push("shop");
+  if (floor >= 3) assign.push("shrine");
   if (rest.length > 3) assign.push("treasure");
-  if (floor === 2 || floor === 4 || (floor >= 3 && rng.chance(0.5))) assign.push("elite");
+  if (floor === 5 || floor === 8 || (floor >= 6 && rng.chance(0.45))) assign.push("elite");
 
   for (let i = 0; i < rest.length; i++) {
     rest[i]!.kind = assign[i] ?? "combat";
   }
 
-  if (farthest.kind === "exit") {
-    tiles[farthest.cy]![farthest.cx] = "stairs";
-  }
   for (const r of rooms) {
     if (r.kind === "shrine") tiles[r.cy]![r.cx] = "shrine";
     if (r.kind === "shop") tiles[r.cy]![r.cx] = "shop";

@@ -2,36 +2,30 @@ import { AudioSys } from "./audio.ts";
 import { def, IDENTITIES, PLAYABLE, powerName } from "./identities.ts";
 import {
   Input,
-  KEY_DOWN,
   KEY_ENTER,
   KEY_ESC,
-  KEY_LEFT,
   KEY_ONE,
   KEY_POWER,
-  KEY_RIGHT,
   KEY_THREE,
   KEY_TWO,
-  KEY_UP,
-  KEY_WAIT,
 } from "./input.ts";
 import { hasPerk, loadMeta, PERKS, remembranceFor, saveMeta, type Meta } from "./meta.ts";
 import { Particles } from "./particles.ts";
-import { activeResonances, echoSet, RESONANCES } from "./resonances.ts";
+import { activeResonances, RESONANCES } from "./resonances.ts";
 import { drawTitleBg, drawWorld, type Cam } from "./render.ts";
 import { dailySeed, hashSeed } from "./rng.ts";
 import {
   chooseHarvest,
   chooseWear,
-  clickStep,
   createRun,
   effectiveMax,
+  goalLabel,
   leaveShop,
+  setMoveTarget,
   shopPick,
   shrinePick,
-  stepEnemies,
-  tryMove,
+  tickWorld,
   usePower,
-  waitTurn,
 } from "./sim.ts";
 import type { IdentityId, RunState, Screen } from "./types.ts";
 import { FLOOR_NAMES, LAST_FLOOR, TILE } from "./types.ts";
@@ -116,8 +110,8 @@ export class Game {
   snapCam(): void {
     const r = this.run;
     if (!r) return;
-    this.cam.x = r.player.x * TILE + TILE / 2 - this.viewW / 2;
-    this.cam.y = r.player.y * TILE + TILE / 2 - this.viewH / 2;
+    this.cam.x = r.player.x * TILE - this.viewW / 2;
+    this.cam.y = r.player.y * TILE - this.viewH / 2;
   }
 
   showScreen(name: Screen): void {
@@ -186,10 +180,10 @@ export class Game {
     for (const f of queue) {
       if (f.kind === "shake" && this.meta.shake) this.shake = Math.max(this.shake, f.mag);
       if (f.kind === "burst") {
-        this.particles.burst((f.x + 0.5) * TILE, (f.y + 0.5) * TILE, f.color, f.n ?? 12);
+        this.particles.burst(f.x * TILE, f.y * TILE, f.color, f.n ?? 12);
       }
       if (f.kind === "text") {
-        this.particles.text((f.x + 0.5) * TILE, f.y * TILE, f.text, f.color);
+        this.particles.text(f.x * TILE, f.y * TILE, f.text, f.color);
       }
       if (f.kind === "banner") {
         this.banner = { text: f.text, sub: f.sub ?? "", color: f.color, t: 1.6 };
@@ -252,20 +246,13 @@ export class Game {
       return;
     }
 
-    if (r.phase === "enemies") return;
-
     if (r.phase === "playing") {
       this.hideModal();
-      if (this.input.consume(KEY_UP)) tryMove(r, 0, -1);
-      else if (this.input.consume(KEY_DOWN)) tryMove(r, 0, 1);
-      else if (this.input.consume(KEY_LEFT)) tryMove(r, -1, 0);
-      else if (this.input.consume(KEY_RIGHT)) tryMove(r, 1, 0);
-      else if (this.input.consume(KEY_WAIT)) waitTurn(r);
-      else if (this.input.consume(KEY_POWER)) usePower(r);
-      else if (this.input.consumeClick()) {
-        const tx = Math.floor((this.input.mouse.x + this.cam.x) / TILE);
-        const ty = Math.floor((this.input.mouse.y + this.cam.y) / TILE);
-        clickStep(r, tx, ty);
+      if (this.input.consume(KEY_POWER)) usePower(r);
+      if (this.input.consumeClick()) {
+        const wx = (this.input.mouse.x + this.cam.x) / TILE;
+        const wy = (this.input.mouse.y + this.cam.y) / TILE;
+        setMoveTarget(r, wx, wy);
       }
     }
     this.drainFx();
@@ -331,11 +318,6 @@ export class Game {
       return;
     }
     if (!r) return;
-    if (cmd === "up") tryMove(r, 0, -1);
-    if (cmd === "down") tryMove(r, 0, 1);
-    if (cmd === "left") tryMove(r, -1, 0);
-    if (cmd === "right") tryMove(r, 1, 0);
-    if (cmd === "wait") waitTurn(r);
     if (cmd === "power") usePower(r);
     if (cmd === "wear") chooseWear(r);
     if (cmd === "harvest") chooseHarvest(r);
@@ -372,17 +354,18 @@ export class Game {
     this.particles.update(dt);
 
     if (this.screen === "playing" && this.run) {
-      if (this.run.phase === "enemies") {
-        stepEnemies(this.run, dt);
+      if (this.run.phase === "playing") {
+        const axis = this.input.axis();
+        tickWorld(this.run, dt, axis.x, axis.y);
         this.drainFx();
       }
       this.handlePlaying();
       const r = this.run;
       if (r) {
-        const tx = r.player.x * TILE + TILE / 2 - this.viewW / 2;
-        const ty = r.player.y * TILE + TILE / 2 - this.viewH / 2;
-        this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 8);
-        this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 8);
+        const tx = r.player.x * TILE - this.viewW / 2;
+        const ty = r.player.y * TILE - this.viewH / 2;
+        this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 10);
+        this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 10);
       }
     } else if (this.screen === "pause" && this.input.consume(KEY_ESC)) {
       this.showScreen("playing");
@@ -416,10 +399,10 @@ export class Game {
       ctx.fillStyle = "#ff5a8a";
       ctx.font = "800 48px Fredoka, Nunito, sans-serif";
       ctx.strokeText(`Floor ${this.run.floor}`, this.viewW / 2, this.viewH * 0.28);
-      ctx.fillText(`Floor ${this.run.floor}`, this.viewW / 2, this.viewH * 0.28);
+      ctx.fillText(`Closet ${this.run.floor} / ${LAST_FLOOR}`, this.viewW / 2, this.viewH * 0.28);
       ctx.fillStyle = "#3b2152";
-      ctx.font = "800 22px Fredoka, Nunito, sans-serif";
-      ctx.fillText(FLOOR_NAMES[this.run.floor] ?? "", this.viewW / 2, this.viewH * 0.28 + 34);
+      ctx.font = "800 20px Fredoka, Nunito, sans-serif";
+      ctx.fillText(goalLabel(this.run), this.viewW / 2, this.viewH * 0.28 + 34);
       ctx.restore();
     }
 
@@ -504,16 +487,15 @@ export class Game {
     const panel = document.getElementById("stack-panel");
     const logEl = document.getElementById("log");
     if (!r || !panel || !logEl) return;
-    const k = `${r.phase}|${r.turn}|${r.gold}|${r.stitches}|${r.player.stack.join(",")}|${r.log[0] ?? ""}|${r.pending?.id ?? ""}|${r.memories.join(",")}|${this.meta.mute}`;
+    const k = `${r.phase}|${r.gold}|${r.stitches}|${r.player.stack.join(",")}|${r.log[0] ?? ""}|${r.pending?.id ?? ""}|${r.goalHave}|${r.stairsOpen}|${this.meta.mute}`;
     if (k === this.hudKey) return;
     this.hudKey = k;
     const face = r.player.stack[0] ?? "vagabond";
-    const echoes = echoSet(r);
     const res = activeResonances(r);
     const max = effectiveMax(r);
     panel.innerHTML = `
       <div class="stack-head">
-        <span>Costume pile</span>
+        <span>Pile</span>
         <span>${r.player.stack.length}/${max}</span>
       </div>
       <ol class="stack-list">
@@ -522,37 +504,21 @@ export class Game {
             const d = def(id);
             return `<li class="${i === 0 ? "top" : ""}" style="--c:${d.color}">
               <b>${d.name}</b>
-              <small>${i === 0 ? "ON TOP · " + powerName(id) : "underneath · " + d.echo}</small>
+              ${i === 0 ? `<small>${powerName(id)}</small>` : ""}
             </li>`;
           })
           .join("")}
       </ol>
       ${
-        r.memories.length
-          ? `<div class="memories"><span>Kept tricks</span>${r.memories
-              .map((id) => `<em style="color:${def(id).color}">${def(id).name}</em>`)
-              .join("")}</div>`
+        res.length
+          ? `<div class="res-list">${res.map((x) => `<div class="res"><b>${x.name}</b></div>`).join("")}</div>`
           : ""
       }
-      ${
-        res.length
-          ? `<div class="res-list">${res
-              .map((x) => `<div class="res"><b>${x.name}</b><small>${x.desc}</small></div>`)
-              .join("")}</div>`
-          : `<p class="hint">Pile on costumes to unlock silly combos.</p>`
-      }
-      <p class="power">${def(face).active}</p>
+      <p class="power">${def(face).active.split("—")[0]}</p>
     `;
-    logEl.innerHTML = r.log.map((l) => `<div>${l}</div>`).join("");
+    logEl.innerHTML = r.log.slice(0, 2).map((l) => `<div>${l}</div>`).join("");
     const mute = document.getElementById("btn-mute");
     if (mute) mute.textContent = this.meta.mute ? "Sound off" : "Sound on";
-
-    const echoNote = document.getElementById("echo-note");
-    if (echoNote) {
-      echoNote.textContent = echoes.size
-        ? `Tricks: ${[...echoes].map((id) => def(id).name).join(", ")}`
-        : "No extra costume tricks yet.";
-    }
 
     if ((r.phase === "decision" && r.pending) || r.phase === "shop" || r.phase === "shrine") {
       this.syncModal();
@@ -580,7 +546,7 @@ export class Game {
     }
     const stats = document.getElementById("meta-stats");
     if (stats) {
-      stats.textContent = `${this.meta.runs} closet raids · ${this.meta.wins} wins · deepest floor ${this.meta.bestFloor}`;
+      stats.textContent = `${this.meta.runs} tries · deepest closet ${this.meta.bestFloor} / ${LAST_FLOOR} · ${this.meta.wins} wins`;
     }
     const mute = document.querySelector("[data-cmd='mute']");
     if (mute) mute.textContent = this.meta.mute ? "Sound is off" : "Sound is on";
@@ -635,7 +601,7 @@ export class Game {
           ? s.usurper
             ? "You put King Empty on like a giant raincoat. Googly eyes and all. Time for a snack."
             : "You sent King Empty packing and kept your own silly pile. Sticker time."
-          : "The last costume went fwoomp. That's okay. Pip always tries again."
+          : `The last costume went fwoomp. King Empty is still ${Math.max(1, LAST_FLOOR - s.floor)} closet${LAST_FLOOR - s.floor === 1 ? "" : "s"} away. Stickers help the next try.`
       }</p>
       <ul class="stats">
         <li>Floor ${s.floor} — ${FLOOR_NAMES[s.floor] ?? ""}</li>

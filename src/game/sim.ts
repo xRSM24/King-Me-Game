@@ -1,20 +1,13 @@
 import { def, enemyPool, harvestLine, popLine, wearLine } from "./identities.ts";
-import {
-  floorTiles,
-  generateDungeon,
-  isWalkable,
-  lineOfSight,
-  nextStep,
-  roomAt,
-} from "./dungeon.ts";
+import { floorTiles, generateDungeon, isWalkable, lineOfSight } from "./dungeon.ts";
+import { canStand, dist, slide } from "./physics.ts";
 import { Rng } from "./rng.ts";
 import { activeResonances, echoSet, hasRes } from "./resonances.ts";
 import { hasPerk, type Meta } from "./meta.ts";
-import type { Enemy, IdentityId, PlayPhase, RunState, TileKind } from "./types.ts";
+import type { Enemy, IdentityId, PlayPhase, RunState } from "./types.ts";
 import {
   DIR_LIST,
   DIRS,
-  FLOOR_NAMES,
   LAST_FLOOR,
   MAX_STITCH,
   VISION,
@@ -34,7 +27,7 @@ function inPhase(state: RunState, ...phases: PlayPhase[]): boolean {
 
 function log(state: RunState, msg: string): void {
   state.log.unshift(msg);
-  if (state.log.length > 8) state.log.length = 8;
+  if (state.log.length > 4) state.log.length = 4;
 }
 
 function fxBurst(state: RunState, x: number, y: number, color: string, n = 12): void {
@@ -45,32 +38,41 @@ function top(state: RunState): IdentityId {
   return state.player.stack[0] ?? "vagabond";
 }
 
-function enemyAt(state: RunState, x: number, y: number): Enemy | undefined {
-  return state.enemies.find((e) => e.x === x && e.y === y);
+function tileOf(x: number, y: number): { x: number; y: number } {
+  return { x: Math.floor(x), y: Math.floor(y) };
 }
 
-function occupied(state: RunState, x: number, y: number, ignore?: Enemy): boolean {
-  if (state.player.x === x && state.player.y === y) return true;
-  return state.enemies.some((e) => e !== ignore && e.x === x && e.y === y);
+function enemyNear(state: RunState, x: number, y: number, r: number, ignore?: Enemy): Enemy | undefined {
+  let best: Enemy | undefined;
+  let bestD = r;
+  for (const e of state.enemies) {
+    if (e === ignore) continue;
+    const d = dist(e.x, e.y, x, y);
+    if (d < bestD) {
+      bestD = d;
+      best = e;
+    }
+  }
+  return best;
 }
 
-function blockedFor(state: RunState, x: number, y: number, ignore?: Enemy): boolean {
-  return !isWalkable(state.tiles, x, y) || occupied(state, x, y, ignore);
+function occupiedTile(state: RunState, x: number, y: number, ignore?: Enemy): boolean {
+  const pt = tileOf(state.player.x, state.player.y);
+  if (pt.x === x && pt.y === y) return true;
+  return state.enemies.some((e) => e !== ignore && Math.floor(e.x) === x && Math.floor(e.y) === y);
 }
 
 function refreshVision(state: RunState): void {
-  const { player, w, h } = state;
+  const pt = tileOf(state.player.x, state.player.y);
+  const { w, h } = state;
   for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      state.vis[y]![x] = false;
-    }
+    for (let x = 0; x < w; x++) state.vis[y]![x] = false;
   }
-  for (let y = player.y - VISION; y <= player.y + VISION; y++) {
-    for (let x = player.x - VISION; x <= player.x + VISION; x++) {
+  for (let y = pt.y - VISION; y <= pt.y + VISION; y++) {
+    for (let x = pt.x - VISION; x <= pt.x + VISION; x++) {
       if (y < 0 || x < 0 || y >= h || x >= w) continue;
-      const md = Math.abs(x - player.x) + Math.abs(y - player.y);
-      if (md > VISION) continue;
-      if (lineOfSight(state.tiles, player.x, player.y, x, y)) {
+      if (Math.abs(x - pt.x) + Math.abs(y - pt.y) > VISION) continue;
+      if (lineOfSight(state.tiles, pt.x, pt.y, x, y)) {
         state.vis[y]![x] = true;
         state.seen[y]![x] = true;
       }
@@ -83,14 +85,9 @@ function uniqueDiscover(state: RunState): void {
   for (const r of activeResonances(state)) {
     if (!before.has(r.id)) {
       state.discovered.push(r.id);
-      state.fx.push({
-        kind: "banner",
-        text: r.name,
-        sub: r.desc,
-        color: "#e8c36a",
-      });
+      state.fx.push({ kind: "banner", text: r.name, sub: r.desc, color: "#e8c36a" });
       state.fx.push({ kind: "sfx", name: "resonate" });
-      log(state, `Combo! ${r.name}: ${r.desc}`);
+      log(state, `Combo! ${r.name}`);
     }
   }
 }
@@ -101,10 +98,12 @@ function feedHollow(state: RunState, id: IdentityId, why: string): void {
   log(state, why);
 }
 
-function ignite(state: RunState, x: number, y: number, turns = 4): void {
-  if (!isWalkable(state.tiles, x, y)) return;
-  const k = key(x, y);
-  state.fire[k] = Math.max(state.fire[k] ?? 0, turns);
+function ignite(state: RunState, x: number, y: number, seconds = 2.4): void {
+  const tx = Math.floor(x);
+  const ty = Math.floor(y);
+  if (!isWalkable(state.tiles, tx, ty)) return;
+  const k = key(tx, ty);
+  state.fire[k] = Math.max(state.fire[k] ?? 0, seconds);
 }
 
 function meleeDamage(state: RunState): number {
@@ -123,46 +122,29 @@ function rangeBonus(state: RunState): number {
   return echoSet(state).has("archer") ? 1 : 0;
 }
 
-function spendTurn(state: RunState): void {
-  if (state.phase === "dead" || state.phase === "won") return;
-  state.turn += 1;
-  if (state.braceCd > 0) state.braceCd -= 1;
-  state.phase = "enemies";
-  state.enemyIx = 0;
-  state.enemyClock = 0;
-  state.fireTicked = false;
-}
-
 function pickupGold(state: RunState): void {
-  const k = key(state.player.x, state.player.y);
+  const t = tileOf(state.player.x, state.player.y);
+  const k = key(t.x, t.y);
   const g = state.goldMap[k];
-  if (g) {
-    state.gold += g;
-    delete state.goldMap[k];
-    log(state, `You pocket ${g} coins.`);
-    state.fx.push({ kind: "sfx", name: "harvest" });
-    state.fx.push({
-      kind: "text",
-      x: state.player.x,
-      y: state.player.y,
-      text: `+${g}`,
-      color: "#e8c36a",
-    });
-  }
+  if (!g) return;
+  state.gold += g;
+  delete state.goldMap[k];
+  log(state, `You pocket ${g} coins.`);
+  state.fx.push({ kind: "sfx", name: "harvest" });
+  state.fx.push({ kind: "text", x: state.player.x, y: state.player.y, text: `+${g}`, color: "#e8c36a" });
 }
 
 function aoeOnPop(state: RunState, x: number, y: number): void {
   if (!hasRes(state, "saintbones")) return;
-  for (const d of DIR_LIST) {
-    const v = DIRS[d];
-    const e = enemyAt(state, x + v.x, y + v.y);
-    if (!e) continue;
-    hurtEnemy(state, e, 2, false);
+  for (const e of [...state.enemies]) {
+    if (dist(e.x, e.y, x, y) < 1.2) hurtEnemy(state, e, 2, false);
   }
 }
 
 export function takeHit(state: RunState, src = "a bonk"): void {
   if (state.phase === "dead" || state.phase === "won") return;
+  if (state.player.iFrames > 0) return;
+  state.player.iFrames = 0.85;
   if (state.stitches > 0) {
     state.stitches -= 1;
     log(state, `Lucky Pin catches ${src}.`);
@@ -219,24 +201,42 @@ export function takeHit(state: RunState, src = "a bonk"): void {
 
 function hurtEnemy(state: RunState, e: Enemy, dmg: number, canLoot: boolean): boolean {
   e.hp -= dmg;
-  e.flash = 1;
-  state.fx.push({
-    kind: "text",
-    x: e.x,
-    y: e.y,
-    text: `-${dmg}`,
-    color: "#f2e6c8",
-  });
+  e.flash = 0.2;
+  state.fx.push({ kind: "text", x: e.x, y: e.y, text: `-${dmg}`, color: "#ff5a8a" });
   fxBurst(state, e.x, e.y, def(e.id).color, 8);
   if (e.hp > 0) return false;
   killEnemy(state, e, canLoot);
   return true;
 }
 
+function noteGoal(state: RunState): void {
+  if (state.floor >= LAST_FLOOR) return;
+  if (state.goalHave < state.goalNeed) {
+    const left = state.goalNeed - state.goalHave;
+    log(state, left === 1 ? "One more costume and the stairs pop open." : `${left} costumes left to open the stairs.`);
+    return;
+  }
+  if (state.stairsOpen) return;
+  state.stairsOpen = true;
+  const x = state.exitX;
+  const y = state.exitY;
+  if (isWalkable(state.tiles, x, y) || state.tiles[y]?.[x] === "wall") {
+    state.tiles[y]![x] = "stairs";
+  }
+  state.fx.push({
+    kind: "banner",
+    text: "Stairs popped open!",
+    sub: "Keep going. King Empty is still far.",
+    color: "#ff7aa0",
+  });
+  state.fx.push({ kind: "sfx", name: "stairs" });
+  log(state, "The stairs pop out of the floor. Next closet!");
+}
+
 function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
   state.enemies = state.enemies.filter((x) => x !== e);
   state.kills += 1;
-  state.blood[key(e.x, e.y)] = (state.blood[key(e.x, e.y)] ?? 0) + 1;
+  state.blood[key(Math.floor(e.x), Math.floor(e.y))] = 1;
   fxBurst(state, e.x, e.y, def(e.id).color, 18);
   if (e.id === "hollow") {
     state.pending = e;
@@ -245,6 +245,8 @@ function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
     state.fx.push({ kind: "sfx", name: "win" });
     return;
   }
+  state.goalHave += 1;
+  noteGoal(state);
   if (!canLoot || state.phase === "decision") {
     harvestEnemy(state, e, true);
     return;
@@ -269,12 +271,7 @@ function addAsh(state: RunState, id: IdentityId): void {
   if (n >= 3 && !state.memories.includes(id)) {
     state.memories.push(id);
     log(state, `Memory sticker! You keep ${def(id).name}'s trick without wearing it.`);
-    state.fx.push({
-      kind: "banner",
-      text: `${def(id).name} Memory`,
-      sub: def(id).echo,
-      color: def(id).color,
-    });
+    state.fx.push({ kind: "banner", text: `${def(id).name} Memory`, sub: def(id).echo, color: def(id).color });
     uniqueDiscover(state);
   }
 }
@@ -291,18 +288,10 @@ function harvestEnemy(state: RunState, e: Enemy, silentFeed: boolean): void {
     feedHollow(
       state,
       e.id,
-      silentFeed
-        ? `The fire mailed ${def(e.id).name}'s costume to King Empty.`
-        : harvestLine(e.id),
+      silentFeed ? `The fire mailed ${def(e.id).name}'s costume to King Empty.` : harvestLine(e.id),
     );
   }
-  state.fx.push({
-    kind: "text",
-    x: e.x,
-    y: e.y,
-    text: `+${g}g`,
-    color: "#e8c36a",
-  });
+  state.fx.push({ kind: "text", x: e.x, y: e.y, text: `+${g}`, color: "#e8c36a" });
 }
 
 function wearEnemy(state: RunState, e: Enemy): void {
@@ -322,11 +311,7 @@ function wearEnemy(state: RunState, e: Enemy): void {
   if (!state.worn.includes(e.id)) state.worn.push(e.id);
   if (state.player.stack.length > effectiveMax(state)) {
     const lost = state.player.stack.pop()!;
-    feedHollow(
-      state,
-      lost,
-      `The ${def(lost).name} costume slips off the bottom. King Empty yoinked it.`,
-    );
+    feedHollow(state, lost, `The ${def(lost).name} costume slips off the bottom. King Empty yoinked it.`);
   }
   log(state, wearLine(e.id));
   uniqueDiscover(state);
@@ -338,17 +323,11 @@ function effectiveMax(state: RunState): number {
   return m;
 }
 
-function spawnEnemy(
-  state: RunState,
-  x: number,
-  y: number,
-  id: IdentityId,
-  elite = false,
-): void {
+function spawnEnemy(state: RunState, x: number, y: number, id: IdentityId, elite = false): void {
   const d = def(id);
-  let hp = d.hp + Math.floor((state.floor - 1) / 2);
+  let hp = d.hp + Math.floor(state.floor / 3);
   if (elite) hp += 3;
-  if (id === "hollow") hp = 8 + state.grave.length;
+  if (id === "hollow") hp = 18 + state.grave.length * 2;
   state.enemies.push({
     x,
     y,
@@ -359,67 +338,79 @@ function spawnEnemy(
     stun: 0,
     flash: 0,
     elite,
+    atkCd: 0.4,
   });
 }
 
 function pickOpen(state: RunState, tiles: { x: number; y: number }[], avoid: number): { x: number; y: number } | null {
   const opts = tiles.filter((p) => {
     if (!isWalkable(state.tiles, p.x, p.y)) return false;
-    if (occupied(state, p.x, p.y)) return false;
+    if (occupiedTile(state, p.x, p.y)) return false;
     const t = state.tiles[p.y]![p.x];
     if (t === "stairs" || t === "shrine" || t === "shop") return false;
-    const md = Math.abs(p.x - state.player.x) + Math.abs(p.y - state.player.y);
-    if (md < avoid) return false;
+    const pt = tileOf(state.player.x, state.player.y);
+    if (Math.abs(p.x - pt.x) + Math.abs(p.y - pt.y) < avoid) return false;
     return true;
   });
   if (!opts.length) return null;
   return rng.pick(opts);
 }
 
+function floorGoal(floor: number): number {
+  if (floor >= LAST_FLOOR) return 1;
+  if (floor === 1) return 1;
+  return Math.min(6, 1 + Math.floor(floor * 0.7));
+}
+
 function populateFloor(state: RunState): void {
   const pool = enemyPool(state.floor);
   for (const room of state.rooms) {
     if (room.kind === "start") {
-      const spots = floorTiles(room);
-      const p = pickOpen(state, spots, 2);
-      if (p) spawnEnemy(state, p.x, p.y, "rat");
+      if (state.floor === 1) {
+        const spots = floorTiles(room);
+        const p = pickOpen(state, spots, 3);
+        if (p) spawnEnemy(state, p.x + 0.5, p.y + 0.5, "rat");
+      }
       continue;
     }
     const spots = floorTiles(room);
     if (room.kind === "boss") {
-      spawnEnemy(state, room.cx, room.cy, "hollow");
+      spawnEnemy(state, room.cx + 0.5, room.cy + 0.5, "hollow");
       continue;
     }
     if (room.kind === "treasure") {
       const g = pickOpen(state, spots, 0);
       if (g) state.goldMap[key(g.x, g.y)] = rng.range(5, 9);
-      const r = pickOpen(state, spots, 2);
-      if (r && rng.chance(0.6)) spawnEnemy(state, r.x, r.y, "rat");
       continue;
     }
     if (room.kind === "elite") {
       const p = pickOpen(state, spots, 3);
-      if (p) spawnEnemy(state, p.x, p.y, rng.chance(0.5) ? "knight" : "guard", true);
+      if (p) spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.chance(0.5) ? "knight" : "guard", true);
       const p2 = pickOpen(state, spots, 2);
-      if (p2) spawnEnemy(state, p2.x, p2.y, "rat");
+      if (p2) spawnEnemy(state, p2.x + 0.5, p2.y + 0.5, "rat");
       continue;
     }
+    if (state.floor === 1) continue;
     const n =
       room.kind === "exit"
-        ? rng.range(1, 2)
-        : state.floor === 1
+        ? 1
+        : state.floor === 2
           ? 1
-          : 1 + Math.floor(state.floor / 2) + rng.int(2);
-    const count = Math.min(n, 4);
-    for (let i = 0; i < count; i++) {
-      const p = pickOpen(state, spots, room.kind === "exit" ? 2 : 2);
+          : Math.min(4, 1 + Math.floor((state.floor - 1) / 3) + rng.int(2));
+    for (let i = 0; i < n; i++) {
+      const p = pickOpen(state, spots, 2);
       if (!p) break;
-      spawnEnemy(state, p.x, p.y, rng.pick(pool));
+      spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.pick(pool));
     }
-    if (room.kind === "combat" && rng.chance(0.25)) {
-      const g = pickOpen(state, spots, 0);
-      if (g) state.goldMap[key(g.x, g.y)] = rng.range(2, 5);
-    }
+  }
+
+  const need = state.goalNeed;
+  let guards = 0;
+  while (state.enemies.filter((e) => e.id !== "hollow").length < need && guards++ < 12) {
+    const room = rng.pick(state.rooms.filter((r) => r.kind === "combat" || r.kind === "exit" || r.kind === "start"));
+    const p = pickOpen(state, floorTiles(room), 3);
+    if (!p) break;
+    spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.pick(pool));
   }
 }
 
@@ -452,7 +443,7 @@ function floorStartBonuses(state: RunState): void {
 
 export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState {
   rng = new Rng(seed);
-  const maxStack = hasPerk(meta, "stack5") ? 5 : 4;
+  const maxStack = hasPerk(meta, "stack5") ? 4 : 3;
   const state: RunState = {
     seed,
     floor: 1,
@@ -462,7 +453,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     w: 0,
     h: 0,
     rooms: [],
-    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"] },
+    player: { x: 0, y: 0, facing: "down", stack: ["vagabond"], iFrames: 0 },
     enemies: [],
     goldMap: {},
     fire: {},
@@ -470,7 +461,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     vis: [],
     blood: {},
     grave: [],
-    log: ["Pip wakes up in stripey PJs. King Empty is already collecting hats."],
+    log: ["Goal: reach King Empty's Fort. You will get sent home a lot. That's the point."],
     fx: [],
     pending: null,
     maxStack,
@@ -480,25 +471,36 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     worn: ["vagabond"],
     kills: 0,
     gold: hasPerk(meta, "gold") ? 4 : 0,
-    stitches: hasPerk(meta, "stitch") ? 2 : 1,
+    stitches: hasPerk(meta, "stitch") ? 1 : 0,
     priestBound: false,
     braceCd: 0,
     scroungeUsed: false,
     knightOathUsed: false,
     interactLock: false,
-    enemyIx: 0,
-    enemyClock: 0,
-    fireTicked: false,
     movedThisTurn: false,
     isDaily,
     shrineSpent: {},
     shopSpent: {},
     extraSlotBought: false,
     hollowMimic: null,
-    hollowMimicTurns: 0,
+    hollowMimicTime: 0,
+    goalNeed: 1,
+    goalHave: 0,
+    exitX: 0,
+    exitY: 0,
+    stairsOpen: false,
+    atkCd: 0,
+    powerCd: 0,
+    fireClock: 0,
+    moveTarget: null,
   };
   loadFloor(state, meta);
-  log(state, "Lucky Pin stuck on. Bump costumes. Wear them, or snack them.");
+  state.fx.push({
+    kind: "banner",
+    text: "Goal: King Empty",
+    sub: "Ten closets down. Stickers help the next try.",
+    color: "#ff5a8a",
+  });
   return state;
 }
 
@@ -517,181 +519,154 @@ export function loadFloor(state: RunState, _meta?: Meta): void {
   state.shrineSpent = {};
   state.shopSpent = {};
   state.interactLock = false;
+  state.moveTarget = null;
+  state.goalNeed = floorGoal(state.floor);
+  state.goalHave = 0;
+  state.stairsOpen = false;
+  const exit = dung.rooms.find((r) => r.kind === "exit" || r.kind === "boss") ?? dung.rooms[dung.rooms.length - 1]!;
+  state.exitX = exit.cx;
+  state.exitY = exit.cy;
   const start = dung.rooms.find((r) => r.kind === "start") ?? dung.rooms[0]!;
-  state.player.x = start.cx;
-  state.player.y = start.cy;
+  state.player.x = start.cx + 0.5;
+  state.player.y = start.cy + 0.5;
   populateFloor(state);
   floorStartBonuses(state);
   revealStart(state);
   refreshVision(state);
   state.fx.push({ kind: "floorTitle" });
   state.fx.push({ kind: "sfx", name: "stairs" });
-  log(state, `Floor ${state.floor} — ${FLOOR_NAMES[state.floor] ?? "Below"}.`);
+  if (state.floor >= LAST_FLOOR) {
+    log(state, "King Empty's Fort. This is the goal.");
+  } else {
+    log(state, `Closet ${state.floor} — boop ${state.goalNeed} costume${state.goalNeed === 1 ? "" : "s"} to open the stairs.`);
+  }
 }
 
 function descend(state: RunState): void {
-  if (state.floor >= LAST_FLOOR) {
-    log(state, "No more stairs. King Empty's fort is this way.");
-    return;
-  }
+  if (state.floor >= LAST_FLOOR) return;
   state.floor += 1;
   loadFloor(state);
 }
 
 function afterMove(state: RunState, fromX: number, fromY: number): void {
   pickupGold(state);
-  if (hasRes(state, "cinderstep")) ignite(state, fromX, fromY, 3);
-  const t = state.tiles[state.player.y]![state.player.x];
-  const k = key(state.player.x, state.player.y);
-  if (t === "stairs") {
+  if (hasRes(state, "cinderstep")) ignite(state, fromX, fromY, 1.6);
+  const t = tileOf(state.player.x, state.player.y);
+  const kind = state.tiles[t.y]![t.x];
+  const k = key(t.x, t.y);
+  if (kind === "stairs" && state.stairsOpen) {
     descend(state);
     return;
   }
-  if (state.interactLock) return;
-  if (t === "shrine" && !state.shrineSpent[k]) {
+  if (state.interactLock) {
+    const from = tileOf(fromX, fromY);
+    if (from.x !== t.x || from.y !== t.y) state.interactLock = false;
+    return;
+  }
+  if (kind === "shrine" && !state.shrineSpent[k]) {
     state.phase = "shrine";
     state.interactLock = true;
     return;
   }
-  if (t === "shop" && !state.shopSpent[k]) {
+  if (kind === "shop" && !state.shopSpent[k]) {
     state.phase = "shop";
     state.interactLock = true;
   }
 }
 
+function knock(state: RunState, e: Enemy, fromX: number, fromY: number, force: number): void {
+  const d = dist(e.x, e.y, fromX, fromY) || 1;
+  const dx = ((e.x - fromX) / d) * force;
+  const dy = ((e.y - fromY) / d) * force;
+  const n = slide(state.tiles, e.x, e.y, dx, dy, 0.3);
+  e.x = n.x;
+  e.y = n.y;
+}
+
 function attackMelee(state: RunState, e: Enemy): void {
   const dmg = meleeDamage(state);
   state.fx.push({ kind: "sfx", name: "hit" });
-  state.fx.push({ kind: "hitstop", ms: 50 });
-  state.fx.push({ kind: "shake", mag: 4 });
-  if (echoSet(state).has("pyromancer") || top(state) === "pyromancer") {
-    ignite(state, e.x, e.y, 3);
-  }
+  state.fx.push({ kind: "hitstop", ms: 40 });
+  state.fx.push({ kind: "shake", mag: 3 });
+  if (echoSet(state).has("pyromancer") || top(state) === "pyromancer") ignite(state, e.x, e.y, 1.8);
   const dead = hurtEnemy(state, e, dmg, true);
-  if (!dead && top(state) === "guard") {
-    const v = DIRS[state.player.facing];
-    const nx = e.x + v.x;
-    const ny = e.y + v.y;
-    if (isWalkable(state.tiles, nx, ny) && !occupied(state, nx, ny)) {
-      e.x = nx;
-      e.y = ny;
-      log(state, "BONK — they hop back.");
-    } else {
-      e.stun = 1;
-      log(state, "BONK — they hit the wall. Clonk.");
-    }
-  }
+  if (!dead) knock(state, e, state.player.x, state.player.y, 0.55);
 }
 
-export function tryMove(state: RunState, dx: number, dy: number): boolean {
-  if (state.phase !== "playing") return false;
-  if (dx === 0 && dy === 0) return false;
-  state.player.facing = dirFromDelta(dx, dy);
-  const floorBefore = state.floor;
-  const nx = state.player.x + dx;
-  const ny = state.player.y + dy;
-  const e = enemyAt(state, nx, ny);
-  state.movedThisTurn = true;
-  if (e) {
-    attackMelee(state, e);
-    if (inPhase(state, "decision")) return true;
-    spendTurn(state);
-    return true;
-  }
-  if (!isWalkable(state.tiles, nx, ny)) return false;
-  const fx = state.player.x;
-  const fy = state.player.y;
-  state.player.x = nx;
-  state.player.y = ny;
-  const k = key(nx, ny);
-  if (state.tiles[fy]![fx] === "shrine" || state.tiles[fy]![fx] === "shop") {
-    if (k !== key(fx, fy)) state.interactLock = false;
-  }
-  state.fx.push({ kind: "sfx", name: "move" });
-  afterMove(state, fx, fy);
-  refreshVision(state);
-  if (state.floor !== floorBefore) return true;
-  if (state.phase === "playing") spendTurn(state);
-  return true;
+function enemySpeed(e: Enemy): number {
+  if (e.id === "hollow") return 1.55;
+  if (e.id === "rat") return 2.6;
+  if (e.id === "thief") return 2.9;
+  if (e.id === "guard" || e.id === "knight") return 1.7;
+  return 2.15;
 }
 
-export function waitTurn(state: RunState): boolean {
-  if (state.phase !== "playing") return false;
-  state.movedThisTurn = false;
-  if (top(state) === "vagabond" && !state.scroungeUsed) {
-    state.scroungeUsed = true;
-    state.gold += 1;
-    log(state, "You find a coin in the PJs.");
-    state.fx.push({ kind: "sfx", name: "harvest" });
-  } else {
-    log(state, "You wait. Pip hums a snack song.");
+function rayHit(state: RunState, x0: number, y0: number, dx: number, dy: number, range: number): Enemy | undefined {
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const steps = Math.ceil(range / 0.18);
+  for (let i = 1; i <= steps; i++) {
+    const x = x0 + ux * i * 0.18;
+    const y = y0 + uy * i * 0.18;
+    if (!canStand(state.tiles, x, y, 0.12)) return undefined;
+    const e = enemyNear(state, x, y, 0.42);
+    if (e) return e;
   }
-  spendTurn(state);
-  return true;
+  return undefined;
 }
 
 function shootLine(state: RunState): boolean {
-  const range = 3 + rangeBonus(state);
+  const range = 3.4 + rangeBonus(state);
   const v = DIRS[state.player.facing];
-  let x = state.player.x;
-  let y = state.player.y;
-  for (let i = 0; i < range; i++) {
-    x += v.x;
-    y += v.y;
-    if (!isWalkable(state.tiles, x, y) && !enemyAt(state, x, y)) return true;
-    const e = enemyAt(state, x, y);
-    if (e) {
-      const dmg = rangedDamage(state);
-      state.fx.push({ kind: "sfx", name: "hit" });
-      state.fx.push({ kind: "hitstop", ms: 40 });
-      if (hasRes(state, "deathwind")) {
-        state.gold += 1;
-        state.fx.push({
-          kind: "text",
-          x: e.x,
-          y: e.y,
-          text: "+1g",
-          color: "#e8c36a",
-        });
-      }
-      hurtEnemy(state, e, dmg, true);
-      return true;
-    }
+  const e = rayHit(state, state.player.x, state.player.y, v.x, v.y, range);
+  if (!e) {
+    log(state, "Pew! It hits a wall. Rude wall.");
+    return true;
   }
-  log(state, "Pew! It hits a wall. Rude wall.");
+  const dmg = rangedDamage(state);
+  state.fx.push({ kind: "sfx", name: "hit" });
+  state.fx.push({ kind: "hitstop", ms: 40 });
+  if (hasRes(state, "deathwind")) {
+    state.gold += 1;
+    state.fx.push({ kind: "text", x: e.x, y: e.y, text: "+1", color: "#e8c36a" });
+  }
+  hurtEnemy(state, e, dmg, true);
   return true;
 }
 
 function dash(state: RunState): boolean {
-  const floorBefore = state.floor;
   const v = DIRS[state.player.facing];
-  let last: { x: number; y: number } | null = null;
   let x = state.player.x;
   let y = state.player.y;
-  for (let i = 0; i < 2; i++) {
-    x += v.x;
-    y += v.y;
-    if (!isWalkable(state.tiles, x, y)) break;
-    if (!occupied(state, x, y)) last = { x, y };
+  let moved = false;
+  for (let i = 0; i < 12; i++) {
+    const n = slide(state.tiles, x, y, v.x * 0.16, v.y * 0.16, 0.28);
+    if (n.x === x && n.y === y) break;
+    x = n.x;
+    y = n.y;
+    moved = true;
   }
-  if (!last) {
+  if (!moved) {
     log(state, "No zoom room!");
     return false;
   }
   const fx = state.player.x;
   const fy = state.player.y;
-  state.player.x = last.x;
-  state.player.y = last.y;
+  state.player.x = x;
+  state.player.y = y;
   state.movedThisTurn = true;
-  fxBurst(state, last.x, last.y, "#d48962", 8);
+  fxBurst(state, x, y, "#d48962", 8);
   afterMove(state, fx, fy);
   refreshVision(state);
-  return state.floor === floorBefore;
+  return true;
 }
 
 function flip(state: RunState): boolean {
   const v = DIRS[state.player.facing];
-  const e = enemyAt(state, state.player.x + v.x, state.player.y + v.y);
+  const lookX = state.player.x + v.x * 0.9;
+  const lookY = state.player.y + v.y * 0.9;
+  const e = enemyNear(state, lookX, lookY, 1.15);
   if (!e) {
     log(state, "Nobody to swap with.");
     return false;
@@ -709,12 +684,7 @@ function flip(state: RunState): boolean {
 }
 
 function cleave(state: RunState): boolean {
-  const hits: Enemy[] = [];
-  for (const d of DIR_LIST) {
-    const v = DIRS[d];
-    const e = enemyAt(state, state.player.x + v.x, state.player.y + v.y);
-    if (e) hits.push(e);
-  }
+  const hits = state.enemies.filter((e) => dist(e.x, e.y, state.player.x, state.player.y) < 1.25);
   if (!hits.length) {
     log(state, "Boop Storm hits... the air. The air is fine.");
     return false;
@@ -733,8 +703,8 @@ function cinder(state: RunState): boolean {
   for (let i = 0; i < 3; i++) {
     x += v.x;
     y += v.y;
-    ignite(state, x, y, 5);
-    const e = enemyAt(state, x, y);
+    ignite(state, x, y, 3);
+    const e = enemyNear(state, x, y, 0.55);
     if (e) hurtEnemy(state, e, 1, true);
   }
   state.fx.push({ kind: "sfx", name: "fire" });
@@ -742,20 +712,33 @@ function cinder(state: RunState): boolean {
   return true;
 }
 
+function pocketLint(state: RunState): boolean {
+  if (state.scroungeUsed) {
+    log(state, "Pockets already empty this closet.");
+    return false;
+  }
+  state.scroungeUsed = true;
+  state.gold += 1;
+  log(state, "You find a coin in the PJs.");
+  state.fx.push({ kind: "sfx", name: "harvest" });
+  return true;
+}
+
 export function usePower(state: RunState): boolean {
   if (state.phase !== "playing") return false;
-  state.movedThisTurn = false;
+  if (state.powerCd > 0) return false;
   const id = top(state);
   let ok = false;
   switch (id) {
     case "vagabond":
-      return waitTurn(state);
+      ok = pocketLint(state);
+      break;
     case "rat":
       ok = dash(state);
       break;
     case "guard":
       if (state.braceCd > 0) {
-        log(state, `Brace is recharging. ${state.braceCd} turns.`);
+        log(state, "Brace is still cooling off.");
         return false;
       }
       if (state.stitches >= MAX_STITCH) {
@@ -763,7 +746,7 @@ export function usePower(state: RunState): boolean {
         return false;
       }
       state.stitches += 1;
-      state.braceCd = 5;
+      state.braceCd = 6;
       log(state, "CLANK. Lucky Pin slapped on.");
       state.fx.push({ kind: "sfx", name: "stitch" });
       ok = true;
@@ -776,7 +759,7 @@ export function usePower(state: RunState): boolean {
       break;
     case "priest":
       if (state.priestBound) {
-        log(state, "Bubbles already popped this floor.");
+        log(state, "Bubbles already popped this closet.");
         return false;
       }
       if (state.stitches >= MAX_STITCH) {
@@ -796,13 +779,10 @@ export function usePower(state: RunState): boolean {
       ok = cleave(state);
       break;
     default:
-      return waitTurn(state);
+      ok = pocketLint(state);
   }
   if (!ok) return false;
-  if (inPhase(state, "decision", "shrine", "shop")) {
-    return true;
-  }
-  spendTurn(state);
+  state.powerCd = 0.45;
   return true;
 }
 
@@ -811,17 +791,12 @@ export function chooseWear(state: RunState): void {
   const e = state.pending;
   state.pending = null;
   state.fx.push({ kind: "sfx", name: "wear" });
-  state.fx.push({
-    kind: "banner",
-    text: def(e.id).name,
-    sub: def(e.id).title,
-    color: def(e.id).color,
-  });
+  state.fx.push({ kind: "banner", text: def(e.id).name, sub: def(e.id).title, color: def(e.id).color });
   fxBurst(state, state.player.x, state.player.y, def(e.id).color, 20);
   wearEnemy(state, e);
   if (inPhase(state, "won")) return;
-  state.movedThisTurn = false;
-  spendTurn(state);
+  state.phase = "playing";
+  state.player.iFrames = 0.5;
 }
 
 export function chooseHarvest(state: RunState): void {
@@ -831,33 +806,28 @@ export function chooseHarvest(state: RunState): void {
   if (e.id === "hollow") {
     state.phase = "won";
     log(state, "You send King Empty home. Pip keeps the pile. Snack victory!");
-    state.fx.push({
-      kind: "banner",
-      text: "King Sent Home!",
-      sub: "Pip keeps the pile.",
-      color: "#e8c36a",
-    });
+    state.fx.push({ kind: "banner", text: "King Sent Home!", sub: "Pip keeps the pile.", color: "#e8c36a" });
     state.fx.push({ kind: "sfx", name: "win" });
     return;
   }
   harvestEnemy(state, e, false);
   state.fx.push({ kind: "sfx", name: "harvest" });
-  state.movedThisTurn = false;
-  spendTurn(state);
+  state.phase = "playing";
+  state.player.iFrames = 0.5;
 }
 
 export function shrinePick(state: RunState, choice: number): void {
   if (state.phase !== "shrine") return;
-  const k = key(state.player.x, state.player.y);
+  const t = tileOf(state.player.x, state.player.y);
+  const k = key(t.x, t.y);
   if (choice === 1) {
     state.player.stack.reverse();
     log(state, "WHOOSH. Pile flipped upside down.");
     uniqueDiscover(state);
     state.fx.push({ kind: "sfx", name: "wear" });
   } else if (choice === 2) {
-    if (state.player.stack.length <= 1) {
-      log(state, "Nope — that's Pip's last costume.");
-    } else {
+    if (state.player.stack.length <= 1) log(state, "Nope — that's Pip's last costume.");
+    else {
       const lost = state.player.stack.shift()!;
       state.gold += 6;
       feedHollow(state, lost, `You traded the ${def(lost).name} costume. King Empty yoinked it.`);
@@ -874,7 +844,6 @@ export function shrinePick(state: RunState, choice: number): void {
   }
   state.shrineSpent[k] = true;
   state.phase = "playing";
-  spendTurn(state);
 }
 
 export function shopPick(state: RunState, choice: number): void {
@@ -913,16 +882,12 @@ export function shopPick(state: RunState, choice: number): void {
       stun: 0,
       flash: 0,
       elite: false,
+      atkCd: 0,
     };
     wearEnemy(state, fake);
     log(state, `Mystery box! You're ${def(id).name} now.`);
     state.fx.push({ kind: "sfx", name: "wear" });
-    state.fx.push({
-      kind: "banner",
-      text: def(id).name,
-      sub: "Bought, not booped.",
-      color: def(id).color,
-    });
+    state.fx.push({ kind: "banner", text: def(id).name, sub: "Bought, not booped.", color: def(id).color });
   } else if (choice === 3) {
     if (state.extraSlotBought) {
       log(state, "The pile is already extra-roomy.");
@@ -942,97 +907,78 @@ export function shopPick(state: RunState, choice: number): void {
 
 export function leaveShop(state: RunState): void {
   if (state.phase !== "shop") return;
-  state.shopSpent[key(state.player.x, state.player.y)] = true;
+  const t = tileOf(state.player.x, state.player.y);
+  state.shopSpent[key(t.x, t.y)] = true;
   state.phase = "playing";
-  spendTurn(state);
 }
 
-function cardinalLine(
-  state: RunState,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  range: number,
-): boolean {
-  if (x0 !== x1 && y0 !== y1) return false;
-  const dx = Math.sign(x1 - x0);
-  const dy = Math.sign(y1 - y0);
-  const dist = Math.abs(x1 - x0) + Math.abs(y1 - y0);
-  if (dist < 2 || dist > range) return false;
-  let x = x0;
-  let y = y0;
-  for (let i = 0; i < dist - 1; i++) {
-    x += dx;
-    y += dy;
-    if (!isWalkable(state.tiles, x, y)) return false;
-    if (occupied(state, x, y)) return false;
-  }
-  return true;
-}
-
-function tickFire(state: RunState): void {
+function tickFire(state: RunState, dt: number): void {
+  state.fireClock += dt;
+  const pulse = state.fireClock >= 0.45;
+  if (pulse) state.fireClock = 0;
   const next: Record<string, number> = {};
-  const spots = Object.keys(state.fire);
-  for (const k of spots) {
-    const n = (state.fire[k] ?? 0) - 1;
+  for (const k of Object.keys(state.fire)) {
+    const n = (state.fire[k] ?? 0) - dt;
     if (n > 0) next[k] = n;
+    if (!pulse) continue;
     const [xs, ys] = k.split(",");
-    const x = Number(xs);
-    const y = Number(ys);
-    if (state.player.x === x && state.player.y === y) {
+    const x = Number(xs) + 0.5;
+    const y = Number(ys) + 0.5;
+    if (dist(state.player.x, state.player.y, x, y) < 0.55) {
       log(state, "Spicy! The pile is on fire.");
       takeHit(state, "the fire");
       state.fx.push({ kind: "sfx", name: "fire" });
     }
-    const e = enemyAt(state, x, y);
-    if (e && e.id !== "hollow") {
-      hurtEnemy(state, e, 1, false);
-    }
+    const e = enemyNear(state, x, y, 0.5);
+    if (e && e.id !== "hollow") hurtEnemy(state, e, 1, false);
   }
   state.fire = next;
 }
 
-function actEnemy(state: RunState, e: Enemy): void {
-  if (state.phase === "dead" || state.phase === "won") return;
+function actEnemy(state: RunState, e: Enemy, dt: number): void {
+  if (state.phase === "dead" || state.phase === "won" || state.phase === "decision") return;
+  e.flash = Math.max(0, e.flash - dt * 4);
+  e.atkCd = Math.max(0, e.atkCd - dt);
   if (e.stun > 0) {
-    e.stun -= 1;
+    e.stun = Math.max(0, e.stun - dt);
     return;
   }
-  e.flash = Math.max(0, e.flash - 0.5);
+
   const px = state.player.x;
   const py = state.player.y;
-  const md = Math.abs(e.x - px) + Math.abs(e.y - py);
+  const d = dist(e.x, e.y, px, py);
+  const et = tileOf(e.x, e.y);
+  const pt = tileOf(px, py);
 
   if (e.id === "hollow") {
-    if (state.hollowMimicTurns > 0) state.hollowMimicTurns -= 1;
-    if (state.hollowMimicTurns <= 0 && state.grave.length && rng.chance(0.35)) {
+    state.hollowMimicTime = Math.max(0, state.hollowMimicTime - dt);
+    if (state.hollowMimicTime <= 0 && state.grave.length && rng.chance(0.008)) {
       state.hollowMimic = rng.pick(state.grave);
-      state.hollowMimicTurns = 3;
+      state.hollowMimicTime = 4;
       log(state, `King Empty tries on your ${def(state.hollowMimic).name}!`);
-      state.fx.push({
-        kind: "banner",
-        text: `King Empty: ${def(state.hollowMimic).name}`,
-        color: "#c8b6ff",
-      });
+      state.fx.push({ kind: "banner", text: `King Empty: ${def(state.hollowMimic).name}`, color: "#c8b6ff" });
     }
   }
 
   const mimic = e.id === "hollow" ? state.hollowMimic : null;
   const archerish = e.id === "archer" || mimic === "archer";
-  const range = 3 + (mimic === "archer" ? 1 : 0);
-
-  if (archerish && cardinalLine(state, e.x, e.y, px, py, range)) {
-    e.facing = dirFromDelta(px - e.x, py - e.y);
-    log(state, `${def(e.id).name} pews you!`);
-    takeHit(state, "an arrow");
-    state.fx.push({ kind: "sfx", name: "hit" });
-    return;
+  if (archerish && d < 4.2 && d > 1.1 && e.atkCd <= 0) {
+    const sees = lineOfSight(state.tiles, et.x, et.y, pt.x, pt.y);
+    const cardinal = Math.abs(e.x - px) < 0.35 || Math.abs(e.y - py) < 0.35;
+    if (sees && cardinal) {
+      e.facing = dirFromDelta(px - e.x, py - e.y);
+      e.atkCd = 1.5;
+      log(state, `${def(e.id).name} pews you!`);
+      takeHit(state, "a pew");
+      state.fx.push({ kind: "sfx", name: "hit" });
+      return;
+    }
   }
 
-  if (md === 1) {
+  if (d < 0.62 && e.atkCd <= 0) {
     e.facing = dirFromDelta(px - e.x, py - e.y);
-    if ((e.id === "thief" || mimic === "thief") && rng.chance(0.35) && state.gold > 0) {
+    e.atkCd = e.id === "hollow" ? 1.15 : 1.05;
+    if ((e.id === "thief" || mimic === "thief") && rng.chance(0.28) && state.gold > 0) {
       state.gold -= 1;
       const tx = e.x;
       const ty = e.y;
@@ -1044,101 +990,103 @@ function actEnemy(state: RunState, e: Enemy): void {
       refreshVision(state);
       return;
     }
-    let hits = def(e.id).damage;
-    if (e.id === "hollow") {
-      const u = new Set(state.grave).size;
-      hits = 1 + Math.min(5, Math.ceil(u / 2));
-    }
-    if (e.elite) hits += 1;
     log(state, `${def(e.id).name} bonks you!`);
-    for (let i = 0; i < hits; i++) {
-      takeHit(state, "a strike");
-      if (inPhase(state, "dead")) break;
-    }
+    takeHit(state, "a strike");
     state.fx.push({ kind: "sfx", name: "hit" });
-    state.fx.push({ kind: "shake", mag: 6 });
+    state.fx.push({ kind: "shake", mag: 5 });
+    const knockD = dist(px, py, e.x, e.y) || 1;
+    const n = slide(state.tiles, px, py, ((px - e.x) / knockD) * 0.35, ((py - e.y) / knockD) * 0.35, 0.28);
+    state.player.x = n.x;
+    state.player.y = n.y;
     return;
   }
 
-  const sees = md <= 10 && lineOfSight(state.tiles, e.x, e.y, px, py);
+  const sees = d < 9 && lineOfSight(state.tiles, et.x, et.y, pt.x, pt.y);
+  let vx = 0;
+  let vy = 0;
   if (sees) {
-    const step = nextStep(
-      (x, y) => blockedFor(state, x, y, e),
-      e.x,
-      e.y,
-      px,
-      py,
-    );
-    if (step && !(step.x === px && step.y === py)) {
-      e.facing = dirFromDelta(step.x - e.x, step.y - e.y);
-      e.x = step.x;
-      e.y = step.y;
-      return;
-    }
+    vx = (px - e.x) / (d || 1);
+    vy = (py - e.y) / (d || 1);
+    e.facing = dirFromDelta(vx, vy);
+  } else if (rng.chance(0.02)) {
+    const dir = rng.pick(DIR_LIST);
+    const v = DIRS[dir];
+    vx = v.x;
+    vy = v.y;
+    e.facing = dir;
   }
-  if (rng.chance(0.2)) {
-    const d = rng.pick(DIR_LIST);
-    const v = DIRS[d];
-    const nx = e.x + v.x;
-    const ny = e.y + v.y;
-    if (!blockedFor(state, nx, ny, e)) {
-      e.facing = d;
-      e.x = nx;
-      e.y = ny;
-    }
-  }
+  if (vx === 0 && vy === 0) return;
+  const spd = enemySpeed(e) * dt;
+  const n = slide(state.tiles, e.x, e.y, vx * spd, vy * spd, 0.3);
+  const other = enemyNear(state, n.x, n.y, 0.55, e);
+  if (other) return;
+  e.x = n.x;
+  e.y = n.y;
 }
 
-export function stepEnemies(state: RunState, dt: number): void {
-  if (state.phase !== "enemies") return;
-  if (!state.fireTicked) {
-    state.fireTicked = true;
-    tickFire(state);
-    if (state.phase !== "enemies") return;
-  }
-  if (state.enemies.length === 0) {
-    state.phase = "playing";
-    return;
-  }
-  state.enemyClock += dt;
-  const pace = 0.055;
-  while (state.phase === "enemies" && state.enemyClock >= pace) {
-    state.enemyClock -= pace;
-    const e = state.enemies[state.enemyIx];
-    if (e) actEnemy(state, e);
-    state.enemyIx += 1;
-    if (state.enemyIx >= state.enemies.length) {
-      state.phase = "playing";
-      state.enemyIx = 0;
-      refreshVision(state);
-      break;
-    }
-  }
+export function setMoveTarget(state: RunState, x: number, y: number): void {
+  if (!isWalkable(state.tiles, Math.floor(x), Math.floor(y))) return;
+  state.moveTarget = { x, y };
 }
 
-export function clickStep(state: RunState, tx: number, ty: number): boolean {
-  if (state.phase !== "playing") return false;
-  if (tx === state.player.x && ty === state.player.y) return waitTurn(state);
-  const step = nextStep(
-    (x, y) => !isWalkable(state.tiles, x, y) && !enemyAt(state, x, y),
-    state.player.x,
-    state.player.y,
-    tx,
-    ty,
-  );
-  if (!step) return false;
-  return tryMove(state, step.x - state.player.x, step.y - state.player.y);
+export function tickWorld(state: RunState, dt: number, ax: number, ay: number): void {
+  if (state.phase !== "playing") return;
+  state.turn += dt;
+  if (state.player.iFrames > 0) state.player.iFrames = Math.max(0, state.player.iFrames - dt);
+  if (state.atkCd > 0) state.atkCd = Math.max(0, state.atkCd - dt);
+  if (state.powerCd > 0) state.powerCd = Math.max(0, state.powerCd - dt);
+  if (state.braceCd > 0) state.braceCd = Math.max(0, state.braceCd - dt);
+
+  if (ax !== 0 || ay !== 0) state.moveTarget = null;
+  if (ax === 0 && ay === 0 && state.moveTarget) {
+    const dx = state.moveTarget.x - state.player.x;
+    const dy = state.moveTarget.y - state.player.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 0.12) state.moveTarget = null;
+    else {
+      ax = dx / d;
+      ay = dy / d;
+    }
+  }
+
+  const fromX = state.player.x;
+  const fromY = state.player.y;
+  if (ax !== 0 || ay !== 0) {
+    state.player.facing = dirFromDelta(ax, ay);
+    state.movedThisTurn = true;
+    const n = slide(state.tiles, state.player.x, state.player.y, ax * 4.4 * dt, ay * 4.4 * dt, 0.28);
+    state.player.x = n.x;
+    state.player.y = n.y;
+    afterMove(state, fromX, fromY);
+    if (state.phase !== "playing") return;
+    refreshVision(state);
+  } else {
+    state.movedThisTurn = false;
+  }
+
+  if (state.atkCd <= 0) {
+    const foe = enemyNear(state, state.player.x, state.player.y, 0.66);
+    if (foe) {
+      attackMelee(state, foe);
+      state.atkCd = 0.38;
+      if (state.phase !== "playing") return;
+    }
+  }
+
+  tickFire(state, dt);
+  if (state.phase !== "playing") return;
+  for (const e of [...state.enemies]) {
+    if (!state.enemies.includes(e)) continue;
+    actEnemy(state, e, dt);
+    if (state.phase !== "playing") return;
+  }
 }
 
 export { refreshVision, effectiveMax, harvestGoldFor };
 
-export function hollowDamagePreview(state: RunState): number {
-  const u = new Set(state.grave).size;
-  return 1 + Math.min(5, Math.ceil(u / 2));
+export function goalLabel(state: RunState): string {
+  if (state.floor >= LAST_FLOOR) return "Goal: boop King Empty";
+  if (state.stairsOpen) return "Goal: take the stairs";
+  const left = Math.max(0, state.goalNeed - state.goalHave);
+  return left === 1 ? "Goal: boop 1 more costume" : `Goal: boop ${left} more costumes`;
 }
-
-export function tileAt(tiles: TileKind[][], x: number, y: number): TileKind | undefined {
-  return tiles[y]?.[x];
-}
-
-export { roomAt };

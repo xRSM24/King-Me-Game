@@ -55,6 +55,7 @@ export interface Player {
   y: number;
   facing: Dir;
   stack: IdentityId[];
+  iFrames: number;
 }
 
 export interface Enemy {
@@ -67,6 +68,7 @@ export interface Enemy {
   stun: number;
   flash: number;
   elite: boolean;
+  atkCd: number;
 }
 
 export type Fx =
@@ -112,16 +114,22 @@ export interface RunState {
   scroungeUsed: boolean;
   knightOathUsed: boolean;
   interactLock: boolean;
-  enemyIx: number;
-  enemyClock: number;
-  fireTicked: boolean;
   movedThisTurn: boolean;
   isDaily: boolean;
   shrineSpent: Record<string, boolean>;
   shopSpent: Record<string, boolean>;
   extraSlotBought: boolean;
   hollowMimic: IdentityId | null;
-  hollowMimicTurns: number;
+  hollowMimicTime: number;
+  goalNeed: number;
+  goalHave: number;
+  exitX: number;
+  exitY: number;
+  stairsOpen: boolean;
+  atkCd: number;
+  powerCd: number;
+  fireClock: number;
+  moveTarget: { x: number; y: number } | null;
 }
 
 export interface Meta {
@@ -170,10 +178,15 @@ export const FLOOR_NAMES = [
   "Silly Gallery",
   "Sock Closet",
   "Chili Labs",
+  "Bubble Baths",
+  "Pew Attic",
+  "Cardboard Keep",
+  "Lost Hat Vault",
   "King Empty's Fort",
 ];
 
 export const TILE = 48;
 export const MAX_STITCH = 3;
-export const VISION = 12;
-export const LAST_FLOOR = 6;
+export const VISION = 10;
+export const LAST_FLOOR = 10;
+export const RUN_GOAL = "Reach King Empty's Fort";

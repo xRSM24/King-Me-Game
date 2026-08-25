@@ -24,6 +24,40 @@ document.addEventListener("click", (e) => {
   game.command(cmd);
 });
 
+function holdFromEvent(e: Event): HTMLElement | null {
+  const t = e.target;
+  if (!(t instanceof HTMLElement)) return null;
+  return t.closest("[data-hold]");
+}
+
+document.addEventListener("pointerdown", (e) => {
+  const btn = holdFromEvent(e);
+  if (!btn) return;
+  const dir = btn.getAttribute("data-hold");
+  if (dir === "up" || dir === "down" || dir === "left" || dir === "right") {
+    e.preventDefault();
+    game.unlock();
+    game.input.holdTouch(dir);
+    if (e instanceof PointerEvent) btn.setPointerCapture(e.pointerId);
+  }
+});
+
+const releaseHold = (e: Event): void => {
+  const btn = holdFromEvent(e);
+  if (!btn) {
+    game.input.holdTouch("clear");
+    return;
+  }
+  const dir = btn.getAttribute("data-hold");
+  if (dir === "up" || dir === "down" || dir === "left" || dir === "right") {
+    game.input.releaseTouch(dir);
+  }
+};
+
+document.addEventListener("pointerup", releaseHold);
+document.addEventListener("pointercancel", () => game.input.holdTouch("clear"));
+window.addEventListener("blur", () => game.input.holdTouch("clear"));
+
 function loop(): void {
   game.update();
   game.draw();

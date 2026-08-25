@@ -22,14 +22,14 @@ export const PERKS = [
   {
     id: "stitch",
     name: "Extra Pin",
-    cost: 12,
-    desc: "Start with two Lucky Pins instead of one.",
+    cost: 18,
+    desc: "Start with one Lucky Pin.",
   },
   {
     id: "stack5",
     name: "Bigger Backpack",
-    cost: 20,
-    desc: "Max pile of 5 costumes. More hats, more problems.",
+    cost: 28,
+    desc: "Max pile of 4 costumes.",
   },
   {
     id: "gold",

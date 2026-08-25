@@ -27,13 +27,13 @@
 
       <div id="touch" class="hidden">
         <div class="pad">
-          <button type="button" data-cmd="up">↑</button>
+          <button type="button" data-hold="up">↑</button>
           <div class="mid">
-            <button type="button" data-cmd="left">←</button>
-            <button type="button" data-cmd="wait">·</button>
-            <button type="button" data-cmd="right">→</button>
+            <button type="button" data-hold="left">←</button>
+            <button type="button" data-cmd="power">★</button>
+            <button type="button" data-hold="right">→</button>
           </div>
-          <button type="button" data-cmd="down">↓</button>
+          <button type="button" data-hold="down">↓</button>
         </div>
         <button type="button" class="power" data-cmd="power">Power</button>
       </div>
@@ -47,19 +47,19 @@
             <figcaption>Pip, pajama ghost and professional costume-piler</figcaption>
           </figure>
           <div class="veil">
-            <p class="kicker">A goofy costume-pile adventure</p>
+            <p class="kicker">A goofy roguelike</p>
             <h1>Soulstack</h1>
             <p class="tag">
-              You are Pip. You have no hearts — only a pile of silly costumes. Bonks knock them off.
-              Outfits you skip go to King Empty. Don't skip too many.
+              <b>Goal every run:</b> reach King Empty's Fort, ten closets down. You will get sent
+              home a lot. Stickers make the next try a tiny bit stronger. That's the whole game.
             </p>
             <div class="row">
               <button data-cmd="new" type="button">Let's Go!</button>
-              <button class="ghost" data-cmd="daily" type="button">Today's Closet</button>
+              <button class="ghost" data-cmd="how" type="button">How to Play</button>
             </div>
             <div class="row">
-              <button class="ghost" data-cmd="how" type="button">How to Play</button>
               <button class="ghost" data-cmd="codex" type="button">Costume Book</button>
+              <button class="ghost" data-cmd="daily" type="button">Today's Closet</button>
             </div>
             <p class="meta-line">Stickers <strong id="rem-count">0</strong></p>
             <p id="meta-stats" class="quiet"></p>
@@ -78,25 +78,20 @@
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>No hearts.</b> Pip is a pile of costumes. A bonk knocks the top one off. You start with
-              one Lucky Pin (a free save). When the last costume pops, you go home.
+              <b>Hold WASD to run.</b> Bump a costume to boop it. Space uses your outfit's trick.
             </li>
             <li>
-              <b>Bump to boop.</b> WASD or arrows move. Space uses your costume power. Z waits.
+              <b>No hearts.</b> Bonks knock costumes off the pile. Last one gone = sent home.
             </li>
             <li>
-              <b>Wear or Snack.</b> Wear = put their outfit on. Snack = take coins, but King Empty keeps
-              the costume for the final fight.
+              <b>Each closet has a job.</b> Boop enough costumes and the stairs pop open. Walk onto them.
             </li>
             <li>
-              <b>The pile is short.</b> Too many outfits and the bottom one falls into the King's closet.
+              <b>Wear or Snack.</b> Wear = put the outfit on. Snack = coins, but King Empty keeps that costume.
             </li>
             <li>
-              <b>Combo outfits.</b> Some costumes together make a silly combo. That's the fun of coming back.
-            </li>
-            <li>
-              <b>King Empty.</b> Floor 6. A giant raincoat made of every outfit you didn't wear. Greedy snack
-              runs make a bigger king.
+              <b>The real goal is far.</b> King Empty waits in closet 10. First tries will send you home.
+              Spend Stickers between runs. That's a roguelike.
             </li>
           </ol>
           <button data-cmd="title" type="button">Back</button>
