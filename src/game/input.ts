@@ -1,6 +1,7 @@
 export class Input {
   private pressed = new Set<string>();
   private touch = { x: 0, y: 0 };
+  fireOn = false;
   mouse: { x: number; y: number; clicked: boolean } = { x: 0, y: 0, clicked: false };
 
   bind(canvas: HTMLCanvasElement): void {
@@ -17,6 +18,7 @@ export class Input {
       this.pressed.clear();
       this.touch.x = 0;
       this.touch.y = 0;
+      this.fireOn = false;
     });
     canvas.addEventListener("pointerdown", (e) => {
       const r = canvas.getBoundingClientRect();
@@ -43,6 +45,14 @@ export class Input {
     if (dir === "down" && this.touch.y > 0) this.touch.y = 0;
     if (dir === "left" && this.touch.x < 0) this.touch.x = 0;
     if (dir === "right" && this.touch.x > 0) this.touch.x = 0;
+  }
+
+  holdFire(on: boolean): void {
+    this.fireOn = on;
+  }
+
+  heldFire(): boolean {
+    return this.fireOn || this.held(KEY_POWER);
   }
 
   held(keys: string[]): boolean {

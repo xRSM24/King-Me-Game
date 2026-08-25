@@ -138,6 +138,28 @@ canvas#game {
   color: var(--ink);
 }
 
+.xp {
+  margin-top: 8px;
+  height: 8px;
+  background: #fff6c8;
+  border: 2px solid #3b2152;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.xp i {
+  display: block;
+  height: 100%;
+  background: #7ed957;
+}
+
+.spark-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
 #log {
   position: absolute;
   left: 16px;

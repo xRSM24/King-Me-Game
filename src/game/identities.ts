@@ -28,7 +28,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 2,
     gold: 2,
-    active: "Pocket Lint — find a coin. Needs a rest first.",
+    active: "Pin Pop — hold Space. One pin the way you face.",
     echo: "Snack harvests give +1 coin.",
     blurb: "A round little ghost in stripey PJs. The costumes go ON Pip. That's the whole trick.",
     unlockFloor: 1,
@@ -44,7 +44,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 1,
     gold: 1,
-    active: "Zoom — dash two tiles. Slip past anybody.",
+    active: "Crumb Fan — hold Space. Three snack crumbs in a spread.",
     echo: "20% chance a bonk misses you completely. Sneaky.",
     blurb: "A hoodie with ears. Smells like cheese. Zoomy.",
     unlockFloor: 1,
@@ -60,7 +60,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 3,
     gold: 3,
-    active: "Brace — slap on a Lucky Pin. Needs 5 turns to cool down.",
+    active: "Pan Blast — hold Space. A close shotgun of saucepan sparks.",
     echo: "Start each floor with a Lucky Pin if you have none.",
     blurb: "Helmet: a saucepan. Job: stand there. Personality: saucepan.",
     unlockFloor: 1,
@@ -76,7 +76,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 2,
     hp: 2,
     gold: 3,
-    active: "Pew — shoot in the way you're facing, range 3.",
+    active: "Rubber Bolt — hold Space. One fast bolt, extra sting.",
     echo: "Pew shots fly one tile farther.",
     blurb: "Never lets you hug them. You shouldn't either. Pew pew.",
     unlockFloor: 2,
@@ -92,7 +92,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 2,
     gold: 4,
-    active: "Swap! — trade places with whoever you face.",
+    active: "Sneak X — hold Space. Two diagonal shots. Sneaky angles.",
     echo: "Bonks drop +2 coins.",
     blurb: "A raccoon mask and zero indoor voice. Yours now.",
     unlockFloor: 3,
@@ -108,7 +108,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 3,
     gold: 3,
-    active: "Pop-Pin — add a Lucky Pin. Once per floor.",
+    active: "Soap Ring — hold Space. Bubbles fly in every direction.",
     echo: "When a costume flies off, 40% chance it just falls to the bottom of the pile.",
     blurb: "Casts Bless. Also casts Bubbles. Same spell, honestly.",
     unlockFloor: 4,
@@ -124,7 +124,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 3,
     gold: 4,
-    active: "Hot Foot — light three tiles on fire. Silly fire. Still hot.",
+    active: "Chili Stream — hold Space. Twin spicy jets. Fast and hot.",
     echo: "Your bonks leave a spicy tile behind.",
     blurb: "A pepper with legs. Do not lick.",
     unlockFloor: 5,
@@ -140,7 +140,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 4,
     gold: 5,
-    active: "Boop Storm — bonk every neighbor at once.",
+    active: "Boop Cross — hold Space. Four shots, plus-sign style.",
     echo: "Once per run, a knockout sends you home as Pip instead of ending the pile.",
     blurb: "A taped-on visor, a cardboard sword, and a very serious BOOP.",
     unlockFloor: 5,
@@ -156,7 +156,7 @@ export const IDENTITIES: Record<IdentityId, IdentityDef> = {
     ranged: 0,
     hp: 8,
     gold: 0,
-    active: "Wears every costume you didn't.",
+    active: "Empty Ring — hold Space. A ring of leftover hats.",
     echo: "King Empty is the leftover pile.",
     blurb: "A giant empty raincoat with googly eyes. It's made of outfits you skipped.",
     unlockFloor: 6,
@@ -182,23 +182,23 @@ export function def(id: IdentityId): IdentityDef {
 export function powerName(id: IdentityId): string {
   switch (id) {
     case "vagabond":
-      return "Pocket Lint";
+      return "Pin Pop";
     case "rat":
-      return "Zoom";
+      return "Crumb Fan";
     case "guard":
-      return "Brace";
+      return "Pan Blast";
     case "archer":
-      return "Pew";
+      return "Rubber Bolt";
     case "thief":
-      return "Swap!";
+      return "Sneak X";
     case "priest":
-      return "Pop-Pin";
+      return "Soap Ring";
     case "pyromancer":
-      return "Hot Foot";
+      return "Chili Stream";
     case "knight":
-      return "Boop Storm";
+      return "Boop Cross";
     case "hollow":
-      return "Try-On";
+      return "Empty Ring";
   }
 }
 
@@ -233,15 +233,13 @@ export function popLine(id: IdentityId): string {
   return `The ${IDENTITIES[id].name} costume goes FWOOMP off the pile.`;
 }
 
-export function enemyPool(floor: number): IdentityId[] {
+export function enemyPool(path: number): IdentityId[] {
   const pool: IdentityId[] = ["rat", "rat", "rat", "vagabond"];
-  if (floor >= 2) pool.push("guard", "rat");
-  if (floor >= 3) pool.push("archer", "guard");
-  if (floor >= 4) pool.push("thief", "archer");
-  if (floor >= 5) pool.push("thief", "priest");
-  if (floor >= 6) pool.push("priest", "archer");
-  if (floor >= 7) pool.push("pyromancer", "thief");
-  if (floor >= 8) pool.push("knight", "pyromancer", "priest");
-  if (floor >= 9) pool.push("knight", "knight", "thief");
+  if (path >= 1) pool.push("guard", "rat");
+  if (path >= 2) pool.push("archer", "guard");
+  if (path >= 3) pool.push("thief", "archer");
+  if (path >= 4) pool.push("thief", "priest");
+  if (path >= 5) pool.push("pyromancer", "thief", "priest");
+  if (path >= 6) pool.push("knight", "pyromancer", "priest", "knight");
   return pool;
 }

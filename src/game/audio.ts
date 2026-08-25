@@ -138,6 +138,10 @@ export class AudioSys {
     this.tone(480, 0.05, "square", 0.03);
   }
 
+  pew(): void {
+    this.tone(720 + Math.random() * 80, 0.05, "square", 0.035, 0, 280);
+  }
+
   play(name: string): void {
     switch (name) {
       case "move":
@@ -172,6 +176,9 @@ export class AudioSys {
         break;
       case "fire":
         this.fire();
+        break;
+      case "pew":
+        this.pew();
         break;
       default:
         this.ui();

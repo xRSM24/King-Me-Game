@@ -30,12 +30,12 @@
           <button type="button" data-hold="up">↑</button>
           <div class="mid">
             <button type="button" data-hold="left">←</button>
-            <button type="button" data-cmd="power">★</button>
+            <button type="button" data-hold="fire">★</button>
             <button type="button" data-hold="right">→</button>
           </div>
           <button type="button" data-hold="down">↓</button>
         </div>
-        <button type="button" class="power" data-cmd="power">Power</button>
+        <button type="button" class="power" data-hold="fire">Pew</button>
       </div>
 
       <div id="modal" class="hidden"></div>
@@ -50,8 +50,9 @@
             <p class="kicker">A goofy roguelike</p>
             <h1>Soulstack</h1>
             <p class="tag">
-              <b>Goal every run:</b> reach King Empty's Fort, ten closets down. You will get sent
-              home a lot. Stickers make the next try a tiny bit stronger. That's the whole game.
+              <b>Goal every run:</b> follow the trail to King Empty. Hold Space to shoot.
+              You will get sent home a lot. Each try leaves Spark, which makes guns a little
+              stronger — and then stops, so you never go god-mode.
             </p>
             <div class="row">
               <button data-cmd="new" type="button">Let's Go!</button>
@@ -78,21 +79,25 @@
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Hold WASD to run.</b> Bump a costume to boop it. Space uses your outfit's trick.
+              <b>Hold WASD to run. Hold Space to shoot.</b> Each costume gun fires a different
+              pattern — pins, fans, shotguns, rings. Bump someone only if you're already on top of them.
             </li>
             <li>
               <b>No hearts.</b> Bonks knock costumes off the pile. Last one gone = sent home.
             </li>
             <li>
-              <b>Each closet has a job.</b> Boop enough costumes and a glowing green hole pops
-              open. Run onto it for the next closet.
+              <b>One sandbox, one trail.</b> Side rooms have snacks and shops. The main path
+              gets meaner the closer you get to King Empty. First tries should send you home
+              five to ten times before you even see him.
             </li>
             <li>
-              <b>Wear or Snack.</b> Wear = put the outfit on. Snack = coins, but King Empty keeps that costume.
+              <b>Wear or Snack.</b> Wear = put the outfit on (and use its gun). Snack = coins, but King Empty keeps that costume.
             </li>
             <li>
-              <b>The real goal is far.</b> King Empty waits in closet 10. First tries will send you home.
-              Spend Stickers between runs. That's a roguelike.
+              <b>XP is split on purpose.</b> Kills level your gun this life only. Getting sent
+              home turns leftover XP into Spark, which permanently buffs guns — but Spark
+              has diminishing returns and a hard ceiling, so later deaths help less and you
+              never steamroll the trail.
             </li>
           </ol>
           <button data-cmd="title" type="button">Back</button>

@@ -5,7 +5,6 @@ import {
   KEY_ENTER,
   KEY_ESC,
   KEY_ONE,
-  KEY_POWER,
   KEY_THREE,
   KEY_TWO,
 } from "./input.ts";
@@ -25,10 +24,10 @@ import {
   shopPick,
   shrinePick,
   tickWorld,
-  usePower,
 } from "./sim.ts";
 import type { IdentityId, RunState, Screen } from "./types.ts";
-import { FLOOR_NAMES, LAST_FLOOR, TILE } from "./types.ts";
+import { PATH_END, PATH_NAMES, TILE } from "./types.ts";
+import { gunOf, sparkBonus, sparkFromRun, weaponLevel, xpIntoLevel } from "./weapons.ts";
 
 export class Game {
   canvas: HTMLCanvasElement;
@@ -61,6 +60,9 @@ export class Game {
     gold: number;
     kills: number;
     grave: number;
+    sparkGained: number;
+    sparkTotal: number;
+    runXp: number;
   } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -140,6 +142,8 @@ export class Game {
       win,
       usurper,
     });
+    const gained = sparkFromRun(r.runXp, this.meta.spark ?? 0);
+    this.meta.spark = (this.meta.spark ?? 0) + gained;
     this.meta.remembrance += rem;
     this.meta.bestFloor = Math.max(this.meta.bestFloor, r.floor);
     this.meta.bestGold = Math.max(this.meta.bestGold, r.gold);
@@ -154,7 +158,7 @@ export class Game {
     for (const id of Object.keys(r.ash) as IdentityId[]) {
       if (!this.meta.seen.includes(id)) this.meta.seen.push(id);
     }
-    if (!this.meta.seen.includes("hollow") && r.floor >= LAST_FLOOR) this.meta.seen.push("hollow");
+    if (!this.meta.seen.includes("hollow") && r.pathProgress >= PATH_END) this.meta.seen.push("hollow");
     for (const res of r.discovered) {
       if (!this.meta.resonances.includes(res)) this.meta.resonances.push(res);
     }
@@ -169,6 +173,9 @@ export class Game {
       gold: r.gold,
       kills: r.kills,
       grave: r.grave.length,
+      sparkGained: gained,
+      sparkTotal: this.meta.spark,
+      runXp: r.runXp,
     };
     this.showScreen("end");
   }
@@ -248,7 +255,6 @@ export class Game {
 
     if (r.phase === "playing") {
       this.hideModal();
-      if (this.input.consume(KEY_POWER)) usePower(r);
       if (this.input.consumeClick()) {
         const wx = (this.input.mouse.x + this.cam.x) / TILE;
         const wy = (this.input.mouse.y + this.cam.y) / TILE;
@@ -318,7 +324,6 @@ export class Game {
       return;
     }
     if (!r) return;
-    if (cmd === "power") usePower(r);
     if (cmd === "wear") chooseWear(r);
     if (cmd === "harvest") chooseHarvest(r);
     if (cmd === "shrine1") shrinePick(r, 1);
@@ -356,7 +361,7 @@ export class Game {
     if (this.screen === "playing" && this.run) {
       if (this.run.phase === "playing") {
         const axis = this.input.axis();
-        tickWorld(this.run, dt, axis.x, axis.y);
+        tickWorld(this.run, dt, axis.x, axis.y, this.input.heldFire());
         this.drainFx();
       }
       this.handlePlaying();
@@ -398,11 +403,16 @@ export class Game {
       ctx.lineJoin = "round";
       ctx.fillStyle = "#ff5a8a";
       ctx.font = "800 48px Fredoka, Nunito, sans-serif";
-      ctx.strokeText(`Floor ${this.run.floor}`, this.viewW / 2, this.viewH * 0.28);
-      ctx.fillText(`Closet ${this.run.floor} / ${LAST_FLOOR}`, this.viewW / 2, this.viewH * 0.28);
+      const roomName = PATH_NAMES[this.run.pathProgress] ?? "Trail";
+      ctx.strokeText(roomName, this.viewW / 2, this.viewH * 0.28);
+      ctx.fillText(roomName, this.viewW / 2, this.viewH * 0.28);
       ctx.fillStyle = "#3b2152";
       ctx.font = "800 20px Fredoka, Nunito, sans-serif";
-      ctx.fillText(goalLabel(this.run), this.viewW / 2, this.viewH * 0.28 + 34);
+      ctx.fillText(
+        `Trail ${this.run.pathProgress + 1} / ${PATH_END + 1}  ·  ${goalLabel(this.run)}`,
+        this.viewW / 2,
+        this.viewH * 0.28 + 34,
+      );
       ctx.restore();
     }
 
@@ -487,12 +497,16 @@ export class Game {
     const panel = document.getElementById("stack-panel");
     const logEl = document.getElementById("log");
     if (!r || !panel || !logEl) return;
-    const k = `${r.phase}|${r.gold}|${r.stitches}|${r.player.stack.join(",")}|${r.log[0] ?? ""}|${r.pending?.id ?? ""}|${r.goalHave}|${r.stairsOpen}|${this.meta.mute}`;
+    const k = `${r.phase}|${r.gold}|${r.stitches}|${r.player.stack.join(",")}|${r.log[0] ?? ""}|${r.pending?.id ?? ""}|${r.runXp}|${r.pathProgress}|${this.meta.mute}`;
     if (k === this.hudKey) return;
     this.hudKey = k;
     const face = r.player.stack[0] ?? "vagabond";
     const res = activeResonances(r);
     const max = effectiveMax(r);
+    const lv = weaponLevel(r.runXp);
+    const xp = xpIntoLevel(r.runXp);
+    const gun = gunOf(face);
+    const perm = sparkBonus(r.spark);
     panel.innerHTML = `
       <div class="stack-head">
         <span>Pile</span>
@@ -514,7 +528,9 @@ export class Game {
           ? `<div class="res-list">${res.map((x) => `<div class="res"><b>${x.name}</b></div>`).join("")}</div>`
           : ""
       }
-      <p class="power">${def(face).active.split("—")[0]}</p>
+      <p class="power">${gun.name} · Lv ${lv}${lv >= 8 ? " max" : ""}</p>
+      <div class="xp"><i style="width:${Math.round((xp.have / xp.need) * 100)}%"></i></div>
+      <p class="spark-note">Spark ${r.spark} · +${Math.round(perm.dmg * 100)}% dmg forever</p>
     `;
     logEl.innerHTML = r.log.slice(0, 2).map((l) => `<div>${l}</div>`).join("");
     const mute = document.getElementById("btn-mute");
@@ -546,7 +562,7 @@ export class Game {
     }
     const stats = document.getElementById("meta-stats");
     if (stats) {
-      stats.textContent = `${this.meta.runs} tries · deepest closet ${this.meta.bestFloor} / ${LAST_FLOOR} · ${this.meta.wins} wins`;
+      stats.textContent = `${this.meta.runs} tries · deepest trail ${this.meta.bestFloor} / ${PATH_END + 1} · ${this.meta.wins} wins · Spark ${this.meta.spark ?? 0} (+${Math.round(sparkBonus(this.meta.spark ?? 0).dmg * 100)}% guns)`;
     }
     const mute = document.querySelector("[data-cmd='mute']");
     if (mute) mute.textContent = this.meta.mute ? "Sound is off" : "Sound is on";
@@ -601,15 +617,16 @@ export class Game {
           ? s.usurper
             ? "You put King Empty on like a giant raincoat. Googly eyes and all. Time for a snack."
             : "You sent King Empty packing and kept your own silly pile. Sticker time."
-          : `The last costume went fwoomp. King Empty is still ${Math.max(1, LAST_FLOOR - s.floor)} closet${LAST_FLOOR - s.floor === 1 ? "" : "s"} away. Stickers help the next try.`
+          : `The last costume went fwoomp. King Empty is still down the trail. Spark from this try makes the next gun a little stronger — never enough to go god-mode.`
       }</p>
       <ul class="stats">
-        <li>Floor ${s.floor} — ${FLOOR_NAMES[s.floor] ?? ""}</li>
+        <li>Trail room ${s.floor} — ${PATH_NAMES[s.floor - 1] ?? ""}</li>
         <li>${s.kills} costumes collected</li>
         <li>${s.worn} outfits worn</li>
         <li>${s.resonances} combos found</li>
         <li>${s.grave} given to King Empty</li>
         <li>${s.gold} coins in the PJ pockets</li>
+        <li>Run XP ${s.runXp} · Spark +${s.sparkGained} (now ${s.sparkTotal})</li>
         <li class="gold">+${s.rem} Stickers</li>
       </ul>
     `;

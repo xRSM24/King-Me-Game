@@ -3,7 +3,8 @@ import { def } from "./identities.ts";
 import { hasPerk, type Meta } from "./meta.ts";
 import { goalLabel } from "./sim.ts";
 import type { RunState } from "./types.ts";
-import { LAST_FLOOR, RUN_GOAL, TILE } from "./types.ts";
+import { PATH_END, RUN_GOAL, TILE } from "./types.ts";
+import { gunOf, sparkBonus, weaponLevel, xpIntoLevel } from "./weapons.ts";
 
 export interface Cam {
   x: number;
@@ -211,16 +212,11 @@ function drawMinimap(
       ctx.fillRect(x0 + 8 + x * sx, y0 + 8 + y * sy, Math.max(1.2, sx), Math.max(1.2, sy));
     }
   }
-  if (state.floor < LAST_FLOOR) {
-    ctx.fillStyle = state.stairsOpen ? "#3dcc6a" : "#7a5ad0";
+  const boss = state.rooms.find((r) => r.kind === "boss");
+  if (boss) {
+    ctx.fillStyle = "#c8b6ff";
     ctx.beginPath();
-    ctx.arc(
-      x0 + 8 + (state.exitX + 0.5) * sx,
-      y0 + 8 + (state.exitY + 0.5) * sy,
-      4,
-      0,
-      Math.PI * 2,
-    );
+    ctx.arc(x0 + 8 + boss.cx * sx, y0 + 8 + boss.cy * sy, 4.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#3b2152";
     ctx.lineWidth = 1.5;
@@ -305,23 +301,6 @@ export function drawWorld(
     }
   }
 
-  if (!state.stairsOpen && state.floor < LAST_FLOOR) {
-    const lx = state.exitX * TILE;
-    const ly = state.exitY * TILE;
-    if (state.seen[state.exitY]?.[state.exitX]) {
-      ctx.fillStyle = "#c48ad6";
-      roundRect(ctx, lx + 8, ly + 8, TILE - 16, TILE - 16, 8);
-      ctx.fill();
-      ctx.strokeStyle = "#3b2152";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.fillStyle = "#ffe566";
-      ctx.font = "800 18px Fredoka, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("🔒", lx + TILE / 2, ly + 32);
-    }
-  }
-
   const p = state.player;
   const pcx = p.x * TILE;
   const pcy = p.y * TILE + 4;
@@ -339,6 +318,16 @@ export function drawWorld(
       facing: p.facing,
       ghost,
     });
+  }
+
+  for (const s of state.shots) {
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(s.x * TILE, s.y * TILE, Math.max(5, s.r * TILE * 2.4), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#3b2152";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
   const glow = ctx.createRadialGradient(pcx, pcy, 8, pcx, pcy, TILE * 3.2);
@@ -377,7 +366,7 @@ export function drawWorld(
   ctx.lineJoin = "round";
   ctx.font = "800 18px Fredoka, Nunito, sans-serif";
   ctx.fillStyle = "#ff5a8a";
-  const goal = `${RUN_GOAL}  ·  closet ${state.floor} / ${LAST_FLOOR}`;
+  const goal = `${RUN_GOAL}  ·  ${state.pathProgress + 1} / ${PATH_END + 1}`;
   ctx.strokeText(goal, 18, 28);
   ctx.fillText(goal, 18, 28);
 
@@ -395,11 +384,30 @@ export function drawWorld(
   ctx.strokeText(pins, 130, 76);
   ctx.fillText(pins, 130, 76);
 
+  const lv = weaponLevel(state.runXp);
+  const xp = xpIntoLevel(state.runXp);
+  const gun = gunOf(stack[0] ?? "vagabond");
+  const perm = sparkBonus(state.spark);
+  const mx = viewW - 164;
+  ctx.fillStyle = "#3b2152";
+  ctx.strokeText(`${gun.name} Lv ${lv}`, mx, 142);
+  ctx.fillText(`${gun.name} Lv ${lv}`, mx, 142);
+  ctx.fillStyle = "#fff6c8";
+  roundRect(ctx, mx, 150, 148, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = "#7ed957";
+  roundRect(ctx, mx, 150, Math.max(4, 148 * (xp.have / xp.need)), 10, 5);
+  ctx.fill();
+  ctx.strokeStyle = "#3b2152";
+  ctx.lineWidth = 2;
+  roundRect(ctx, mx, 150, 148, 10, 5);
+  ctx.stroke();
+
   const face = def(stack[0] ?? "vagabond");
   ctx.textAlign = "center";
   ctx.fillStyle = face.color;
   ctx.font = "800 16px Fredoka, Nunito, sans-serif";
-  const power = `Hold WASD to run · Space ${face.active.split("—")[0]!.trim()}`;
+  const power = `Hold WASD to run · hold Space to ${gun.name}${state.spark ? ` · Spark +${Math.round(perm.dmg * 100)}%` : ""}`;
   ctx.strokeText(power, viewW / 2, viewH - 22);
   ctx.fillText(power, viewW / 2, viewH - 22);
 }

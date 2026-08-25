@@ -1,9 +1,9 @@
 import { Rng } from "./rng.ts";
 import type { Room, RoomKind, TileKind } from "./types.ts";
-import { LAST_FLOOR, key } from "./types.ts";
+import { PATH_END, key } from "./types.ts";
 
-export const MAP_W = 54;
-export const MAP_H = 40;
+export const MAP_W = 96;
+export const MAP_H = 52;
 
 export interface Dungeon {
   tiles: TileKind[][];
@@ -54,121 +54,82 @@ function carveLine(tiles: TileKind[][], x0: number, y0: number, x1: number, y1: 
   stampFloor(tiles, x, y);
 }
 
-function dist2(a: Room, b: Room): number {
-  const dx = a.cx - b.cx;
-  const dy = a.cy - b.cy;
-  return dx * dx + dy * dy;
-}
-
-export function generateDungeon(rng: Rng, floor: number): Dungeon {
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const d = tryGenerate(rng, floor);
-    if (d) return d;
-  }
-  return tryGenerate(rng, floor) ?? fallback();
+function roomAtPos(x: number, y: number, w: number, h: number, kind: RoomKind, pathIndex: number): Room {
+  return { x, y, w, h, cx: x + (w >> 1), cy: y + (h >> 1), kind, pathIndex };
 }
 
 function fallback(): Dungeon {
   const tiles = emptyTiles(MAP_W, MAP_H);
-  const r: Room = { x: 18, y: 14, w: 16, h: 12, cx: 26, cy: 20, kind: "start" };
-  carveRoom(tiles, r);
-  const exit: Room = { x: 36, y: 14, w: 10, h: 10, cx: 41, cy: 19, kind: "exit" };
-  carveRoom(tiles, exit);
-  carveLine(tiles, r.cx, r.cy, exit.cx, exit.cy);
-  tiles[exit.cy]![exit.cx] = "stairs";
-  return { tiles, rooms: [r, exit], w: MAP_W, h: MAP_H };
+  const start = roomAtPos(8, 20, 12, 10, "start", 0);
+  const mid = roomAtPos(40, 20, 12, 10, "combat", 3);
+  const boss = roomAtPos(72, 18, 14, 12, "boss", PATH_END);
+  for (const r of [start, mid, boss]) carveRoom(tiles, r);
+  carveLine(tiles, start.cx, start.cy, mid.cx, mid.cy);
+  carveLine(tiles, mid.cx, mid.cy, boss.cx, boss.cy);
+  return { tiles, rooms: [start, mid, boss], w: MAP_W, h: MAP_H };
 }
 
-function tryGenerate(rng: Rng, floor: number): Dungeon | null {
+function tryTrail(rng: Rng): Dungeon | null {
   const tiles = emptyTiles(MAP_W, MAP_H);
-  const slotW = 16;
-  const slotH = 12;
-  const ox = 3;
-  const oy = 2;
-  const slots: { sx: number; sy: number; x: number; y: number }[] = [];
-  for (let sy = 0; sy < 3; sy++) {
-    for (let sx = 0; sx < 3; sx++) {
-      slots.push({ sx, sy, x: ox + sx * slotW, y: oy + sy * slotH });
-    }
-  }
+  const spots: { x: number; y: number }[] = [
+    { x: 4, y: 20 },
+    { x: 18, y: 8 },
+    { x: 18, y: 32 },
+    { x: 34, y: 20 },
+    { x: 50, y: 8 },
+    { x: 50, y: 32 },
+    { x: 66, y: 20 },
+    { x: 80, y: 18 },
+  ];
+  if (spots.length !== PATH_END + 1) return null;
 
-  const want = floor >= LAST_FLOOR ? 6 : floor >= 6 ? 6 : floor >= 3 ? 5 : 4;
-  const chosen: typeof slots = [];
-  const startSlot = slots[4]!;
-  chosen.push(startSlot);
-
-  const adjacent = (
-    a: { sx: number; sy: number },
-    b: { sx: number; sy: number },
-  ) => Math.abs(a.sx - b.sx) + Math.abs(a.sy - b.sy) === 1;
-
-  while (chosen.length < want) {
-    const frontier = slots.filter(
-      (s) => !chosen.includes(s) && chosen.some((c) => adjacent(c, s)),
-    );
-    if (frontier.length === 0) break;
-    chosen.push(rng.pick(frontier));
-  }
-  if (chosen.length < 4) return null;
-
-  const rooms: Room[] = chosen.map((s) => {
-    const w = 8 + rng.int(3);
-    const h = 6 + rng.int(3);
-    const x = s.x + 1 + rng.int(2);
-    const y = s.y + 1 + rng.int(2);
-    return {
-      x,
-      y,
-      w,
-      h,
-      cx: x + (w >> 1),
-      cy: y + (h >> 1),
-      kind: "combat",
-    };
+  const rooms: Room[] = spots.map((s, i) => {
+    const w = i === 0 ? 12 : i === PATH_END ? 14 : 11 + rng.int(3);
+    const h = i === 0 ? 10 : i === PATH_END ? 12 : 9 + rng.int(3);
+    const kind: RoomKind = i === 0 ? "start" : i === PATH_END ? "boss" : "combat";
+    return roomAtPos(s.x + rng.int(2), s.y + rng.int(2), w, h, kind, i);
   });
 
-  for (const r of rooms) carveRoom(tiles, r);
-
-  for (let i = 0; i < chosen.length; i++) {
-    for (let j = i + 1; j < chosen.length; j++) {
-      if (!adjacent(chosen[i]!, chosen[j]!)) continue;
-      carveLine(tiles, rooms[i]!.cx, rooms[i]!.cy, rooms[j]!.cx, rooms[j]!.cy);
-    }
-  }
-
-  const start = rooms[0]!;
-  let farthest = rooms[0]!;
-  let best = -1;
   for (const r of rooms) {
-    const d = dist2(start, r);
-    if (d > best) {
-      best = d;
-      farthest = r;
-    }
+    if (r.x + r.w >= MAP_W - 1 || r.y + r.h >= MAP_H - 1) return null;
+    carveRoom(tiles, r);
   }
 
-  start.kind = "start";
-  farthest.kind = floor >= LAST_FLOOR ? "boss" : "exit";
-
-  const rest = rooms.filter((r) => r !== start && r !== farthest);
-  rng.shuffle(rest);
-
-  const assign: RoomKind[] = [];
-  if (floor >= 4 && (floor === 4 || floor === 7 || rng.chance(0.4))) assign.push("shop");
-  if (floor >= 3) assign.push("shrine");
-  if (rest.length > 3) assign.push("treasure");
-  if (floor === 5 || floor === 8 || (floor >= 6 && rng.chance(0.45))) assign.push("elite");
-
-  for (let i = 0; i < rest.length; i++) {
-    rest[i]!.kind = assign[i] ?? "combat";
+  const main = [0, 1, 2, 3, 4, 5, 6, PATH_END];
+  for (let i = 1; i < main.length; i++) {
+    const a = rooms[main[i - 1]!]!;
+    const b = rooms[main[i]!]!;
+    carveLine(tiles, a.cx, a.cy, b.cx, b.cy);
   }
 
-  for (const r of rooms) {
-    if (r.kind === "shrine") tiles[r.cy]![r.cx] = "shrine";
-    if (r.kind === "shop") tiles[r.cy]![r.cx] = "shop";
+  const sideKind = (i: number): RoomKind => {
+    if (i === 2) return "treasure";
+    if (i === 3) return rng.chance(0.5) ? "shop" : "shrine";
+    if (i === 5) return "shrine";
+    return "treasure";
+  };
+  for (const i of [2, 3, 5]) {
+    const hub = rooms[i]!;
+    const north = hub.y > 20;
+    const sy = north ? Math.max(2, hub.y - 12) : Math.min(MAP_H - 14, hub.y + hub.h + 1);
+    const side = roomAtPos(hub.x + 1, sy, 9, 8, sideKind(i), i);
+    if (side.y + side.h >= MAP_H - 1 || side.y < 1) continue;
+    carveRoom(tiles, side);
+    carveLine(tiles, hub.cx, hub.cy, side.cx, side.cy);
+    rooms.push(side);
+    if (side.kind === "shrine") tiles[side.cy]![side.cx] = "shrine";
+    if (side.kind === "shop") tiles[side.cy]![side.cx] = "shop";
   }
 
   return { tiles, rooms, w: MAP_W, h: MAP_H };
+}
+
+export function generateDungeon(rng: Rng, _floor = 1): Dungeon {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const d = tryTrail(rng);
+    if (d) return d;
+  }
+  return fallback();
 }
 
 export function isWalkable(tiles: TileKind[][], x: number, y: number): boolean {
@@ -214,7 +175,7 @@ export function bresenham(
       x += sx;
     }
     if (e2 < dx) {
-      err += dx;
+      err += dy;
       y += sy;
     }
   }

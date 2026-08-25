@@ -16,6 +16,7 @@ const EMPTY: Meta = {
   usurper: false,
   mute: false,
   shake: true,
+  spark: 0,
 };
 
 export const PERKS = [
@@ -56,6 +57,7 @@ export function loadMeta(): Meta {
       seen: Array.isArray(p.seen) ? (p.seen as IdentityId[]) : ["vagabond"],
       resonances: Array.isArray(p.resonances) ? p.resonances : [],
       perks: Array.isArray(p.perks) ? p.perks : [],
+      spark: typeof p.spark === "number" ? p.spark : 0,
     };
   } catch {
     return { ...EMPTY, seen: [...EMPTY.seen], perks: [] };

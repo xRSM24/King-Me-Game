@@ -48,6 +48,7 @@ export interface Room {
   cx: number;
   cy: number;
   kind: RoomKind;
+  pathIndex: number;
 }
 
 export interface Player {
@@ -69,6 +70,18 @@ export interface Enemy {
   flash: number;
   elite: boolean;
   atkCd: number;
+  pathIndex: number;
+}
+
+export interface Shot {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  dmg: number;
+  life: number;
+  color: string;
+  r: number;
 }
 
 export type Fx =
@@ -130,6 +143,11 @@ export interface RunState {
   powerCd: number;
   fireClock: number;
   moveTarget: { x: number; y: number } | null;
+  shots: Shot[];
+  runXp: number;
+  spark: number;
+  fireHeld: number;
+  pathProgress: number;
 }
 
 export interface Meta {
@@ -144,6 +162,7 @@ export interface Meta {
   usurper: boolean;
   mute: boolean;
   shake: boolean;
+  spark: number;
 }
 
 export const DIRS: Record<Dir, { x: number; y: number }> = {
@@ -171,22 +190,25 @@ export function opposite(d: Dir): Dir {
   return "left";
 }
 
-export const FLOOR_NAMES = [
-  "",
+export const PATH_NAMES = [
   "Snack Cellar",
-  "Clank Hall",
+  "Clank Bend",
   "Silly Gallery",
-  "Sock Closet",
+  "Sock Crossroads",
   "Chili Labs",
   "Bubble Baths",
   "Pew Attic",
-  "Cardboard Keep",
-  "Lost Hat Vault",
   "King Empty's Fort",
+];
+
+export const FLOOR_NAMES = [
+  "",
+  ...PATH_NAMES,
 ];
 
 export const TILE = 48;
 export const MAX_STITCH = 3;
-export const VISION = 10;
-export const LAST_FLOOR = 10;
-export const RUN_GOAL = "Reach King Empty's Fort";
+export const VISION = 11;
+export const LAST_FLOOR = 8;
+export const PATH_END = 7;
+export const RUN_GOAL = "Follow the trail to King Empty";

@@ -1,19 +1,20 @@
 import { def, enemyPool, harvestLine, popLine, wearLine } from "./identities.ts";
-import { floorTiles, generateDungeon, isWalkable, lineOfSight } from "./dungeon.ts";
+import { floorTiles, generateDungeon, isWalkable, lineOfSight, roomAt } from "./dungeon.ts";
 import { canStand, dist, slide } from "./physics.ts";
 import { Rng } from "./rng.ts";
 import { activeResonances, echoSet, hasRes } from "./resonances.ts";
 import { hasPerk, type Meta } from "./meta.ts";
-import type { Enemy, IdentityId, PlayPhase, Room, RunState } from "./types.ts";
+import type { Enemy, IdentityId, PlayPhase, Room, RunState, Shot } from "./types.ts";
 import {
   DIR_LIST,
   DIRS,
-  LAST_FLOOR,
   MAX_STITCH,
+  PATH_END,
   VISION,
   dirFromDelta,
   key,
 } from "./types.ts";
+import { gunOf, makeShots, weaponLevel, weaponRate } from "./weapons.ts";
 
 let rng = new Rng(1);
 
@@ -112,16 +113,6 @@ function meleeDamage(state: RunState): number {
   return d;
 }
 
-function rangedDamage(state: RunState): number {
-  let d = def(top(state)).ranged || 2;
-  if (hasRes(state, "deathwind")) d += 2;
-  return d;
-}
-
-function rangeBonus(state: RunState): number {
-  return echoSet(state).has("archer") ? 1 : 0;
-}
-
 function pickupGold(state: RunState): void {
   const t = tileOf(state.player.x, state.player.y);
   const k = key(t.x, t.y);
@@ -209,64 +200,28 @@ function hurtEnemy(state: RunState, e: Enemy, dmg: number, canLoot: boolean): bo
   return true;
 }
 
-function stampStairs(state: RunState, x: number, y: number): void {
-  for (const [dx, dy] of [
-    [0, 0],
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ]) {
-    const tx = x + dx;
-    const ty = y + dy;
-    if (isWalkable(state.tiles, tx, ty) || state.tiles[ty]?.[tx] === "wall") {
-      if (state.tiles[ty]) state.tiles[ty]![tx] = "stairs";
-    }
+function grantXp(state: RunState, amount: number): void {
+  const before = weaponLevel(state.runXp);
+  state.runXp += amount;
+  const after = weaponLevel(state.runXp);
+  if (after > before) {
+    log(state, `Gun leveled up! Lv ${after}. This run only.`);
+    state.fx.push({
+      kind: "banner",
+      text: `Gun Lv ${after}`,
+      sub: "This life only. Spark is what you keep.",
+      color: "#ffe566",
+    });
+    state.fx.push({ kind: "sfx", name: "resonate" });
+  } else {
+    state.fx.push({
+      kind: "text",
+      x: state.player.x,
+      y: state.player.y - 0.4,
+      text: `+${amount} xp`,
+      color: "#7ed957",
+    });
   }
-}
-
-function noteGoal(state: RunState): void {
-  if (state.floor >= LAST_FLOOR) return;
-  if (state.goalHave < state.goalNeed) {
-    const left = state.goalNeed - state.goalHave;
-    log(state, left === 1 ? "One more costume and the next-closet hole pops open." : `${left} costumes left to open the hole.`);
-    return;
-  }
-  if (state.stairsOpen) return;
-  state.stairsOpen = true;
-  let x = state.exitX;
-  let y = state.exitY;
-  if (!isWalkable(state.tiles, x, y)) {
-    const room = state.rooms.find((r) => r.kind === "exit");
-    if (room) {
-      const spot = floorTiles(room).find((p) => isWalkable(state.tiles, p.x, p.y));
-      if (spot) {
-        x = spot.x;
-        y = spot.y;
-      }
-    }
-  }
-  state.exitX = x;
-  state.exitY = y;
-  stampStairs(state, x, y);
-  state.fx.push({
-    kind: "banner",
-    text: "Green hole is open!",
-    sub: "Run onto the glowing hole to the next closet.",
-    color: "#3dcc6a",
-  });
-  state.fx.push({ kind: "sfx", name: "stairs" });
-  log(state, "A big green hole popped open. Run onto it!");
-}
-
-function tryDescend(state: RunState): boolean {
-  if (!state.stairsOpen || state.floor >= LAST_FLOOR) return false;
-  if (dist(state.player.x, state.player.y, state.exitX + 0.5, state.exitY + 0.5) > 1.05) {
-    const t = tileOf(state.player.x, state.player.y);
-    if (state.tiles[t.y]?.[t.x] !== "stairs") return false;
-  }
-  descend(state);
-  return true;
 }
 
 function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
@@ -274,6 +229,7 @@ function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
   state.kills += 1;
   state.blood[key(Math.floor(e.x), Math.floor(e.y))] = 1;
   fxBurst(state, e.x, e.y, def(e.id).color, 18);
+  grantXp(state, 3 + e.pathIndex);
   if (e.id === "hollow") {
     state.pending = e;
     state.phase = "decision";
@@ -282,7 +238,6 @@ function killEnemy(state: RunState, e: Enemy, canLoot: boolean): void {
     return;
   }
   state.goalHave += 1;
-  noteGoal(state);
   if (!canLoot || state.phase === "decision") {
     harvestEnemy(state, e, true);
     return;
@@ -359,11 +314,11 @@ function effectiveMax(state: RunState): number {
   return m;
 }
 
-function spawnEnemy(state: RunState, x: number, y: number, id: IdentityId, elite = false): void {
+function spawnEnemy(state: RunState, x: number, y: number, id: IdentityId, elite = false, pathIndex = 0): void {
   const d = def(id);
-  let hp = d.hp + Math.floor(state.floor / 3);
-  if (elite) hp += 3;
-  if (id === "hollow") hp = 18 + state.grave.length * 2;
+  let hp: number;
+  if (id === "hollow") hp = 22 + state.grave.length * 2 + pathIndex * 2;
+  else hp = Math.max(1, Math.round(d.hp * (1 + pathIndex * 0.42) + (elite ? 3 : 0)));
   state.enemies.push({
     x,
     y,
@@ -375,6 +330,7 @@ function spawnEnemy(state: RunState, x: number, y: number, id: IdentityId, elite
     flash: 0,
     elite,
     atkCd: 0.4,
+    pathIndex,
   });
 }
 
@@ -406,59 +362,38 @@ function spawnInRoom(
     p = { x: room.cx, y: room.cy };
   }
   if (!p) return false;
-  spawnEnemy(state, p.x + 0.5, p.y + 0.5, id, elite);
+  spawnEnemy(state, p.x + 0.5, p.y + 0.5, id, elite, room.pathIndex);
   return true;
 }
 
-function floorGoal(floor: number): number {
-  if (floor >= LAST_FLOOR) return 1;
-  if (floor === 1) return 1;
-  return Math.min(6, 1 + Math.floor(floor * 0.7));
+function swarmCount(pathIndex: number): number {
+  if (pathIndex <= 0) return 1;
+  return Math.min(9, 2 + pathIndex);
 }
 
-function populateFloor(state: RunState): void {
-  const pool = enemyPool(state.floor);
-  const start = state.rooms.find((r) => r.kind === "start");
-
-  if (state.floor >= LAST_FLOOR) {
-    const boss = state.rooms.find((r) => r.kind === "boss");
-    if (boss) spawnEnemy(state, boss.cx + 0.5, boss.cy + 0.5, "hollow");
-    return;
-  }
-
-  if (start) {
-    spawnInRoom(state, start, state.floor === 1 ? "rat" : rng.pick(pool), false, 4);
-  }
-  if (state.floor === 1) return;
-
+function populateTrail(state: RunState): void {
   for (const room of state.rooms) {
-    if (room.kind === "start" || room.kind === "boss") continue;
-    const spots = floorTiles(room);
     if (room.kind === "treasure") {
-      const g = pickOpen(state, spots, 0);
+      const g = pickOpen(state, floorTiles(room), 0);
       if (g) state.goldMap[key(g.x, g.y)] = rng.range(5, 9);
       continue;
     }
     if (room.kind === "shrine" || room.kind === "shop") continue;
-    if (room.kind === "elite") {
-      spawnInRoom(state, room, rng.chance(0.5) ? "knight" : "guard", true, 2);
-      spawnInRoom(state, room, "rat", false, 1);
+    if (room.kind === "start" || room.pathIndex === 0) {
+      spawnInRoom(state, room, "rat", false, 4);
       continue;
     }
-    const n =
-      room.kind === "exit"
-        ? Math.max(1, Math.ceil(state.floor / 5))
-        : state.floor <= 2
-          ? 1
-          : Math.min(3, 1 + Math.floor((state.floor - 1) / 4));
-    for (let i = 0; i < n; i++) spawnInRoom(state, room, rng.pick(pool), false, 1);
-  }
-
-  const need = Math.max(state.goalNeed, 1);
-  let guards = 0;
-  const dens = state.rooms.filter((r) => r.kind === "combat" || r.kind === "exit" || r.kind === "start");
-  while (state.enemies.length < need && dens.length && guards++ < 24) {
-    spawnInRoom(state, rng.pick(dens), rng.pick(pool), false, 0);
+    if (room.kind === "boss") {
+      spawnEnemy(state, room.cx + 0.5, room.cy + 0.5, "hollow", false, room.pathIndex);
+      for (const id of ["archer", "guard", "pyromancer"] as IdentityId[]) {
+        spawnInRoom(state, room, id, false, 2);
+      }
+      continue;
+    }
+    const n = swarmCount(room.pathIndex);
+    const pool = enemyPool(room.pathIndex);
+    const elite = room.pathIndex >= 5;
+    for (let i = 0; i < n; i++) spawnInRoom(state, room, rng.pick(pool), elite && i === 0, 1);
   }
 }
 
@@ -509,7 +444,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     vis: [],
     blood: {},
     grave: [],
-    log: ["Goal: reach King Empty's Fort. You will get sent home a lot. That's the point."],
+    log: ["Goal: follow the trail to King Empty. Hold Space to shoot. Spark from getting sent home makes the next gun a little stronger."],
     fx: [],
     pending: null,
     maxStack,
@@ -532,7 +467,7 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     extraSlotBought: false,
     hollowMimic: null,
     hollowMimicTime: 0,
-    goalNeed: 1,
+    goalNeed: PATH_END,
     goalHave: 0,
     exitX: 0,
     exitY: 0,
@@ -541,19 +476,24 @@ export function createRun(seed: number, meta: Meta, isDaily: boolean): RunState 
     powerCd: 0,
     fireClock: 0,
     moveTarget: null,
+    shots: [],
+    runXp: 0,
+    spark: meta.spark ?? 0,
+    fireHeld: 0,
+    pathProgress: 0,
   };
-  loadFloor(state, meta);
+  loadTrail(state, meta);
   state.fx.push({
     kind: "banner",
     text: "Goal: King Empty",
-    sub: "Ten closets down. Stickers help the next try.",
+    sub: "Follow the trail. Hold Space to shoot. Getting sent home leaves Spark.",
     color: "#ff5a8a",
   });
   return state;
 }
 
-export function loadFloor(state: RunState, _meta?: Meta): void {
-  const dung = generateDungeon(rng, state.floor);
+export function loadTrail(state: RunState, _meta?: Meta): void {
+  const dung = generateDungeon(rng, 1);
   state.tiles = dung.tiles;
   state.rooms = dung.rooms;
   state.w = dung.w;
@@ -568,39 +508,45 @@ export function loadFloor(state: RunState, _meta?: Meta): void {
   state.shopSpent = {};
   state.interactLock = false;
   state.moveTarget = null;
-  state.goalNeed = floorGoal(state.floor);
+  state.shots = [];
+  state.goalNeed = PATH_END;
   state.goalHave = 0;
   state.stairsOpen = false;
-  const exit = dung.rooms.find((r) => r.kind === "exit" || r.kind === "boss") ?? dung.rooms[dung.rooms.length - 1]!;
+  const exit = dung.rooms.find((r) => r.kind === "boss") ?? dung.rooms[dung.rooms.length - 1]!;
   state.exitX = exit.cx;
   state.exitY = exit.cy;
   const start = dung.rooms.find((r) => r.kind === "start") ?? dung.rooms[0]!;
   state.player.x = start.cx + 0.5;
   state.player.y = start.cy + 0.5;
-  populateFloor(state);
+  populateTrail(state);
   floorStartBonuses(state);
   revealStart(state);
   refreshVision(state);
   state.fx.push({ kind: "floorTitle" });
   state.fx.push({ kind: "sfx", name: "stairs" });
-  if (state.floor >= LAST_FLOOR) {
-    log(state, "King Empty's Fort. This is the goal.");
-  } else {
-    log(state, `Closet ${state.floor} — boop ${state.goalNeed} costume${state.goalNeed === 1 ? "" : "s"} to open the stairs.`);
-  }
-}
-
-function descend(state: RunState): void {
-  if (state.floor >= LAST_FLOOR) return;
-  state.floor += 1;
-  loadFloor(state);
+  log(state, "Snack Cellar. One rat, then the trail gets meaner.");
 }
 
 function afterMove(state: RunState, fromX: number, fromY: number): void {
   pickupGold(state);
   if (hasRes(state, "cinderstep")) ignite(state, fromX, fromY, 1.6);
-  if (tryDescend(state)) return;
   const t = tileOf(state.player.x, state.player.y);
+  const room = roomAt(state.rooms, t.x, t.y);
+  if (room && room.pathIndex > state.pathProgress) {
+    state.pathProgress = room.pathIndex;
+    state.floor = room.pathIndex + 1;
+    if (room.kind === "boss") {
+      log(state, "King Empty's Fort. This is the goal.");
+      state.fx.push({
+        kind: "banner",
+        text: "King Empty",
+        sub: "The trail ends here.",
+        color: "#c8b6ff",
+      });
+    } else {
+      log(state, `Deeper on the trail — room ${room.pathIndex + 1} of ${PATH_END + 1}.`);
+    }
+  }
   const kind = state.tiles[t.y]![t.x];
   const k = key(t.x, t.y);
   if (state.interactLock) {
@@ -639,196 +585,13 @@ function attackMelee(state: RunState, e: Enemy): void {
 }
 
 function enemySpeed(e: Enemy): number {
-  if (e.id === "hollow") return 1.55;
-  if (e.id === "rat") return 2.6;
-  if (e.id === "thief") return 2.9;
-  if (e.id === "guard" || e.id === "knight") return 1.7;
-  return 2.15;
-}
-
-function rayHit(state: RunState, x0: number, y0: number, dx: number, dy: number, range: number): Enemy | undefined {
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  const steps = Math.ceil(range / 0.18);
-  for (let i = 1; i <= steps; i++) {
-    const x = x0 + ux * i * 0.18;
-    const y = y0 + uy * i * 0.18;
-    if (!canStand(state.tiles, x, y, 0.12)) return undefined;
-    const e = enemyNear(state, x, y, 0.42);
-    if (e) return e;
-  }
-  return undefined;
-}
-
-function shootLine(state: RunState): boolean {
-  const range = 3.4 + rangeBonus(state);
-  const v = DIRS[state.player.facing];
-  const e = rayHit(state, state.player.x, state.player.y, v.x, v.y, range);
-  if (!e) {
-    log(state, "Pew! It hits a wall. Rude wall.");
-    return true;
-  }
-  const dmg = rangedDamage(state);
-  state.fx.push({ kind: "sfx", name: "hit" });
-  state.fx.push({ kind: "hitstop", ms: 40 });
-  if (hasRes(state, "deathwind")) {
-    state.gold += 1;
-    state.fx.push({ kind: "text", x: e.x, y: e.y, text: "+1", color: "#e8c36a" });
-  }
-  hurtEnemy(state, e, dmg, true);
-  return true;
-}
-
-function dash(state: RunState): boolean {
-  const v = DIRS[state.player.facing];
-  let x = state.player.x;
-  let y = state.player.y;
-  let moved = false;
-  for (let i = 0; i < 12; i++) {
-    const n = slide(state.tiles, x, y, v.x * 0.16, v.y * 0.16, 0.28);
-    if (n.x === x && n.y === y) break;
-    x = n.x;
-    y = n.y;
-    moved = true;
-  }
-  if (!moved) {
-    log(state, "No zoom room!");
-    return false;
-  }
-  const fx = state.player.x;
-  const fy = state.player.y;
-  state.player.x = x;
-  state.player.y = y;
-  state.movedThisTurn = true;
-  fxBurst(state, x, y, "#d48962", 8);
-  afterMove(state, fx, fy);
-  refreshVision(state);
-  return true;
-}
-
-function flip(state: RunState): boolean {
-  const v = DIRS[state.player.facing];
-  const lookX = state.player.x + v.x * 0.9;
-  const lookY = state.player.y + v.y * 0.9;
-  const e = enemyNear(state, lookX, lookY, 1.15);
-  if (!e) {
-    log(state, "Nobody to swap with.");
-    return false;
-  }
-  const px = state.player.x;
-  const py = state.player.y;
-  state.player.x = e.x;
-  state.player.y = e.y;
-  e.x = px;
-  e.y = py;
-  e.facing = state.player.facing;
-  log(state, "SWAP! They're wearing your old spot.");
-  refreshVision(state);
-  return true;
-}
-
-function cleave(state: RunState): boolean {
-  const hits = state.enemies.filter((e) => dist(e.x, e.y, state.player.x, state.player.y) < 1.25);
-  if (!hits.length) {
-    log(state, "Boop Storm hits... the air. The air is fine.");
-    return false;
-  }
-  state.fx.push({ kind: "sfx", name: "hit" });
-  state.fx.push({ kind: "shake", mag: 5 });
-  const dmg = meleeDamage(state);
-  for (const e of hits) hurtEnemy(state, e, dmg, true);
-  return true;
-}
-
-function cinder(state: RunState): boolean {
-  const v = DIRS[state.player.facing];
-  let x = state.player.x;
-  let y = state.player.y;
-  for (let i = 0; i < 3; i++) {
-    x += v.x;
-    y += v.y;
-    ignite(state, x, y, 3);
-    const e = enemyNear(state, x, y, 0.55);
-    if (e) hurtEnemy(state, e, 1, true);
-  }
-  state.fx.push({ kind: "sfx", name: "fire" });
-  log(state, "Hot Foot! The floor is spicy now.");
-  return true;
-}
-
-function pocketLint(state: RunState): boolean {
-  if (state.scroungeUsed) {
-    log(state, "Pockets already empty this closet.");
-    return false;
-  }
-  state.scroungeUsed = true;
-  state.gold += 1;
-  log(state, "You find a coin in the PJs.");
-  state.fx.push({ kind: "sfx", name: "harvest" });
-  return true;
-}
-
-export function usePower(state: RunState): boolean {
-  if (state.phase !== "playing") return false;
-  if (state.powerCd > 0) return false;
-  const id = top(state);
-  let ok = false;
-  switch (id) {
-    case "vagabond":
-      ok = pocketLint(state);
-      break;
-    case "rat":
-      ok = dash(state);
-      break;
-    case "guard":
-      if (state.braceCd > 0) {
-        log(state, "Brace is still cooling off.");
-        return false;
-      }
-      if (state.stitches >= MAX_STITCH) {
-        log(state, "Too many Lucky Pins. They'll fall off.");
-        return false;
-      }
-      state.stitches += 1;
-      state.braceCd = 6;
-      log(state, "CLANK. Lucky Pin slapped on.");
-      state.fx.push({ kind: "sfx", name: "stitch" });
-      ok = true;
-      break;
-    case "archer":
-      ok = shootLine(state);
-      break;
-    case "thief":
-      ok = flip(state);
-      break;
-    case "priest":
-      if (state.priestBound) {
-        log(state, "Bubbles already popped this closet.");
-        return false;
-      }
-      if (state.stitches >= MAX_STITCH) {
-        log(state, "Already covered in pins.");
-        return false;
-      }
-      state.stitches += 1;
-      state.priestBound = true;
-      log(state, "Bubbles! Extra Lucky Pin.");
-      state.fx.push({ kind: "sfx", name: "stitch" });
-      ok = true;
-      break;
-    case "pyromancer":
-      ok = cinder(state);
-      break;
-    case "knight":
-      ok = cleave(state);
-      break;
-    default:
-      ok = pocketLint(state);
-  }
-  if (!ok) return false;
-  state.powerCd = 0.45;
-  return true;
+  const boost = 1 + e.pathIndex * 0.07;
+  let base = 2.15;
+  if (e.id === "hollow") base = 1.55;
+  else if (e.id === "rat") base = 2.6;
+  else if (e.id === "thief") base = 2.9;
+  else if (e.id === "guard" || e.id === "knight") base = 1.7;
+  return base * boost;
 }
 
 export function chooseWear(state: RunState): void {
@@ -916,7 +679,7 @@ export function shopPick(state: RunState, choice: number): void {
       return;
     }
     state.gold -= 12;
-    const id = rng.pick(enemyPool(Math.min(LAST_FLOOR, state.floor + 1)).filter((x) => x !== "hollow"));
+    const id = rng.pick(enemyPool(Math.min(PATH_END, state.pathProgress + 1)).filter((x) => x !== "hollow"));
     const fake: Enemy = {
       x: state.player.x,
       y: state.player.y,
@@ -928,6 +691,7 @@ export function shopPick(state: RunState, choice: number): void {
       flash: 0,
       elite: false,
       atkCd: 0,
+      pathIndex: Math.max(0, state.pathProgress),
     };
     wearEnemy(state, fake);
     log(state, `Mystery box! You're ${def(id).name} now.`);
@@ -1022,7 +786,7 @@ function actEnemy(state: RunState, e: Enemy, dt: number): void {
 
   if (d < 0.62 && e.atkCd <= 0) {
     e.facing = dirFromDelta(px - e.x, py - e.y);
-    e.atkCd = e.id === "hollow" ? 1.15 : 1.05;
+    e.atkCd = e.id === "hollow" ? 1.15 : Math.max(0.7, 1.05 - e.pathIndex * 0.04);
     if ((e.id === "thief" || mimic === "thief") && rng.chance(0.28) && state.gold > 0) {
       state.gold -= 1;
       const tx = e.x;
@@ -1069,14 +833,55 @@ function actEnemy(state: RunState, e: Enemy, dt: number): void {
   e.y = n.y;
 }
 
+function tryFire(state: RunState, firing: boolean): void {
+  if (!firing || state.atkCd > 0) return;
+  const id = top(state);
+  const gun = gunOf(id);
+  state.atkCd = weaponRate(gun.rate, state.runXp, state.spark);
+  const shots = makeShots(id, state.player.x, state.player.y, state.player.facing, state.runXp, state.spark);
+  state.shots.push(...shots);
+  state.fx.push({ kind: "sfx", name: "pew" });
+}
+
+function tickShots(state: RunState, dt: number): void {
+  const next: Shot[] = [];
+  for (const s of state.shots) {
+    if (state.phase !== "playing") {
+      next.push(s);
+      continue;
+    }
+    s.life -= dt;
+    if (s.life <= 0) continue;
+    const nx = s.x + s.vx * dt;
+    const ny = s.y + s.vy * dt;
+    if (nx < 0 || ny < 0 || nx >= state.w || ny >= state.h) continue;
+    if (!canStand(state.tiles, nx, ny, s.r)) continue;
+    s.x = nx;
+    s.y = ny;
+    const e = enemyNear(state, s.x, s.y, 0.4 + s.r);
+    if (e) {
+      if (hasRes(state, "deathwind")) {
+        state.gold += 1;
+        state.fx.push({ kind: "text", x: e.x, y: e.y, text: "+1", color: "#e8c36a" });
+      }
+      if (echoSet(state).has("pyromancer") || top(state) === "pyromancer") ignite(state, e.x, e.y, 1.2);
+      hurtEnemy(state, e, s.dmg, true);
+      continue;
+    }
+    next.push(s);
+  }
+  state.shots = next;
+}
+
 export function setMoveTarget(state: RunState, x: number, y: number): void {
   if (!isWalkable(state.tiles, Math.floor(x), Math.floor(y))) return;
   state.moveTarget = { x, y };
 }
 
-export function tickWorld(state: RunState, dt: number, ax: number, ay: number): void {
+export function tickWorld(state: RunState, dt: number, ax: number, ay: number, firing = false): void {
   if (state.phase !== "playing") return;
   state.turn += dt;
+  state.fireHeld = firing ? 1 : 0;
   if (state.player.iFrames > 0) state.player.iFrames = Math.max(0, state.player.iFrames - dt);
   if (state.atkCd > 0) state.atkCd = Math.max(0, state.atkCd - dt);
   if (state.powerCd > 0) state.powerCd = Math.max(0, state.powerCd - dt);
@@ -1107,14 +912,17 @@ export function tickWorld(state: RunState, dt: number, ax: number, ay: number): 
     refreshVision(state);
   } else {
     state.movedThisTurn = false;
-    tryDescend(state);
   }
 
-  if (state.atkCd <= 0) {
+  tryFire(state, firing);
+  tickShots(state, dt);
+  if (state.phase !== "playing") return;
+
+  if (!firing && state.atkCd <= 0) {
     const foe = enemyNear(state, state.player.x, state.player.y, 0.66);
     if (foe) {
       attackMelee(state, foe);
-      state.atkCd = 0.38;
+      state.atkCd = 0.42;
       if (state.phase !== "playing") return;
     }
   }
@@ -1131,8 +939,6 @@ export function tickWorld(state: RunState, dt: number, ax: number, ay: number): 
 export { refreshVision, effectiveMax, harvestGoldFor };
 
 export function goalLabel(state: RunState): string {
-  if (state.floor >= LAST_FLOOR) return "Goal: boop King Empty";
-  if (state.stairsOpen) return "Goal: run onto the green hole";
-  const left = Math.max(0, state.goalNeed - state.goalHave);
-  return left === 1 ? "Goal: boop 1 more costume" : `Goal: boop ${left} more costumes`;
+  if (state.pathProgress >= PATH_END) return "Goal: boop King Empty";
+  return `Goal: follow the trail · room ${state.pathProgress + 1} / ${PATH_END + 1}`;
 }
