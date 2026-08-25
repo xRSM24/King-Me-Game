@@ -4,7 +4,7 @@ import { canStand, dist, slide } from "./physics.ts";
 import { Rng } from "./rng.ts";
 import { activeResonances, echoSet, hasRes } from "./resonances.ts";
 import { hasPerk, type Meta } from "./meta.ts";
-import type { Enemy, IdentityId, PlayPhase, RunState } from "./types.ts";
+import type { Enemy, IdentityId, PlayPhase, Room, RunState } from "./types.ts";
 import {
   DIR_LIST,
   DIRS,
@@ -356,6 +356,24 @@ function pickOpen(state: RunState, tiles: { x: number; y: number }[], avoid: num
   return rng.pick(opts);
 }
 
+function spawnInRoom(
+  state: RunState,
+  room: Room,
+  id: IdentityId,
+  elite = false,
+  avoid = 2,
+): boolean {
+  const spots = floorTiles(room);
+  let p = pickOpen(state, spots, avoid);
+  if (!p) p = pickOpen(state, spots, 0);
+  if (!p && isWalkable(state.tiles, room.cx, room.cy) && !occupiedTile(state, room.cx, room.cy)) {
+    p = { x: room.cx, y: room.cy };
+  }
+  if (!p) return false;
+  spawnEnemy(state, p.x + 0.5, p.y + 0.5, id, elite);
+  return true;
+}
+
 function floorGoal(floor: number): number {
   if (floor >= LAST_FLOOR) return 1;
   if (floor === 1) return 1;
@@ -364,53 +382,47 @@ function floorGoal(floor: number): number {
 
 function populateFloor(state: RunState): void {
   const pool = enemyPool(state.floor);
+  const start = state.rooms.find((r) => r.kind === "start");
+
+  if (state.floor >= LAST_FLOOR) {
+    const boss = state.rooms.find((r) => r.kind === "boss");
+    if (boss) spawnEnemy(state, boss.cx + 0.5, boss.cy + 0.5, "hollow");
+    return;
+  }
+
+  if (start) {
+    spawnInRoom(state, start, state.floor === 1 ? "rat" : rng.pick(pool), false, 4);
+  }
+  if (state.floor === 1) return;
+
   for (const room of state.rooms) {
-    if (room.kind === "start") {
-      if (state.floor === 1) {
-        const spots = floorTiles(room);
-        const p = pickOpen(state, spots, 3);
-        if (p) spawnEnemy(state, p.x + 0.5, p.y + 0.5, "rat");
-      }
-      continue;
-    }
+    if (room.kind === "start" || room.kind === "boss") continue;
     const spots = floorTiles(room);
-    if (room.kind === "boss") {
-      spawnEnemy(state, room.cx + 0.5, room.cy + 0.5, "hollow");
-      continue;
-    }
     if (room.kind === "treasure") {
       const g = pickOpen(state, spots, 0);
       if (g) state.goldMap[key(g.x, g.y)] = rng.range(5, 9);
       continue;
     }
+    if (room.kind === "shrine" || room.kind === "shop") continue;
     if (room.kind === "elite") {
-      const p = pickOpen(state, spots, 3);
-      if (p) spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.chance(0.5) ? "knight" : "guard", true);
-      const p2 = pickOpen(state, spots, 2);
-      if (p2) spawnEnemy(state, p2.x + 0.5, p2.y + 0.5, "rat");
+      spawnInRoom(state, room, rng.chance(0.5) ? "knight" : "guard", true, 2);
+      spawnInRoom(state, room, "rat", false, 1);
       continue;
     }
-    if (state.floor === 1) continue;
     const n =
       room.kind === "exit"
-        ? 1
-        : state.floor === 2
+        ? Math.max(1, Math.ceil(state.floor / 5))
+        : state.floor <= 2
           ? 1
-          : Math.min(4, 1 + Math.floor((state.floor - 1) / 3) + rng.int(2));
-    for (let i = 0; i < n; i++) {
-      const p = pickOpen(state, spots, 2);
-      if (!p) break;
-      spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.pick(pool));
-    }
+          : Math.min(3, 1 + Math.floor((state.floor - 1) / 4));
+    for (let i = 0; i < n; i++) spawnInRoom(state, room, rng.pick(pool), false, 1);
   }
 
-  const need = state.goalNeed;
+  const need = Math.max(state.goalNeed, 1);
   let guards = 0;
-  while (state.enemies.filter((e) => e.id !== "hollow").length < need && guards++ < 12) {
-    const room = rng.pick(state.rooms.filter((r) => r.kind === "combat" || r.kind === "exit" || r.kind === "start"));
-    const p = pickOpen(state, floorTiles(room), 3);
-    if (!p) break;
-    spawnEnemy(state, p.x + 0.5, p.y + 0.5, rng.pick(pool));
+  const dens = state.rooms.filter((r) => r.kind === "combat" || r.kind === "exit" || r.kind === "start");
+  while (state.enemies.length < need && dens.length && guards++ < 24) {
+    spawnInRoom(state, rng.pick(dens), rng.pick(pool), false, 0);
   }
 }
 

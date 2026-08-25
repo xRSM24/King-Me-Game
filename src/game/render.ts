@@ -348,7 +348,7 @@ export function drawWorld(
     ctx.fillRect(0, 0, viewW, viewH);
   }
 
-  if (hasPerk(meta, "maps")) drawMinimap(ctx, state, meta, viewW);
+  drawMinimap(ctx, state, meta, viewW);
 
   ctx.textAlign = "left";
   ctx.strokeStyle = "#fff6c8";
