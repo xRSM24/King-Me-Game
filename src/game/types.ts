@@ -32,6 +32,12 @@ export interface Laws {
   hopCrown: boolean;
 }
 
+export interface BoardMods {
+  holes: Pos[];
+  bounce: boolean;
+  themFly: boolean;
+}
+
 export interface Meta {
   notches: number;
   runs: number;
@@ -47,11 +53,17 @@ export interface BoardSetup {
   themRows: number[];
   themKings: number;
   openKing: boolean;
+  holes: Pos[];
+  bounce: boolean;
+  themFly: boolean;
+  blurb: string;
+  youPos?: Pos[];
+  themPos?: Pos[];
 }
 
 export const SIZE = 8;
 export const PATH_END = 6;
-export const RUN_GOAL = "Beat the Black Crown";
+export const RUN_GOAL = "Beat the Crown";
 
 export function posKey(p: Pos): string {
   return `${p.r},${p.c}`;
@@ -82,11 +94,15 @@ export function emptyLaws(): Laws {
   };
 }
 
+export function emptyMods(): BoardMods {
+  return { holes: [], bounce: false, themFly: false };
+}
+
 export const BOARD_NAMES = [
-  "Opening Quiet",
-  "The Long File",
-  "Crowded Felt",
-  "King's Shadow",
-  "Grave Row",
-  "The Black Crown",
+  "First Hop",
+  "Crown Race",
+  "Holey Felt",
+  "Shadow King",
+  "Super Bounce",
+  "The Crown",
 ];

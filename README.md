@@ -1,27 +1,32 @@
 # Jumpgrave
 
-A roguelike of **English draughts**. You sit ivory. The house sits charcoal. Hop, capture, rewrite the laws, and try to reach the **Black Crown** before the felt is empty.
+Kid-friendly checkers with a climb. You sit **ivory**. They sit **charcoal**. Hop, capture, pick a power, and try to beat **the Crown** in six boards.
 
 ## The goal
 
-Every run is the same job: win six boards in a row.
+Every game: win six boards in a row.
 
-You will be wiped. That is the point. Captures become **Notches**, a permanent opening bonus with diminishing returns and a hard ceiling, so later deaths help less and you never own the table.
+You will lose sometimes. That is OK. Captures become **Stars**, a little permanent boost with a ceiling, so the next First Hop is kinder but you never skip the climb.
 
-## The laws
+## How it feels
 
-After each win you pick one rule that lasts the rest of the run:
+- The first board starts with a jump (the gold **star**).
+- Pieces hop. Captures pop. Double jumps cheer.
+- One **Oops** per board if you tap the wrong square.
+- Each board is a different puzzle: a race to crown, holes in the felt, a shadow king, backward jumps, then the Crown.
 
-- **Backbite** — your men may jump backward
-- **Long Crown** — kings slide any empty diagonal
-- **Press Gang** — captures try to seat a new man on your back row
-- **Last Rites** — once per run, a wipe saves a king
-- **Borrowed Crown** — a man starts crowned each board
-- **Spare Checker** — +1 starting man
-- **Mercy Rule** — jumps are optional for you
-- **Hop Fever** — every 4 captures crowns a random man
+## Powers
 
-Later boards field more charcoal than Notches can ever match.
+After each win you pick one that lasts the rest of the run:
+
+- **Jump Back** — your men may jump backward
+- **Super King** — kings slide any empty diagonal
+- **Buddy Up** — captures try to seat a new friend
+- **Second Chance** — once, losing everyone saves a king
+- **Start Crowned** — a man starts as a king
+- **Extra Man** — +1 starting checker
+- **Skip the Jump** — jumps are optional for you
+- **Hop Party** — every 4 captures crowns a friend
 
 ## Run locally
 
@@ -43,12 +48,11 @@ Progress lives in the browser (`localStorage`).
 
 | Action | How |
 | --- | --- |
-| Select a piece | Click / tap it |
-| Hop | Click a highlighted square |
-| Multi-jump | Keep hopping the same piece |
+| Select a piece | Tap a gold ring |
+| Hop | Tap a cream pip |
+| Capture | Tap a gold star |
+| Take-back | Oops (once per board) |
 | Pause | Menu |
-
-On a phone, tap the dark squares.
 
 ## License
 

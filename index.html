@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/style.css" />
@@ -17,46 +17,46 @@
     <div id="frame">
       <section class="screen" data-screen="title">
         <div class="veil">
-          <p class="kicker">A draughts roguelike</p>
+          <p class="kicker">Checkers with super powers</p>
           <h1>Jumpgrave</h1>
           <p class="tag">
-            <b>Goal every run:</b> hop the path to the Black Crown. English draughts, then the
-            laws change. You will be wiped. Notches make the next opening a little kinder — and
-            then they stop, so you never own the table.
+            <b>Your job:</b> hop six boards and beat the Crown. Ivory is you. Charcoal is them.
+            Jump over a checker to capture it. Win a board, pick a power, go again. Stars you
+            earn make the next game a tiny bit easier.
           </p>
           <div class="row">
-            <button data-cmd="new" type="button">Sit down</button>
+            <button data-cmd="new" type="button">Play</button>
             <button class="ghost" data-cmd="how" type="button">How to Play</button>
           </div>
           <div class="row">
-            <button class="ghost" data-cmd="daily" type="button">Today's felt</button>
+            <button class="ghost" data-cmd="daily" type="button">Today's board</button>
             <button class="ghost" data-cmd="mute" type="button">Sound is on</button>
           </div>
-          <p class="meta-line">Notches <strong id="notch-count">0</strong></p>
+          <p class="meta-line">Stars <strong id="notch-count">0</strong></p>
           <p id="meta-stats" class="quiet"></p>
         </div>
       </section>
 
       <section class="screen hidden" data-screen="how">
         <div class="veil narrow">
-          <p class="kicker">The house rules</p>
+          <p class="kicker">Easy rules</p>
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Ivory is yours. Charcoal is the house.</b> Men hop forward on the dark squares.
-              Capture by jumping. If a jump is on the table, you must take it.
+              <b>Tap, then hop.</b> Gold rings can move. Cream pips are slides. Stars are
+              jumps — those capture!
             </li>
             <li>
-              <b>The last row crowns you.</b> Kings hop any diagonal. Multi-jumps stay with the
-              same piece.
+              <b>If you can jump, you must.</b> Keep jumping with the same checker if another
+              star appears. Reach the far row to become a king.
             </li>
             <li>
-              <b>Six felts to the Black Crown.</b> Each win you pick a Law that rewrites the rest
-              of the run. Later boards field more charcoal than notches can ever match.
+              <b>Six boards to the Crown.</b> Each one plays a little differently. Win, pick a
+              power, keep hopping.
             </li>
             <li>
-              <b>Empty felt is death.</b> Lose every piece and the run is over. Captures become
-              Notches, with diminishing returns and a hard ceiling.
+              <b>Oops is OK.</b> One take-back per board. If you lose your last checker, you
+              still get Stars. Sit down again!
             </li>
           </ol>
           <button data-cmd="back" type="button">Back</button>
@@ -65,14 +65,22 @@
 
       <div id="table" class="hidden">
         <header class="table-top">
-          <p id="goal">Opening Quiet</p>
-          <p id="status">Your hop.</p>
+          <div>
+            <p id="goal">First Hop</p>
+            <ol id="path" class="path" aria-label="Path to the Crown"></ol>
+          </div>
+          <p id="status">Your turn.</p>
           <div class="row tiny">
+            <button class="ghost hud-btn" data-cmd="oops" id="btn-oops" type="button">Oops</button>
             <button class="ghost hud-btn" data-cmd="mute" id="btn-mute" type="button">Sound on</button>
             <button class="ghost hud-btn" data-cmd="pause" type="button">Menu</button>
           </div>
         </header>
-        <div id="board" role="grid" aria-label="Draughts board"></div>
+        <div id="board-wrap">
+          <div id="board" role="grid" aria-label="Checkers board"></div>
+          <div id="cheer" class="cheer hidden" aria-live="polite"></div>
+        </div>
+        <p id="blurb" class="blurb"></p>
         <p id="counts"></p>
         <ul id="laws"></ul>
         <div id="log"></div>
@@ -86,13 +94,13 @@
 
       <section class="screen hidden" data-screen="pause">
         <div class="veil narrow">
-          <p class="kicker">Hold please</p>
+          <p class="kicker">Paused</p>
           <h2>The pieces wait</h2>
-          <p class="lead">Nobody hops until you sit back down.</p>
+          <p class="lead">Nobody hops until you come back.</p>
           <div class="col">
-            <button data-cmd="resume" type="button">Back to the felt</button>
+            <button data-cmd="resume" type="button">Keep playing</button>
             <button class="ghost" data-cmd="how" type="button">How to Play</button>
-            <button class="ghost" data-cmd="abandon" type="button">Leave the table</button>
+            <button class="ghost" data-cmd="abandon" type="button">Go home</button>
           </div>
         </div>
       </section>
@@ -101,8 +109,8 @@
         <div class="veil narrow">
           <div id="end-body"></div>
           <div class="row">
-            <button data-cmd="new" type="button">Again</button>
-            <button class="ghost" data-cmd="title" type="button">Title</button>
+            <button data-cmd="new" type="button">Play again</button>
+            <button class="ghost" data-cmd="title" type="button">Home</button>
           </div>
         </div>
       </section>

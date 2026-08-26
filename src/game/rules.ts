@@ -1,5 +1,5 @@
-import type { BoardSetup, Cell, Laws, Move, Piece, Pos, Side } from "./types.ts";
-import { SIZE, inBoard, isDark, samePos } from "./types.ts";
+import type { BoardMods, BoardSetup, Cell, Laws, Move, Piece, Pos, Side } from "./types.ts";
+import { SIZE, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export type Board = Cell[][];
 
@@ -26,6 +26,14 @@ export function at(board: Board, p: Pos): Cell {
   return board[p.r]?.[p.c] ?? null;
 }
 
+export function isHole(mods: BoardMods, r: number, c: number): boolean {
+  return mods.holes.some((h) => h.r === r && h.c === c);
+}
+
+export function playable(r: number, c: number, mods: BoardMods): boolean {
+  return inBoard(r, c) && isDark(r, c) && !isHole(mods, r, c);
+}
+
 export function piecesOf(board: Board, side: Side): { piece: Piece; pos: Pos }[] {
   const out: { piece: Piece; pos: Pos }[] = [];
   for (let r = 0; r < SIZE; r++) {
@@ -45,19 +53,27 @@ function moveDirs(piece: Piece): Pos[] {
   return piece.king ? ALL : fwd(piece.side);
 }
 
-function jumpDirs(piece: Piece, laws: Laws): Pos[] {
+function jumpDirs(piece: Piece, laws: Laws, mods: BoardMods): Pos[] {
   if (piece.king) return ALL;
+  if (mods.bounce) return ALL;
   if (piece.side === "you" && laws.backJump) return ALL;
   return fwd(piece.side);
 }
 
-function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, out: Move[]): void {
-  if (piece.king && laws.flyingKings && piece.side === "you") {
+function canFly(piece: Piece, laws: Laws, mods: BoardMods): boolean {
+  if (!piece.king) return false;
+  if (piece.side === "you" && laws.flyingKings) return true;
+  if (piece.side === "them" && mods.themFly) return true;
+  return false;
+}
+
+function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
+  if (canFly(piece, laws, mods)) {
     for (const d of ALL) {
       for (let k = 1; k < SIZE; k++) {
         const r = from.r + d.r * k;
         const c = from.c + d.c * k;
-        if (!inBoard(r, c) || !isDark(r, c)) break;
+        if (!playable(r, c, mods)) break;
         if (board[r]![c]) break;
         out.push({ from, to: { r, c } });
       }
@@ -67,18 +83,18 @@ function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, out: Move[]
   for (const d of moveDirs(piece)) {
     const r = from.r + d.r;
     const c = from.c + d.c;
-    if (!inBoard(r, c) || !isDark(r, c)) continue;
+    if (!playable(r, c, mods)) continue;
     if (!board[r]![c]) out.push({ from, to: { r, c } });
   }
 }
 
-function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, out: Move[]): void {
-  for (const d of jumpDirs(piece, laws)) {
+function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
+  for (const d of jumpDirs(piece, laws, mods)) {
     const mr = from.r + d.r;
     const mc = from.c + d.c;
     const tr = from.r + d.r * 2;
     const tc = from.c + d.c * 2;
-    if (!inBoard(tr, tc) || !isDark(tr, tc)) continue;
+    if (!playable(tr, tc, mods)) continue;
     const mid = board[mr]?.[mc];
     if (!mid || mid.side === piece.side) continue;
     if (board[tr]![tc]) continue;
@@ -86,22 +102,28 @@ function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, out: Move[]
   }
 }
 
-export function movesFrom(board: Board, from: Pos, laws: Laws): Move[] {
+export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods = emptyMods()): Move[] {
   const piece = at(board, from);
   if (!piece) return [];
   const jumps: Move[] = [];
   const slides: Move[] = [];
-  addJumps(board, from, piece, laws, jumps);
-  addSlide(board, from, piece, laws, slides);
+  addJumps(board, from, piece, laws, mods, jumps);
+  addSlide(board, from, piece, laws, mods, slides);
   return [...jumps, ...slides];
 }
 
-export function legalMoves(board: Board, side: Side, laws: Laws, lock?: Pos | null): Move[] {
+export function legalMoves(
+  board: Board,
+  side: Side,
+  laws: Laws,
+  lock?: Pos | null,
+  mods: BoardMods = emptyMods(),
+): Move[] {
   const owned = piecesOf(board, side);
   const all: Move[] = [];
   for (const { pos } of owned) {
     if (lock && !samePos(pos, lock)) continue;
-    all.push(...movesFrom(board, pos, laws));
+    all.push(...movesFrom(board, pos, laws, mods));
   }
   const jumps = all.filter((m) => m.capture);
   if (lock) return jumps.length ? jumps : [];
@@ -122,19 +144,19 @@ export function applyMove(board: Board, move: Move): Board {
   return next;
 }
 
-export function moreJumps(board: Board, pos: Pos, laws: Laws): boolean {
+export function moreJumps(board: Board, pos: Pos, laws: Laws, mods: BoardMods = emptyMods()): boolean {
   const piece = at(board, pos);
   if (!piece) return false;
   const jumps: Move[] = [];
-  addJumps(board, pos, piece, laws, jumps);
+  addJumps(board, pos, piece, laws, mods, jumps);
   return jumps.length > 0;
 }
 
-export function recruitMan(board: Board, side: Side, nextId: () => number): Board {
+export function recruitMan(board: Board, side: Side, nextId: () => number, mods: BoardMods = emptyMods()): Board {
   const next = cloneBoard(board);
   const row = side === "you" ? SIZE - 1 : 0;
   for (let c = 0; c < SIZE; c++) {
-    if (!isDark(row, c)) continue;
+    if (!playable(row, c, mods)) continue;
     if (next[row]![c]) continue;
     next[row]![c] = { id: nextId(), side, king: false };
     return next;
@@ -152,12 +174,12 @@ export function crownRandom(board: Board, side: Side, pick: (n: number) => numbe
   return { board: next, did: true };
 }
 
-export function outcome(board: Board, sideToMove: Side, laws: Laws): "you" | "them" | null {
+export function outcome(board: Board, sideToMove: Side, laws: Laws, mods: BoardMods = emptyMods()): "you" | "them" | null {
   const you = piecesOf(board, "you").length;
   const them = piecesOf(board, "them").length;
   if (you === 0) return "them";
   if (them === 0) return "you";
-  if (legalMoves(board, sideToMove, laws).length === 0) return sideToMove === "you" ? "them" : "you";
+  if (legalMoves(board, sideToMove, laws, null, mods).length === 0) return sideToMove === "you" ? "them" : "you";
   return null;
 }
 
@@ -169,23 +191,42 @@ export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
     board.push(row);
   }
 
-  const place = (side: Side, count: number, rows: number[], kingFirst: boolean) => {
+  const mods: BoardMods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
+
+  const stamp = (side: Side, pos: Pos, king: boolean) => {
+    if (!playable(pos.r, pos.c, mods)) return false;
+    if (board[pos.r]![pos.c]) return false;
+    board[pos.r]![pos.c] = { id: nextId(), side, king };
+    return true;
+  };
+
+  const fill = (side: Side, count: number, rows: number[], spots: Pos[] | undefined, kingFirst: boolean) => {
     let n = 0;
     let crowned = false;
+    if (spots) {
+      for (const pos of spots) {
+        if (n >= count) return;
+        const king = kingFirst && !crowned && side === "you";
+        if (stamp(side, pos, king)) {
+          if (king) crowned = true;
+          n += 1;
+        }
+      }
+    }
     for (const r of rows) {
       for (let c = 0; c < SIZE; c++) {
         if (n >= count) return;
-        if (!isDark(r, c)) continue;
         const king = kingFirst && !crowned && side === "you";
-        if (king) crowned = true;
-        board[r]![c] = { id: nextId(), side, king };
-        n += 1;
+        if (stamp(side, { r, c }, king)) {
+          if (king) crowned = true;
+          n += 1;
+        }
       }
     }
   };
 
-  place("them", spec.them, spec.themRows, false);
-  place("you", spec.you, spec.youRows, spec.openKing);
+  fill("them", spec.them, spec.themRows, spec.themPos, false);
+  fill("you", spec.you, spec.youRows, spec.youPos, spec.openKing);
   crownSide(board, "them", spec.themKings);
   return board;
 }

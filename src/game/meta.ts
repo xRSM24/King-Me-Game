@@ -29,7 +29,7 @@ export function saveMeta(meta: Meta): void {
   localStorage.setItem(KEY, JSON.stringify(meta));
 }
 
-/** Permanent bonus from Notches. Approaches +1 extra man and a 30% opening-king chance. */
+/** Permanent bonus from Stars. Approaches +1 extra man and a 30% opening-king chance. */
 export function notchBonus(notches: number): { extra: number; kingChance: number } {
   const s = Math.max(0, notches);
   return {
