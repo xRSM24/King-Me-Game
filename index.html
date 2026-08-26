@@ -4,123 +4,95 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Soulstack</title>
+    <title>Jumpgrave</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@600;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="frame">
-      <canvas id="game"></canvas>
-
-      <div id="hud" class="hidden">
-        <aside id="stack-panel"></aside>
-        <div id="log"></div>
-        <p id="echo-note"></p>
-        <button id="btn-mute" class="hud-btn" data-cmd="mute" type="button">Sound on</button>
-        <button class="hud-btn pause-btn" data-cmd="resume" id="open-pause" type="button">Menu</button>
-      </div>
-
-      <div id="touch" class="hidden">
-        <div class="pad">
-          <button type="button" data-hold="up">↑</button>
-          <div class="mid">
-            <button type="button" data-hold="left">←</button>
-            <span class="pad-star" aria-hidden="true">★</span>
-            <button type="button" data-hold="right">→</button>
-          </div>
-          <button type="button" data-hold="down">↓</button>
-        </div>
-      </div>
-
-      <div id="modal" class="hidden"></div>
-
       <section class="screen" data-screen="title">
-        <div class="title-layout">
-          <figure class="hero-frame">
-            <img src="/pip-hero.webp" alt="Pip, a round pajama ghost with a giant safety pin" />
-            <figcaption>Pip, pajama ghost and professional costume-piler</figcaption>
-          </figure>
-          <div class="veil">
-            <p class="kicker">A goofy roguelike</p>
-            <h1>Soulstack</h1>
-            <p class="tag">
-              <b>Goal every run:</b> follow the trail to King Empty. Guns auto-fire.
-              You will get sent home a lot. Each try leaves Spark, which makes guns a little
-              stronger — and then stops, so you never go god-mode.
-            </p>
-            <div class="row">
-              <button data-cmd="new" type="button">Let's Go!</button>
-              <button class="ghost" data-cmd="how" type="button">How to Play</button>
-            </div>
-            <div class="row">
-              <button class="ghost" data-cmd="codex" type="button">Costume Book</button>
-              <button class="ghost" data-cmd="daily" type="button">Today's Closet</button>
-            </div>
-            <p class="meta-line">Stickers <strong id="rem-count">0</strong></p>
-            <p id="meta-stats" class="quiet"></p>
-            <div id="perk-shop" class="perks"></div>
-            <div class="row tiny">
-              <button class="ghost" data-cmd="mute" type="button">Sound is on</button>
-              <button class="ghost" data-cmd="shake" type="button">Wobble on</button>
-            </div>
+        <div class="veil">
+          <p class="kicker">A draughts roguelike</p>
+          <h1>Jumpgrave</h1>
+          <p class="tag">
+            <b>Goal every run:</b> hop the path to the Black Crown. English draughts, then the
+            laws change. You will be wiped. Notches make the next opening a little kinder — and
+            then they stop, so you never own the table.
+          </p>
+          <div class="row">
+            <button data-cmd="new" type="button">Sit down</button>
+            <button class="ghost" data-cmd="how" type="button">How to Play</button>
           </div>
+          <div class="row">
+            <button class="ghost" data-cmd="daily" type="button">Today's felt</button>
+            <button class="ghost" data-cmd="mute" type="button">Sound is on</button>
+          </div>
+          <p class="meta-line">Notches <strong id="notch-count">0</strong></p>
+          <p id="meta-stats" class="quiet"></p>
         </div>
       </section>
 
       <section class="screen hidden" data-screen="how">
         <div class="veil narrow">
-          <p class="kicker">Super simple</p>
+          <p class="kicker">The house rules</p>
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Hold WASD to run.</b> Your costume gun auto-fires — pins, fans, shotguns, rings —
-              and leans toward the nearest costume. Just steer.
+              <b>Ivory is yours. Charcoal is the house.</b> Men hop forward on the dark squares.
+              Capture by jumping. If a jump is on the table, you must take it.
             </li>
             <li>
-              <b>No hearts.</b> Bonks knock costumes off the pile. Last one gone = sent home.
+              <b>The last row crowns you.</b> Kings hop any diagonal. Multi-jumps stay with the
+              same piece.
             </li>
             <li>
-              <b>One sandbox, one trail.</b> Side rooms have snacks and shops. The main path
-              gets meaner the closer you get to King Empty. First tries should send you home
-              five to ten times before you even see him.
+              <b>Six felts to the Black Crown.</b> Each win you pick a Law that rewrites the rest
+              of the run. Later boards field more charcoal than notches can ever match.
             </li>
             <li>
-              <b>Wear or Snack.</b> Wear = put the outfit on (and use its gun). Snack = coins, but King Empty keeps that costume.
-            </li>
-            <li>
-              <b>XP is split on purpose.</b> Kills level your gun this life only. Getting sent
-              home turns leftover XP into Spark, which permanently buffs guns — but Spark
-              has diminishing returns and a hard ceiling, so later deaths help less and you
-              never steamroll the trail.
+              <b>Empty felt is death.</b> Lose every piece and the run is over. Captures become
+              Notches, with diminishing returns and a hard ceiling.
             </li>
           </ol>
-          <button data-cmd="title" type="button">Back</button>
+          <button data-cmd="back" type="button">Back</button>
         </div>
       </section>
 
-      <section class="screen hidden" data-screen="codex">
-        <div class="veil wide">
-          <p class="kicker">Pip's sticker book</p>
-          <h2>Costume Book</h2>
-          <div id="codex-body"></div>
-          <button data-cmd="title" type="button">Back</button>
+      <div id="table" class="hidden">
+        <header class="table-top">
+          <p id="goal">Opening Quiet</p>
+          <p id="status">Your hop.</p>
+          <div class="row tiny">
+            <button class="ghost hud-btn" data-cmd="mute" id="btn-mute" type="button">Sound on</button>
+            <button class="ghost hud-btn" data-cmd="pause" type="button">Menu</button>
+          </div>
+        </header>
+        <div id="board" role="grid" aria-label="Draughts board"></div>
+        <p id="counts"></p>
+        <ul id="laws"></ul>
+        <div id="log"></div>
+      </div>
+
+      <section class="screen hidden" data-screen="pick">
+        <div class="veil narrow">
+          <div id="pick-body"></div>
         </div>
       </section>
 
       <section class="screen hidden" data-screen="pause">
         <div class="veil narrow">
           <p class="kicker">Hold please</p>
-          <h2>Pip waits</h2>
-          <p class="lead">The costumes are frozen mid-wobble. Take a snack break.</p>
+          <h2>The pieces wait</h2>
+          <p class="lead">Nobody hops until you sit back down.</p>
           <div class="col">
-            <button data-cmd="resume" type="button">Back to the pile</button>
+            <button data-cmd="resume" type="button">Back to the felt</button>
             <button class="ghost" data-cmd="how" type="button">How to Play</button>
-            <button class="ghost" data-cmd="abandon" type="button">Go home</button>
+            <button class="ghost" data-cmd="abandon" type="button">Leave the table</button>
           </div>
         </div>
       </section>
@@ -129,7 +101,7 @@
         <div class="veil narrow">
           <div id="end-body"></div>
           <div class="row">
-            <button data-cmd="new" type="button">Again!</button>
+            <button data-cmd="new" type="button">Again</button>
             <button class="ghost" data-cmd="title" type="button">Title</button>
           </div>
         </div>

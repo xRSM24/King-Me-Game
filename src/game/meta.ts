@@ -1,66 +1,27 @@
-import type { IdentityId, Meta } from "./types.ts";
+import type { Meta } from "./types.ts";
 
-export type { Meta };
-
-const KEY = "soulstack-meta-v1";
+const KEY = "jumpgrave-meta-v1";
 
 const EMPTY: Meta = {
-  remembrance: 0,
-  seen: ["vagabond"],
-  resonances: [],
-  wins: 0,
-  bestFloor: 0,
-  bestGold: 0,
+  notches: 0,
   runs: 0,
-  perks: [],
-  usurper: false,
+  wins: 0,
+  bestBoard: 0,
   mute: false,
-  shake: true,
-  spark: 0,
 };
-
-export const PERKS = [
-  {
-    id: "stitch",
-    name: "Extra Pin",
-    cost: 18,
-    desc: "Start with one Lucky Pin.",
-  },
-  {
-    id: "stack5",
-    name: "Bigger Backpack",
-    cost: 28,
-    desc: "Max pile of 4 costumes.",
-  },
-  {
-    id: "gold",
-    name: "Snack Money",
-    cost: 10,
-    desc: "Start with 4 coins.",
-  },
-  {
-    id: "maps",
-    name: "See-Through Socks",
-    cost: 16,
-    desc: "The mini-map shows the whole floor.",
-  },
-] as const;
 
 export function loadMeta(): Meta {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...EMPTY, seen: [...EMPTY.seen], perks: [] };
+    if (!raw) return { ...EMPTY };
     const p = JSON.parse(raw) as Partial<Meta>;
     return {
       ...EMPTY,
       ...p,
-      seen: Array.isArray(p.seen) ? (p.seen as IdentityId[]) : ["vagabond"],
-      resonances: Array.isArray(p.resonances) ? p.resonances : [],
-      perks: Array.isArray(p.perks) ? p.perks : [],
-      spark: typeof p.spark === "number" ? p.spark : 0,
+      notches: typeof p.notches === "number" ? p.notches : 0,
     };
   } catch {
-    return { ...EMPTY, seen: [...EMPTY.seen], perks: [] };
+    return { ...EMPTY };
   }
 }
 
@@ -68,22 +29,17 @@ export function saveMeta(meta: Meta): void {
   localStorage.setItem(KEY, JSON.stringify(meta));
 }
 
-export function hasPerk(meta: Meta, id: string): boolean {
-  return meta.perks.includes(id);
+/** Permanent bonus from Notches. Approaches +1 extra man and a 30% opening-king chance. */
+export function notchBonus(notches: number): { extra: number; kingChance: number } {
+  const s = Math.max(0, notches);
+  return {
+    extra: Math.round(0.85 * (1 - Math.exp(-s / 70))),
+    kingChance: 0.3 * (1 - Math.exp(-s / 90)),
+  };
 }
 
-export function remembranceFor(opts: {
-  floor: number;
-  worn: number;
-  resonances: number;
-  win: boolean;
-  usurper: boolean;
-}): number {
-  return (
-    opts.floor * 2 +
-    opts.worn * 3 +
-    opts.resonances * 5 +
-    (opts.win ? 18 : 0) +
-    (opts.usurper ? 8 : 0)
-  );
+export function notchesFromRun(hops: number, current: number): number {
+  const raw = 6 + hops * 0.35;
+  const fade = 90 / (90 + current);
+  return Math.max(2, Math.round(raw * fade));
 }

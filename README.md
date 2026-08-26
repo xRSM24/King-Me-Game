@@ -1,50 +1,27 @@
-# Soulstack
+# Jumpgrave
 
-A goofy costume-pile roguelike. You play **Pip**, a pajama ghost with no hearts — only a wobbly pile of outfits. Hold WASD to run. Costume guns auto-fire. Outfits you skip go to **King Empty**.
+A roguelike of **English draughts**. You sit ivory. The house sits charcoal. Hop, capture, rewrite the laws, and try to reach the **Black Crown** before the felt is empty.
 
 ## The goal
 
-Every run has the same job: **follow the trail to King Empty** and finish the fight.
+Every run is the same job: win six boards in a row.
 
-The map is one sandbox with a winding linear path. Side rooms hide coins, shops, and fountains. The main rooms get more crowded and meaner the closer you get. First tries should send you home several times before you even reach the boss. That is the point.
+You will be wiped. That is the point. Captures become **Notches**, a permanent opening bonus with diminishing returns and a hard ceiling, so later deaths help less and you never own the table.
 
-## Guns
+## The laws
 
-Each costume shoots a different pattern:
+After each win you pick one rule that lasts the rest of the run:
 
-| Costume | Gun | Pattern |
-| --- | --- | --- |
-| Pip | Pin Pop | One shot forward |
-| Squeak | Crumb Fan | Three-way spread |
-| Sir Clank | Pan Blast | Close shotgun |
-| Twang | Rubber Bolt | Fast bolt, extra sting |
-| Nib | Sneak X | Two diagonal shots |
-| Bubbles | Soap Ring | Eight-way ring |
-| Chili | Chili Stream | Twin spicy jets |
-| Sir Boop | Boop Cross | Four shots, plus sign |
-| King Empty | Empty Ring | A leftover-hat ring |
+- **Backbite** — your men may jump backward
+- **Long Crown** — kings slide any empty diagonal
+- **Press Gang** — captures try to seat a new man on your back row
+- **Last Rites** — once per run, a wipe saves a king
+- **Borrowed Crown** — a man starts crowned each board
+- **Spare Checker** — +1 starting man
+- **Mercy Rule** — jumps are optional for you
+- **Hop Fever** — every 4 captures crowns a random man
 
-Damage and fire rate are balanced around Pip's starter pin. Bigger patterns hit more people; slower or shorter shots keep them honest.
-
-## XP without god-mode
-
-Kills give **run XP**, which levels the current gun **this life only** (cap 8). Death resets that.
-
-Death also grants **Spark**, a permanent gun bonus with three brakes:
-
-1. **Diminishing returns.** Each death grants `~6 + 0.22×run XP`, then scales by `90 / (90 + current Spark)`. Later deaths help less.
-2. **Soft ceiling.** Spark bonus is `1 - e^(-Spark / n)`, approaching **+30% damage** and **+18% fire rate**. It never goes higher.
-3. **No farm.** Rooms spawn a fixed swarm and never respawn. Trail HP and swarm size scale faster than Spark, so the last stretch still hurts.
-
-Stickers still buy Lucky Pins and pile size between runs. Spark is only for guns.
-
-## The loop
-
-1. Run the candy trail. Hold WASD or arrows (or tap the floor).
-2. Your costume gun auto-fires and leans toward the nearest foe.
-3. When a costume flops, **Wear** or **Snack**.
-4. Wear: put the outfit on and use its gun. Snack: take coins, and King Empty keeps that costume.
-5. Follow the trail. King Empty waits at the end, wearing every outfit you skipped.
+Later boards field more charcoal than Notches can ever match.
 
 ## Run locally
 
@@ -60,19 +37,18 @@ npm run build
 npm run preview
 ```
 
-Progress lives in the browser (`localStorage`). Stickers and Spark both persist between runs.
+Progress lives in the browser (`localStorage`).
 
 ## Controls
 
-| Action | Keys |
+| Action | How |
 | --- | --- |
-| Run | Hold WASD, arrows, or vim hjkl |
-| Walk toward a spot | Click the floor |
-| Shoot | Automatic — aims at the nearest costume |
-| Wear / Snack | 1 / 2 |
-| Pause | Esc |
+| Select a piece | Click / tap it |
+| Hop | Click a highlighted square |
+| Multi-jump | Keep hopping the same piece |
+| Pause | Menu |
 
-On a phone, hold the d-pad. Guns fire on their own.
+On a phone, tap the dark squares.
 
 ## License
 
