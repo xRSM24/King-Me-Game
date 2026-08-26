@@ -466,9 +466,11 @@ export class Game {
         ? "Charcoal is hopping…"
         : this.lock
           ? "Keep jumping."
-          : this.turn === "you"
-            ? "Your hop."
-            : "Wait.";
+          : this.selected
+            ? "Land on a marked square."
+            : this.turn === "you"
+              ? "Your hop. Gold rings can move."
+              : "Wait.";
     }
     const counts = document.getElementById("counts");
     if (counts) counts.textContent = `Ivory ${you} · charcoal ${them} · hops ${this.hops}`;
@@ -504,6 +506,8 @@ export class Game {
         html += `<button type="button" class="sq ${dark ? "dark" : "light"} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${dark ? "" : "tabindex='-1'"}>`;
         if (p) {
           html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side} ${p.king ? "king" : "man"}"></span>`;
+        } else if (hint) {
+          html += `<span class="land" aria-hidden="true"></span>`;
         }
         html += `</button>`;
       }

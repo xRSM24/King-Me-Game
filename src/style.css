@@ -221,17 +221,33 @@ button small {
   background: #1a4031;
 }
 
-.sq.sel {
-  box-shadow: inset 0 0 0 3px var(--gold);
+#board .sq.hint,
+#board .sq.hint:nth-child(odd) {
+  background: #3f8a5e;
+  box-shadow: inset 0 0 0 4px #f6e7b0;
 }
 
-.sq.hint {
-  background: #2f6b4c;
-  box-shadow: inset 0 0 0 3px #f3e6c8;
+#board .sq.can,
+#board .sq.can:nth-child(odd) {
+  box-shadow: inset 0 0 0 3px rgba(226, 182, 87, 0.85);
+}
+
+#board .sq.sel,
+#board .sq.sel:nth-child(odd) {
+  box-shadow: inset 0 0 0 4px var(--gold);
 }
 
 .sq.can .man {
   transform: translateY(-2px) scale(1.04);
+}
+
+.land {
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: #f3e6c8;
+  box-shadow: 0 0 0 3px #e2b657;
+  pointer-events: none;
 }
 
 .man {
