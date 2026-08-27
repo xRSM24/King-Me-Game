@@ -164,14 +164,14 @@ export function recruitMan(board: Board, side: Side, nextId: () => number, mods:
   return next;
 }
 
-export function crownRandom(board: Board, side: Side, pick: (n: number) => number): { board: Board; did: boolean } {
+export function crownRandom(board: Board, side: Side, pick: (n: number) => number): { board: Board; did: boolean; pos: Pos | null } {
   const men = piecesOf(board, side).filter((x) => !x.piece.king);
-  if (!men.length) return { board, did: false };
+  if (!men.length) return { board, did: false, pos: null };
   const chosen = men[pick(men.length)]!;
   const next = cloneBoard(board);
   const p = next[chosen.pos.r]![chosen.pos.c];
   if (p) p.king = true;
-  return { board: next, did: true };
+  return { board: next, did: true, pos: chosen.pos };
 }
 
 export function outcome(board: Board, sideToMove: Side, laws: Laws, mods: BoardMods = emptyMods()): "you" | "them" | null {

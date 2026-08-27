@@ -19,7 +19,7 @@ import {
 } from "./rules.ts";
 import { boardSpec } from "./setup.ts";
 import type { BoardMods, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods } from "./types.ts";
+import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, samePos } from "./types.ts";
 
 const CHEERS = ["Nice!", "Jump!", "Got 'em!", "Wow!", "Again!", "Super hop!"];
 
@@ -303,10 +303,11 @@ export class Game {
       this.snapshotHops = this.hops;
     }
     this.animating = true;
-    await this.animateHop(move, "you");
     const wasKing = at(this.board, move.from)?.king ?? false;
+    await this.animateHop(move, "you");
     this.board = applyMove(this.board, move);
     const nowKing = at(this.board, move.to)?.king ?? false;
+    let partyPos: Pos | null = null;
     if (move.capture) {
       this.hops += 1;
       this.combo += 1;
@@ -317,33 +318,38 @@ export class Game {
       if (this.laws.hopCrown && this.hops % 4 === 0) {
         const c = crownRandom(this.board, "you", (n) => this.rng.int(n));
         this.board = c.board;
-        if (c.did) {
-          this.audio.crown();
-          this.cheer("Party crown!");
-          this.pushLog("Hop Party crowned a friend.");
-        }
+        if (c.did) partyPos = c.pos;
       }
     } else {
       this.combo = 0;
       this.audio.hop();
     }
+
+    const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
+    this.lock = keepJumping ? move.to : null;
+    this.selected = keepJumping ? move.to : null;
+    this.renderAll();
+    await this.settle(move.to, !wasKing && nowKing, keepJumping);
     if (!wasKing && nowKing) {
       this.audio.crown();
       this.cheer("Crowned!");
       this.pushLog("Crowned! Kings hop every way.");
+      await this.animateCrown(move.to);
+    }
+    if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
+      this.audio.crown();
+      this.cheer("Party crown!");
+      this.pushLog("Hop Party crowned a friend.");
+      await this.animateCrown(partyPos);
     }
 
-    if (move.capture && moreJumps(this.board, move.to, this.laws, this.mods)) {
-      this.lock = move.to;
-      this.selected = move.to;
-      this.animating = false;
+    this.animating = false;
+    if (keepJumping) {
       this.renderAll();
       return;
     }
-
     this.lock = null;
     this.selected = null;
-    this.animating = false;
     this.afterYou();
   }
 
@@ -372,15 +378,24 @@ export class Game {
       return;
     }
     this.animating = true;
+    const wasKing = at(this.board, move.from)?.king ?? false;
     await this.animateHop(move, "them");
     this.board = applyMove(this.board, move);
+    const nowKing = at(this.board, move.to)?.king ?? false;
     if (move.capture) this.audio.capture(1);
     else this.audio.hop();
-    this.animating = false;
+    const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
     this.renderAll();
+    await this.settle(move.to, !wasKing && nowKing, keepJumping);
+    if (!wasKing && nowKing) {
+      this.audio.crown();
+      this.cheer("They crowned!");
+      await this.animateCrown(move.to);
+    }
+    this.animating = false;
 
-    if (move.capture && moreJumps(this.board, move.to, this.laws, this.mods)) {
-      this.scheduleAi(320);
+    if (keepJumping) {
+      this.scheduleAi(280);
       return;
     }
 
@@ -403,40 +418,143 @@ export class Game {
     return document.querySelector(`[data-r="${p.r}"][data-c="${p.c}"]`);
   }
 
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  private fx(el: HTMLElement, className: string, ms: number): void {
+    document.body.appendChild(el);
+    el.classList.add(className);
+    window.setTimeout(() => el.remove(), ms);
+  }
+
+  private sparkAt(target: HTMLElement, count: number, colors: string[], dist = 36): void {
+    const box = target.getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement("span");
+      s.className = "spark";
+      s.style.left = `${cx}px`;
+      s.style.top = `${cy}px`;
+      s.style.background = colors[i % colors.length]!;
+      const ang = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+      const far = dist * (0.65 + Math.random() * 0.5);
+      s.style.setProperty("--sx", `${Math.cos(ang) * far}px`);
+      s.style.setProperty("--sy", `${Math.sin(ang) * far}px`);
+      this.fx(s, "go", 420);
+    }
+  }
+
+  private puffAt(target: HTMLElement): void {
+    const box = target.getBoundingClientRect();
+    const p = document.createElement("span");
+    p.className = "puff";
+    p.style.left = `${box.left + box.width / 2}px`;
+    p.style.top = `${box.top + box.height / 2}px`;
+    this.fx(p, "go", 380);
+  }
+
   private animateHop(move: Move, side: "you" | "them"): Promise<void> {
-    return new Promise((resolve) => {
-      const fromEl = this.squareEl(move.from);
-      const toEl = this.squareEl(move.to);
-      const man = fromEl?.querySelector(".man") as HTMLElement | null;
-      if (!fromEl || !toEl || !man) {
-        resolve();
-        return;
+    const fromEl = this.squareEl(move.from);
+    const toEl = this.squareEl(move.to);
+    const man = fromEl?.querySelector(".man") as HTMLElement | null;
+    if (!fromEl || !toEl || !man) return this.wait(0);
+
+    const start = man.getBoundingClientRect();
+    const destBox = toEl.getBoundingClientRect();
+    const fly = man.cloneNode(true) as HTMLElement;
+    fly.classList.add("flyer");
+    fly.style.width = `${start.width}px`;
+    fly.style.height = `${start.height}px`;
+    fly.style.left = `${start.left}px`;
+    fly.style.top = `${start.top}px`;
+    man.style.opacity = "0";
+    document.body.appendChild(fly);
+    this.puffAt(fromEl);
+
+    const dx = destBox.left + (destBox.width - start.width) / 2 - start.left;
+    const dy = destBox.top + (destBox.height - start.height) / 2 - start.top;
+    const arc = -Math.min(side === "you" ? 72 : 56, Math.hypot(dx, dy) * 0.42);
+    const spin = move.capture ? (dx >= 0 ? 22 : -22) : dx >= 0 ? 8 : -8;
+    const ms = move.capture ? 340 : 280;
+
+    const hop = fly.animate(
+      [
+        { transform: "translate(0, 0) scale(1) rotate(0deg)" },
+        {
+          transform: `translate(${dx * 0.5}px, ${dy * 0.45 + arc}px) scale(1.2) rotate(${spin}deg)`,
+          offset: 0.42,
+        },
+        { transform: `translate(${dx}px, ${dy}px) scale(1.04) rotate(0deg)` },
+      ],
+      { duration: ms, easing: "cubic-bezier(.2,.85,.25,1)", fill: "forwards" },
+    );
+
+    const extras: Promise<void>[] = [hop.finished.then(() => undefined).catch(() => undefined), this.wait(ms)];
+
+    if (move.capture) {
+      const capEl = this.squareEl(move.capture);
+      const capMan = capEl?.querySelector(".man") as HTMLElement | null;
+      if (capEl && capMan) {
+        const cbox = capMan.getBoundingClientRect();
+        capMan.style.opacity = "0";
+        const taken = capMan.cloneNode(true) as HTMLElement;
+        taken.classList.add("flyer", "taken");
+        taken.style.width = `${cbox.width}px`;
+        taken.style.height = `${cbox.height}px`;
+        taken.style.left = `${cbox.left}px`;
+        taken.style.top = `${cbox.top}px`;
+        document.body.appendChild(taken);
+        this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
+        this.puffAt(capEl);
+        const kick = dx >= 0 ? 28 : -28;
+        const pop = taken.animate(
+          [
+            { transform: "scale(1) rotate(0deg)", opacity: 1 },
+            { transform: `scale(1.25) rotate(${kick > 0 ? -18 : 18}deg)`, opacity: 1, offset: 0.22 },
+            { transform: `translate(${kick}px, 36px) scale(0.15) rotate(${kick > 0 ? 70 : -70}deg)`, opacity: 0 },
+          ],
+          { duration: 320, easing: "ease-in", fill: "forwards" },
+        );
+        extras.push(pop.finished.then(() => undefined).catch(() => undefined));
+        window.setTimeout(() => taken.remove(), 340);
       }
-      const start = man.getBoundingClientRect();
-      const destBox = toEl.getBoundingClientRect();
-      const fly = man.cloneNode(true) as HTMLElement;
-      fly.classList.add("flyer");
-      fly.style.width = `${start.width}px`;
-      fly.style.height = `${start.height}px`;
-      fly.style.left = `${start.left}px`;
-      fly.style.top = `${start.top}px`;
-      man.style.opacity = "0";
-      if (move.capture) {
-        const cap = this.squareEl(move.capture)?.querySelector(".man");
-        cap?.classList.add("pop");
-      }
-      document.body.appendChild(fly);
-      const dx = destBox.left + (destBox.width - start.width) / 2 - start.left;
-      const dy = destBox.top + (destBox.height - start.height) / 2 - start.top;
-      requestAnimationFrame(() => {
-        fly.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
-      });
-      const lift = side === "you" ? 200 : 180;
-      window.setTimeout(() => {
-        fly.remove();
-        resolve();
-      }, lift);
+    }
+
+    return Promise.all(extras).then(() => {
+      fly.remove();
     });
+  }
+
+  private async settle(pos: Pos, willCrown: boolean, quick: boolean): Promise<void> {
+    const man = this.squareEl(pos)?.querySelector(".man") as HTMLElement | null;
+    if (!man) return;
+    man.classList.add(willCrown ? "just-crowned" : "just-landed");
+    const sq = this.squareEl(pos);
+    if (sq) this.puffAt(sq);
+    if (!willCrown) this.sparkAt(man, quick ? 3 : 5, ["#fff3d4", "#ffd45a"], 22);
+    await this.wait(willCrown || quick ? 140 : 200);
+  }
+
+  private async animateCrown(pos: Pos): Promise<void> {
+    const sq = this.squareEl(pos);
+    const man = sq?.querySelector(".man") as HTMLElement | null;
+    if (!sq || !man) return;
+    man.classList.add("just-crowned", "king");
+    const box = man.getBoundingClientRect();
+    const crown = document.createElement("span");
+    crown.className = "crown-drop";
+    crown.style.left = `${box.left + box.width / 2}px`;
+    crown.style.top = `${box.top - 8}px`;
+    this.fx(crown, "go", 620);
+    this.sparkAt(sq, 12, ["#ffd45a", "#fff8ea", "#ffe08a", "#ffb347"], 48);
+    const ring = document.createElement("span");
+    ring.className = "crown-ring";
+    ring.style.left = `${box.left + box.width / 2}px`;
+    ring.style.top = `${box.top + box.height / 2}px`;
+    this.fx(ring, "go", 560);
+    await this.wait(560);
   }
 
   private tryRites(): void {
@@ -458,6 +576,7 @@ export class Game {
       this.lock = null;
       this.selected = null;
       this.renderAll();
+      if (target) void this.animateCrown(target.pos);
       if (outcome(this.board, "you", this.laws, this.mods) === "them") this.finish(false);
       return;
     }
