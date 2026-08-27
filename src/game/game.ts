@@ -906,18 +906,18 @@ export class Game {
     if (status) {
       status.textContent = this.thinking
         ? this.canOops()
-          ? "Charcoal is thinking… Oops still works!"
+          ? "Charcoal… Oops still works."
           : "Charcoal is hopping…"
         : this.lock
-          ? "Keep jumping — another star!"
+          ? "Keep jumping!"
           : jumps.length
             ? this.selected
-              ? "Jump onto the star!"
-              : "A jump is ready. Tap the gold ring, then the star."
+              ? "Jump the star."
+              : "Jump ready — gold ring, then the star."
             : this.selected
-              ? "Tap a cream pip to hop."
+              ? "Tap a pip to hop."
               : this.turn === "you"
-                ? "Your turn. Gold rings can move."
+                ? "Your hop."
                 : "Wait.";
     }
     const counts = document.getElementById("counts");

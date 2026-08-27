@@ -176,11 +176,32 @@ button small {
 
 .table-top {
   width: min(560px, 96vw);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "id btns"
+    "status status";
+  align-items: start;
+  gap: 6px 12px;
+}
+
+.table-id {
+  grid-area: id;
+}
+
+.table-top .row.tiny {
+  grid-area: btns;
+  justify-content: flex-end;
+}
+
+#status {
+  grid-area: status;
+  margin: 0;
+  color: var(--gold);
+  font-weight: 700;
+  min-height: 2.7em;
+  line-height: 1.35;
+  overflow: hidden;
 }
 
 #goal {
@@ -219,13 +240,6 @@ button small {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(255, 212, 90, 0.35);
   color: var(--gold);
-}
-
-#status {
-  margin: 0;
-  color: var(--gold);
-  font-weight: 700;
-  max-width: 16rem;
 }
 
 #board-wrap {
@@ -698,13 +712,19 @@ button small {
     font-size: 48px;
   }
   .table-top {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "id"
+      "btns"
+      "status";
+  }
+  .table-top .row.tiny {
+    justify-content: flex-start;
   }
   #board {
     border-width: 7px;
   }
   #status {
-    max-width: none;
+    min-height: 2.7em;
   }
 }
