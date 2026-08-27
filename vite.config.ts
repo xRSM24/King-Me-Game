@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
+import { dailyLeaderboardPlugin } from "./daily-plugin.ts";
 
 export default defineConfig({
+  plugins: [dailyLeaderboardPlugin()],
   server: {
     host: "0.0.0.0",
     port: 43181,

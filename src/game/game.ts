@@ -1,6 +1,8 @@
 import { think } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
+import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
+import { escapeHtml, fetchBoard, loadName, postScore, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
 import { dailySeed, hashSeed, Rng } from "./rng.ts";
 import {
@@ -33,8 +35,13 @@ export class Game {
   mods: BoardMods = emptyMods();
   blurb = "";
   hops = 0;
+  moves = 0;
   combo = 0;
   boardIndex = 0;
+  mode: "run" | "daily" = "run";
+  dailyLabel = "";
+  scores: Score[] = [];
+  posted = false;
   turn: "you" | "them" = "you";
   selected: Pos | null = null;
   lock: Pos | null = null;
@@ -45,6 +52,7 @@ export class Game {
   oopsLeft = 1;
   snapshot: Board | null = null;
   snapshotHops = 0;
+  snapshotMoves = 0;
   offers: LawDef[] = [];
   log: string[] = [];
   returnTo: Screen = "title";
@@ -93,17 +101,27 @@ export class Game {
         if (Number.isFinite(r) && Number.isFinite(c)) this.clickSquare(r, c);
       }
     });
+    document.addEventListener("submit", (e) => {
+      if (e.target instanceof HTMLFormElement && e.target.id === "score-form") {
+        e.preventDefault();
+        void this.submitDaily();
+      }
+    });
   }
 
   command(cmd: string): void {
     this.unlock();
     if (cmd !== "oops") this.audio.ui();
     if (cmd === "new") {
-      this.newRun(false);
+      this.newRun();
       return;
     }
     if (cmd === "daily") {
-      this.newRun(true);
+      void this.openDaily();
+      return;
+    }
+    if (cmd === "daily-play") {
+      this.newDaily();
       return;
     }
     if (cmd === "how") {
@@ -158,16 +176,19 @@ export class Game {
     }
   }
 
-  newRun(daily: boolean): void {
+  newRun(): void {
     this.unlock();
-    const seed = daily ? hashSeed(dailySeed() * 31 + 9) : (Math.random() * 0xffffffff) | 0;
+    this.mode = "run";
+    const seed = (Math.random() * 0xffffffff) | 0;
     this.rng = new Rng(seed);
     this.laws = emptyLaws();
     this.hops = 0;
+    this.moves = 0;
     this.combo = 0;
     this.boardIndex = 0;
     this.lastRitesUsed = false;
     this.end = null;
+    this.posted = false;
     this.idSeq = 1;
     this.meta.runs += 1;
     saveMeta(this.meta);
@@ -175,6 +196,46 @@ export class Game {
     this.pushLog("Tap a gold ring, then a pip. Stars mean jump!");
     this.show("playing");
     this.cheer("Let's hop!");
+  }
+
+  private async openDaily(): Promise<void> {
+    this.unlock();
+    this.dailyLabel = dailyTitle();
+    this.show("daily");
+    const board = await fetchBoard(utcDayKey());
+    this.scores = board.scores;
+    this.renderDaily();
+  }
+
+  newDaily(): void {
+    this.unlock();
+    this.mode = "daily";
+    this.rng = new Rng(hashSeed(dailySeed() * 97 + 13));
+    this.laws = emptyLaws();
+    this.hops = 0;
+    this.moves = 0;
+    this.combo = 0;
+    this.boardIndex = 0;
+    this.lastRitesUsed = false;
+    this.end = null;
+    this.posted = false;
+    this.idSeq = 1;
+    const spec = dailySpec();
+    this.dailyLabel = dailyTitle();
+    this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
+    this.blurb = spec.blurb;
+    this.board = setupBoard(spec, this.pid);
+    this.turn = "you";
+    this.selected = null;
+    this.lock = null;
+    this.thinking = false;
+    this.animating = false;
+    this.oopsLeft = 0;
+    this.snapshot = null;
+    this.clearAi();
+    this.pushLog(`${this.dailyLabel}. Fewest moves wins today.`);
+    this.show("playing");
+    this.cheer("Daily!");
   }
 
   private scheduleAi(delay: number): void {
@@ -214,7 +275,7 @@ export class Game {
     this.lock = null;
     this.thinking = false;
     this.animating = false;
-    this.oopsLeft = 1;
+    this.oopsLeft = this.mode === "daily" ? 0 : 1;
     this.snapshot = null;
     this.combo = 0;
     this.clearAi();
@@ -257,6 +318,7 @@ export class Game {
     this.oopsLeft -= 1;
     this.board = cloneBoard(snap);
     this.hops = this.snapshotHops;
+    this.moves = this.snapshotMoves;
     this.lock = null;
     this.selected = null;
     this.combo = 0;
@@ -301,6 +363,7 @@ export class Game {
     if (!this.lock) {
       this.snapshot = cloneBoard(this.board);
       this.snapshotHops = this.hops;
+      this.snapshotMoves = this.moves;
     }
     this.animating = true;
     const wasKing = at(this.board, move.from)?.king ?? false;
@@ -354,6 +417,7 @@ export class Game {
   }
 
   private afterYou(): void {
+    this.moves += 1;
     const over = outcome(this.board, "them", this.laws, this.mods);
     if (over === "you") {
       this.boardCleared();
@@ -371,7 +435,7 @@ export class Game {
 
   private async aiStep(): Promise<void> {
     if (this.screen !== "playing") return;
-    const skill = 0.08 + this.boardIndex * 0.14;
+    const skill = this.mode === "daily" ? 0.8 : 0.08 + this.boardIndex * 0.14;
     const move = think(this.board, this.laws, this.rng, skill, this.mods);
     if (!move) {
       this.boardCleared();
@@ -588,7 +652,7 @@ export class Game {
     this.animating = false;
     this.audio.win();
     this.cheer("Board clear!");
-    if (this.boardIndex >= PATH_END - 1) {
+    if (this.mode === "daily" || this.boardIndex >= PATH_END - 1) {
       window.setTimeout(() => this.finish(true), 700);
       return;
     }
@@ -610,21 +674,64 @@ export class Game {
     this.clearAi();
     this.thinking = false;
     this.animating = false;
-    const gained = notchesFromRun(this.hops, this.meta.notches);
-    this.meta.notches += gained;
-    this.meta.bestBoard = Math.max(this.meta.bestBoard, this.boardIndex + 1);
-    if (win) this.meta.wins += 1;
-    saveMeta(this.meta);
-    this.end = {
-      win,
-      hops: this.hops,
-      notches: this.meta.notches,
-      gained,
-      board: this.boardIndex + 1,
-    };
+    if (this.mode === "run") {
+      const gained = notchesFromRun(this.hops, this.meta.notches);
+      this.meta.notches += gained;
+      this.meta.bestBoard = Math.max(this.meta.bestBoard, this.boardIndex + 1);
+      if (win) this.meta.wins += 1;
+      saveMeta(this.meta);
+      this.end = {
+        win,
+        hops: this.hops,
+        notches: this.meta.notches,
+        gained,
+        board: this.boardIndex + 1,
+      };
+    } else {
+      this.end = {
+        win,
+        hops: this.hops,
+        notches: this.moves,
+        gained: this.moves,
+        board: 1,
+      };
+    }
     if (win) this.audio.win();
     else this.audio.lose();
     this.show("end");
+    if (this.mode === "daily" && win) void this.refreshScores();
+  }
+
+  private async refreshScores(): Promise<void> {
+    const board = await fetchBoard(utcDayKey());
+    this.scores = board.scores;
+    if (this.screen === "end" || this.screen === "daily" || this.screen === "title") {
+      if (this.screen === "end") this.renderEnd();
+      if (this.screen === "daily") this.renderDaily();
+      if (this.screen === "title") this.renderTitle();
+    }
+  }
+
+  private async submitDaily(): Promise<void> {
+    if (this.mode !== "daily" || !this.end?.win || this.posted) return;
+    const input = document.getElementById("player-name");
+    const name = input instanceof HTMLInputElement ? input.value : loadName();
+    this.posted = true;
+    const board = await postScore(utcDayKey(), name, this.moves);
+    this.scores = board.scores;
+    this.renderEnd();
+  }
+
+  private scoreList(limit = 12): string {
+    if (!this.scores.length) return `<li class="quiet">Nobody's pinned a score yet. Be first.</li>`;
+    const mine = loadName().toLowerCase();
+    return this.scores
+      .slice(0, limit)
+      .map((s, i) => {
+        const me = s.name.toLowerCase() === mine ? " me" : "";
+        return `<li class="score${me}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em></li>`;
+      })
+      .join("");
   }
 
   show(name: Screen): void {
@@ -636,6 +743,7 @@ export class Game {
     if (name === "title") this.renderTitle();
     if (name === "end") this.renderEnd();
     if (name === "pick") this.renderPick();
+    if (name === "daily") this.renderDaily();
     if (name === "playing") this.renderAll();
     this.renderChrome();
   }
@@ -656,6 +764,36 @@ export class Game {
       const extra = b.extra ? ` · extra man +${b.extra}` : "";
       stats.textContent = `${this.meta.runs} plays · farthest ${this.meta.bestBoard} / ${PATH_END} · ${this.meta.wins} Crowns beaten${extra}`;
     }
+    const mini = document.getElementById("title-leaders");
+    if (mini) {
+      mini.innerHTML = this.scores.length
+        ? this.scoreList(5)
+        : `<li class="quiet">Today's fewest-moves board is empty.</li>`;
+    }
+    const dlabel = document.getElementById("daily-chip");
+    if (dlabel) dlabel.textContent = dailyTitle();
+    void this.warmTitleScores();
+  }
+
+  private titleWarmed = false;
+  private async warmTitleScores(): Promise<void> {
+    if (this.titleWarmed && this.scores.length) return;
+    this.titleWarmed = true;
+    const board = await fetchBoard(utcDayKey());
+    this.scores = board.scores;
+    if (this.screen === "title") {
+      const mini = document.getElementById("title-leaders");
+      if (mini) mini.innerHTML = this.scores.length ? this.scoreList(5) : `<li class="quiet">Today's fewest-moves board is empty.</li>`;
+    }
+  }
+
+  private renderDaily(): void {
+    const title = document.getElementById("daily-heading");
+    if (title) title.textContent = this.dailyLabel || dailyTitle();
+    const date = document.getElementById("daily-date");
+    if (date) date.textContent = utcDayKey();
+    const list = document.getElementById("daily-board");
+    if (list) list.innerHTML = this.scoreList(20);
   }
 
   private renderPick(): void {
@@ -683,6 +821,40 @@ export class Game {
     const box = document.getElementById("end-body");
     const s = this.end;
     if (!box || !s) return;
+    if (this.mode === "daily") {
+      const rank = this.scores.findIndex((x) => x.moves === this.moves && x.name.toLowerCase() === loadName().toLowerCase());
+      const rankBit = this.posted && rank >= 0 ? `You're #${rank + 1} with ${this.moves} moves.` : "";
+      box.innerHTML = s.win
+        ? `
+      <p class="kicker">${this.dailyLabel} · ${utcDayKey()}</p>
+      <h2>${this.moves} moves</h2>
+      <p class="lead">The house is off the felt. Lowest moves sits on top. ${rankBit}</p>
+      ${
+        this.posted
+          ? `<p class="quiet">Pinned. Come back tomorrow for a new board.</p>`
+          : `<form id="score-form" class="score-form">
+              <label>Your name <input id="player-name" name="name" maxlength="16" value="${escapeHtml(loadName())}" autocomplete="nickname" /></label>
+              <button type="submit">Pin ${this.moves} moves</button>
+            </form>`
+      }
+      <ol class="leaderboard">${this.scoreList(12)}</ol>
+    `
+        : `
+      <p class="kicker">${this.dailyLabel}</p>
+      <h2>Not this time</h2>
+      <p class="lead">The daily is supposed to sting. Same felt until midnight UTC — try a shorter line.</p>
+      <ol class="leaderboard">${this.scoreList(8)}</ol>
+    `;
+      const extra = document.getElementById("end-actions");
+      if (extra) {
+        extra.innerHTML = s.win
+          ? `<button data-cmd="daily" type="button">See the board</button>
+             <button class="ghost" data-cmd="title" type="button">Home</button>`
+          : `<button data-cmd="daily-play" type="button">Try again</button>
+             <button class="ghost" data-cmd="title" type="button">Home</button>`;
+      }
+      return;
+    }
     const b = notchBonus(s.notches);
     const close = s.board >= 3;
     box.innerHTML = `
@@ -702,6 +874,11 @@ export class Game {
         }</li>
       </ul>
     `;
+    const extra = document.getElementById("end-actions");
+    if (extra) {
+      extra.innerHTML = `<button data-cmd="new" type="button">Play again</button>
+        <button class="ghost" data-cmd="title" type="button">Home</button>`;
+    }
   }
 
   renderAll(): void {
@@ -712,11 +889,12 @@ export class Game {
   private renderHud(): void {
     const you = piecesOf(this.board, "you").length;
     const them = piecesOf(this.board, "them").length;
-    const name = BOARD_NAMES[this.boardIndex] ?? "";
+    const name = this.mode === "daily" ? this.dailyLabel : (BOARD_NAMES[this.boardIndex] ?? "");
     const goal = document.getElementById("goal");
     if (goal) goal.textContent = name;
     const path = document.getElementById("path");
     if (path) {
+      path.classList.toggle("hidden", this.mode === "daily");
       path.innerHTML = BOARD_NAMES.map(
         (n, i) =>
           `<li class="${i < this.boardIndex ? "done" : i === this.boardIndex ? "now" : ""}" title="${n}">${i + 1}</li>`,
@@ -743,20 +921,30 @@ export class Game {
                 : "Wait.";
     }
     const counts = document.getElementById("counts");
-    if (counts) counts.textContent = `You ${you} · them ${them} · hops ${this.hops}`;
+    if (counts) {
+      counts.textContent =
+        this.mode === "daily"
+          ? `Moves ${this.moves} · you ${you} · them ${them}`
+          : `You ${you} · them ${them} · hops ${this.hops}`;
+    }
     const tip = document.getElementById("blurb");
     if (tip) tip.textContent = this.blurb;
     const oops = document.getElementById("btn-oops");
     if (oops instanceof HTMLButtonElement) {
+      oops.classList.toggle("hidden", this.mode === "daily");
       oops.disabled = !this.canOops();
       oops.textContent = this.oopsLeft ? "Oops" : "Oops used";
     }
     const laws = document.getElementById("laws");
     if (laws) {
-      const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
-      laws.innerHTML = owned.length
-        ? owned.map((d) => `<li><b>${d.icon} ${d.name}</b> ${d.desc}</li>`).join("")
-        : `<li class="quiet">Win a board to pick a power.</li>`;
+      if (this.mode === "daily") {
+        laws.innerHTML = `<li class="quiet">No powers today. Fewest moves wins.</li>`;
+      } else {
+        const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
+        laws.innerHTML = owned.length
+          ? owned.map((d) => `<li><b>${d.icon} ${d.name}</b> ${d.desc}</li>`).join("")
+          : `<li class="quiet">Win a board to pick a power.</li>`;
+      }
     }
     const log = document.getElementById("log");
     if (log) log.innerHTML = this.log.map((l) => `<div>${l}</div>`).join("");

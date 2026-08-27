@@ -34,6 +34,10 @@
           </div>
           <p class="meta-line">Stars <strong id="notch-count">0</strong></p>
           <p id="meta-stats" class="quiet"></p>
+          <div class="title-board">
+            <p class="kicker">Fewest moves today · <span id="daily-chip">Daily</span></p>
+            <ol id="title-leaders" class="leaderboard"></ol>
+          </div>
         </div>
       </section>
 
@@ -55,8 +59,12 @@
               power, keep hopping.
             </li>
             <li>
-              <b>Oops is OK.</b> One take-back per board. If you lose your last checker, you
-              still get Stars. Sit down again!
+              <b>Oops is OK on the climb.</b> One take-back per board. If you lose your last
+              checker, you still get Stars. Sit down again!
+            </li>
+            <li>
+              <b>Today's board is a toughie.</b> Everyone gets the same hard felt until midnight
+              UTC. Win it, pin your move count. Lowest moves sits on top.
             </li>
           </ol>
           <button data-cmd="back" type="button">Back</button>
@@ -86,6 +94,23 @@
         <div id="log"></div>
       </div>
 
+      <section class="screen hidden" data-screen="daily">
+        <div class="veil">
+          <p class="kicker">Daily · <span id="daily-date"></span></p>
+          <h2 id="daily-heading">Today's board</h2>
+          <p class="lead">
+            One mean felt. Same for everybody until midnight UTC. Beat it, then pin how many
+            moves it took. Lowest number sits on top. No powers. No Oops.
+          </p>
+          <div class="row">
+            <button data-cmd="daily-play" type="button">Hop today's board</button>
+            <button class="ghost" data-cmd="title" type="button">Home</button>
+          </div>
+          <p class="kicker">Leaderboard</p>
+          <ol id="daily-board" class="leaderboard"></ol>
+        </div>
+      </section>
+
       <section class="screen hidden" data-screen="pick">
         <div class="veil narrow">
           <div id="pick-body"></div>
@@ -108,7 +133,7 @@
       <section class="screen hidden" data-screen="end">
         <div class="veil narrow">
           <div id="end-body"></div>
-          <div class="row">
+          <div class="row" id="end-actions">
             <button data-cmd="new" type="button">Play again</button>
             <button class="ghost" data-cmd="title" type="button">Home</button>
           </div>

@@ -623,6 +623,76 @@ button small {
   font-size: 0.85em;
 }
 
+.leaderboard {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  width: min(560px, 100%);
+}
+
+.leaderboard li {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.leaderboard b {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard em::after {
+  content: " moves";
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.leaderboard .me span {
+  color: var(--gold);
+}
+
+.score-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin: 16px 0;
+}
+
+.score-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.score-form input {
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--gold);
+  background: rgba(18, 74, 50, 0.8);
+  color: var(--ivory);
+  min-width: 12rem;
+}
+
+.title-board {
+  margin-top: 22px;
+}
+
 @media (max-width: 640px) {
   h1 {
     font-size: 48px;

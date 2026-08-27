@@ -1,6 +1,6 @@
 export type Side = "you" | "them";
 
-export type Screen = "title" | "how" | "playing" | "pick" | "pause" | "end";
+export type Screen = "title" | "how" | "playing" | "pick" | "pause" | "end" | "daily";
 
 export interface Pos {
   r: number;
