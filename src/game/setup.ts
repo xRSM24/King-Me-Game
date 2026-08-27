@@ -28,13 +28,13 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean): B
     {
       you: 4,
       them: 4,
-      youRows: [5, 6],
-      themRows: [2, 1],
+      youRows: [2, 3],
+      themRows: [5, 6],
       themKings: 0,
       holes: none,
       bounce: false,
       themFly: false,
-      blurb: "Race to the far row. A king hops every way!",
+      blurb: "Race to the far row. First crown wins the brag!",
     },
     {
       you: 4,
