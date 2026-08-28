@@ -268,10 +268,10 @@ export class Game {
     this.lock = null;
     this.thinking = false;
     this.animating = false;
-    this.oopsLeft = 0;
+    this.oopsLeft = 2;
     this.snapshot = null;
     this.clearAi();
-    this.pushLog(`${this.dailyLabel}. Fewest moves wins today.`);
+    this.pushLog(`${this.dailyLabel}. Two Oops. Fewest moves wins today.`);
     this.show("playing");
     this.cheer("Daily!");
   }
@@ -321,7 +321,7 @@ export class Game {
     this.lock = null;
     this.thinking = false;
     this.animating = false;
-    this.oopsLeft = this.mode === "daily" ? 0 : 1;
+    this.oopsLeft = this.mode === "daily" ? 2 : 1;
     this.snapshot = null;
     this.combo = 0;
     this.clearAi();
@@ -1177,14 +1177,14 @@ export class Game {
     if (tip) tip.textContent = this.blurb;
     const oops = document.getElementById("btn-oops");
     if (oops instanceof HTMLButtonElement) {
-      oops.classList.toggle("hidden", this.mode === "daily");
+      oops.classList.remove("hidden");
       oops.disabled = !this.canOops();
-      oops.textContent = this.oopsLeft ? "Oops" : "Oops used";
+      oops.textContent = this.oopsLeft > 0 ? `Oops ×${this.oopsLeft}` : "Oops used";
     }
     const laws = document.getElementById("laws");
     if (laws) {
       if (this.mode === "daily") {
-        laws.innerHTML = `<li class="quiet">No powers today. Fewest moves wins.</li>`;
+        laws.innerHTML = `<li class="quiet">No powers today. Two Oops. Fewest moves wins.</li>`;
       } else {
         const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
         laws.innerHTML = owned.length

@@ -43,12 +43,12 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - The first board starts with a jump (the gold **star**), but the squares change every climb.
 - Later boards pile on charcoal, holes, bouncing jumps, and flying kings.
 - Pieces hop. Captures pop. Double jumps cheer.
-- One **Oops** per board if you tap the wrong square.
+- One **Oops** per climb board if you tap the wrong square. Today's board gives you **two**.
 - Each board is a different puzzle: a race to crown, holes in the felt, a shadow king, backward jumps, then the Crown.
 
 ## Today's board
 
-One hard felt per UTC day. Same pieces for everybody. No powers, no Oops. Clear it, pin your **move count** (a multi-jump is one move). The shared leaderboard is sorted fewest moves first; a name keeps only its best.
+One hard felt per UTC day. Same pieces for everybody. No powers. **Two Oops.** Clear it, pin your **move count** (a multi-jump is one move). The shared leaderboard is sorted fewest moves first; a name keeps only its best.
 
 ```bash
 npm run dev
