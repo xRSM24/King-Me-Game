@@ -34,13 +34,14 @@ Invite them on Origin if the repo is private.
 
 ## The goal
 
-Every game: win six boards in a row.
+Every game: win six **new** boards in a row. Each climb rolls a fresh path. Later felts bring more charcoal, nastier rules, and a sharper house.
 
 You will lose sometimes. That is OK. Captures become **Stars**, a little permanent boost with a ceiling, so the next First Hop is kinder but you never skip the climb.
 
 ## How it feels
 
-- The first board starts with a jump (the gold **star**).
+- The first board starts with a jump (the gold **star**), but the squares change every climb.
+- Later boards pile on charcoal, holes, bouncing jumps, and flying kings.
 - Pieces hop. Captures pop. Double jumps cheer.
 - One **Oops** per board if you tap the wrong square.
 - Each board is a different puzzle: a race to crown, holes in the felt, a shadow king, backward jumps, then the Crown.

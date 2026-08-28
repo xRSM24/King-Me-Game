@@ -34,6 +34,11 @@
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
           </nav>
           <p class="stars-chip">★ <strong id="notch-count">0</strong> stars</p>
+          <div class="title-daily">
+            <p class="kicker">Today's fewest · <span id="daily-chip">Daily</span></p>
+            <ol id="title-leaders" class="leaderboard compact"></ol>
+            <button class="ghost" data-cmd="daily" type="button">Open today's board</button>
+          </div>
         </div>
       </section>
 
@@ -51,8 +56,8 @@
               star appears. Reach the far row to become a king.
             </li>
             <li>
-              <b>Six boards to the Crown.</b> Each one plays a little differently. Win, pick a
-              power, keep hopping.
+              <b>Six boards to the Crown.</b> Every climb lays a new path. Later felts
+              get meaner — more charcoal, sharper AI, nastier rules.
             </li>
             <li>
               <b>Oops is OK on the climb.</b> One take-back per board. If you lose your last
@@ -92,17 +97,18 @@
 
       <section class="screen hidden" data-screen="daily">
         <div class="veil">
-          <p class="kicker">Daily · <span id="daily-date"></span></p>
+          <p class="kicker">Daily challenge · <span id="daily-date"></span></p>
           <h2 id="daily-heading">Today's board</h2>
-          <p class="lead">
-            One mean felt. Same for everybody until midnight UTC. Beat it, then pin how many
+          <p class="lead" id="daily-lead">
+            One mean felt, same for everybody until midnight UTC. Beat it, then pin how many
             moves it took. Lowest number sits on top. No powers. No Oops.
           </p>
           <div class="row">
             <button data-cmd="daily-play" type="button">Hop today's board</button>
             <button class="ghost" data-cmd="title" type="button">Home</button>
           </div>
-          <p class="kicker">Leaderboard</p>
+          <p class="kicker">Leaderboard · fewest moves</p>
+          <p class="quiet" id="daily-count"></p>
           <ol id="daily-board" class="leaderboard"></ol>
         </div>
       </section>

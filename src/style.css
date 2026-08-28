@@ -909,8 +909,43 @@ button small {
   min-width: 12rem;
 }
 
-.title-board {
-  margin-top: 22px;
+.title-daily {
+  margin: 28px auto 0;
+  width: min(360px, 100%);
+  text-align: left;
+}
+
+.title-daily .kicker {
+  text-align: center;
+}
+
+.title-daily .ghost {
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.leaderboard.compact {
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+.leaderboard .rank-1 b {
+  color: #ffd45a;
+}
+
+.leaderboard .rank-2 b {
+  color: #e8e0f8;
+}
+
+.leaderboard .rank-3 b {
+  color: #e0a070;
+}
+
+.leaderboard .rank-1 span,
+.leaderboard .rank-2 span,
+.leaderboard .rank-3 span {
+  font-weight: 800;
 }
 
 @media (max-width: 640px) {

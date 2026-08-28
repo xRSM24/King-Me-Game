@@ -12,11 +12,15 @@ function chainValue(board: Board, start: Move, laws: Laws, mods: BoardMods, rng:
   let b = applyMove(board, start);
   let pos = start.to;
   let captures = start.capture ? 1 : 0;
+  if (start.capture) {
+    const taken = board[start.capture.r]![start.capture.c];
+    if (taken?.king) captures += 1;
+  }
   let guard = 0;
   while (start.capture && moreJumps(b, pos, laws, mods) && guard++ < 8) {
     const jumps = legalMoves(b, "them", laws, pos, mods);
     if (!jumps.length) break;
-    const nxt = rng.pick(jumps);
+    const nxt = skill > 0.5 ? jumps.reduce((a, m) => (m.to.r > a.to.r ? m : a)) : rng.pick(jumps);
     b = applyMove(b, nxt);
     pos = nxt.to;
     captures += 1;
@@ -25,11 +29,11 @@ function chainValue(board: Board, start: Move, laws: Laws, mods: BoardMods, rng:
   const piece = b[pos.r]![pos.c];
   if (piece?.king) score += 3;
   if (pos.r === SIZE - 1) score += 4;
-  if (skill > 0.35 && threatened(b, laws, mods, pos)) score -= 5;
+  if (skill > 0.28 && threatened(b, laws, mods, pos)) score -= 5 + skill * 4;
   const youLeft = piecesOf(b, "you").length;
   const themLeft = piecesOf(b, "them").length;
   score += (themLeft - youLeft) * 0.4;
-  return score + rng.next() * 0.2;
+  return score + rng.next() * (skill > 0.7 ? 0.05 : 0.2);
 }
 
 export function think(
@@ -43,7 +47,8 @@ export function think(
   if (!moves.length) return null;
   const jumps = moves.filter((m) => m.capture);
   const pool = jumps.length ? jumps : moves;
-  if (skill < 0.22 && rng.chance(0.6)) return rng.pick(pool);
+  if (skill < 0.18 && rng.chance(0.55)) return rng.pick(pool);
+  if (skill < 0.35 && rng.chance(0.22)) return rng.pick(pool);
   let best = pool[0]!;
   let bestS = -1e9;
   for (const m of pool) {

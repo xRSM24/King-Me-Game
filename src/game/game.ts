@@ -19,7 +19,7 @@ import {
   setupBoard,
   type Board,
 } from "./rules.ts";
-import { boardSpec } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL } from "./setup.ts";
 import type { BoardMods, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, samePos } from "./types.ts";
 
@@ -30,7 +30,9 @@ export class Game {
   audio = new AudioSys();
   screen: Screen = "title";
   rng = new Rng(1);
-  board: Board = setupBoard(boardSpec(0, 0, false), () => 1);
+  runSeed = 1;
+  pathNames = climbNames(1);
+  board: Board = setupBoard(boardSpec(0, 0, false, new Rng(1)), () => 1);
   laws: Laws = emptyLaws();
   mods: BoardMods = emptyMods();
   blurb = "";
@@ -214,7 +216,9 @@ export class Game {
     this.unlock();
     this.mode = "run";
     const seed = (Math.random() * 0xffffffff) | 0;
+    this.runSeed = seed;
     this.rng = new Rng(seed);
+    this.pathNames = climbNames(seed);
     this.laws = emptyLaws();
     this.hops = 0;
     this.moves = 0;
@@ -300,7 +304,8 @@ export class Game {
 
   private loadBoard(): void {
     const openKing = this.laws.openKing || this.rng.chance(notchBonus(this.meta.notches).kingChance);
-    const spec = boardSpec(this.boardIndex, this.extraMen(), openKing);
+    const boardRng = new Rng(hashSeed(this.runSeed + (this.boardIndex + 1) * 104729));
+    const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng);
     this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
     this.blurb = spec.blurb;
     this.board = setupBoard(spec, this.pid);
@@ -313,7 +318,7 @@ export class Game {
     this.snapshot = null;
     this.combo = 0;
     this.clearAi();
-    const name = BOARD_NAMES[this.boardIndex] ?? "Next board";
+    const name = this.pathNames[this.boardIndex] ?? "Next board";
     this.pushLog(`${name}. ${spec.blurb}`);
   }
 
@@ -648,7 +653,7 @@ export class Game {
 
   private async aiStep(): Promise<void> {
     if (this.screen !== "playing") return;
-    const skill = this.mode === "daily" ? 0.8 : 0.08 + this.boardIndex * 0.14;
+    const skill = this.mode === "daily" ? 0.86 : (CLIMB_SKILL[this.boardIndex] ?? 0.95);
     const move = think(this.board, this.laws, this.rng, skill, this.mods);
     if (!move) {
       this.boardCleared();
@@ -940,13 +945,16 @@ export class Game {
   }
 
   private scoreList(limit = 12): string {
-    if (!this.scores.length) return `<li class="quiet">Nobody's pinned a score yet. Be first.</li>`;
+    if (!this.scores.length) {
+      return `<li class="quiet">Nobody's pinned a score yet. Beat today's board and put your name first.</li>`;
+    }
     const mine = loadName().toLowerCase();
     return this.scores
       .slice(0, limit)
       .map((s, i) => {
         const me = s.name.toLowerCase() === mine ? " me" : "";
-        return `<li class="score${me}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em></li>`;
+        const podium = i < 3 ? ` rank-${i + 1}` : "";
+        return `<li class="score${me}${podium}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em></li>`;
       })
       .join("");
   }
@@ -983,6 +991,29 @@ export class Game {
   private renderTitle(): void {
     const rem = document.getElementById("notch-count");
     if (rem) rem.textContent = String(this.meta.notches);
+    const dlabel = document.getElementById("daily-chip");
+    if (dlabel) dlabel.textContent = dailyTitle();
+    const mini = document.getElementById("title-leaders");
+    if (mini) {
+      mini.innerHTML = this.scores.length
+        ? this.scoreList(5)
+        : `<li class="quiet">Be first on today's board.</li>`;
+    }
+    void this.warmTitleScores();
+  }
+
+  private titleWarmed = false;
+  private async warmTitleScores(): Promise<void> {
+    if (this.titleWarmed && this.scores.length) return;
+    this.titleWarmed = true;
+    const board = await fetchBoard(utcDayKey());
+    this.scores = board.scores;
+    if (this.screen === "title") {
+      const mini = document.getElementById("title-leaders");
+      if (mini) {
+        mini.innerHTML = this.scores.length ? this.scoreList(5) : `<li class="quiet">Be first on today's board.</li>`;
+      }
+    }
   }
 
   private renderDaily(): void {
@@ -991,13 +1022,20 @@ export class Game {
     const date = document.getElementById("daily-date");
     if (date) date.textContent = utcDayKey();
     const list = document.getElementById("daily-board");
-    if (list) list.innerHTML = this.scoreList(20);
+    if (list) list.innerHTML = this.scoreList(40);
+    const count = document.getElementById("daily-count");
+    if (count) {
+      const n = this.scores.length;
+      count.textContent = n
+        ? `${n} hopper${n === 1 ? "" : "s"} on the board. Lowest moves wins.`
+        : "The board is empty. Win it and pin your move count.";
+    }
   }
 
   private renderPick(): void {
     const box = document.getElementById("pick-body");
     if (!box) return;
-    const next = BOARD_NAMES[this.boardIndex + 1] ?? "the next board";
+    const next = this.pathNames[this.boardIndex + 1] ?? "the next board";
     box.innerHTML = `
       <p class="kicker">You won the board!</p>
       <h2>Pick a power</h2>
@@ -1064,7 +1102,7 @@ export class Game {
           : "Your ivory hopped off the board. Stars from this try make the next First Hop a little kinder."
       }</p>
       <ul class="stats">
-        <li>Reached ${BOARD_NAMES[s.board - 1] ?? ""} (${s.board} / ${PATH_END})</li>
+        <li>Reached ${this.pathNames[s.board - 1] ?? BOARD_NAMES[s.board - 1] ?? ""} (${s.board} / ${PATH_END})</li>
         <li>${s.hops} captures</li>
         <li class="star-line">Stars +${s.gained} <span>(now ${s.notches})</span></li>
         <li>Next game: ${b.extra ? `+${b.extra} extra man` : "same crew"}${
@@ -1087,13 +1125,13 @@ export class Game {
   private renderHud(): void {
     const you = piecesOf(this.board, "you").length;
     const them = piecesOf(this.board, "them").length;
-    const name = this.mode === "daily" ? this.dailyLabel : (BOARD_NAMES[this.boardIndex] ?? "");
+    const name = this.mode === "daily" ? this.dailyLabel : (this.pathNames[this.boardIndex] ?? "");
     const goal = document.getElementById("goal");
     if (goal) goal.textContent = name;
     const path = document.getElementById("path");
     if (path) {
       path.classList.toggle("hidden", this.mode === "daily");
-      path.innerHTML = BOARD_NAMES.map(
+      path.innerHTML = this.pathNames.map(
         (n, i) =>
           `<li class="${i < this.boardIndex ? "done" : i === this.boardIndex ? "now" : ""}" title="${n}">${i + 1}</li>`,
       ).join("");
