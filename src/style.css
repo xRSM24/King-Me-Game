@@ -864,15 +864,23 @@ button small {
   list-style: none;
   padding: 0;
   margin: 8px 0 0;
-  width: min(560px, 100%);
+  width: 100%;
 }
 
 .leaderboard li {
   display: grid;
-  grid-template-columns: 2rem 1fr auto;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
   gap: 10px;
   align-items: baseline;
   padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  width: 100%;
+}
+
+.leaderboard li.quiet {
+  display: block;
+  text-align: center;
+  white-space: normal;
   border-bottom: 1px solid var(--line);
 }
 
@@ -929,7 +937,8 @@ button small {
 .title-daily {
   margin: 20px auto 0;
   width: 100%;
-  text-align: left;
+  max-width: 100%;
+  text-align: center;
 }
 
 .title-daily .kicker {
