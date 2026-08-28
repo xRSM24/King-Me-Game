@@ -1,6 +1,22 @@
 import type { BoardSetup, FeltMod, Pos } from "./types.ts";
 import { PATH_END, isDark } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
+import {
+  CLOSE_QUARTERS_DESC,
+  FIRST_JUMP_DESC,
+  FIRST_LANE_CENTER,
+  FIRST_LANE_LEFT,
+  FIRST_LANE_RIGHT,
+  HOLE_ONE_DESC,
+  JUMP_BACK_BOTH_DESC,
+  LONG_KING_DESC,
+  OPPOSITE_WINGS_DESC,
+  RACE_DESC,
+  STAGGER_DESC,
+  enemyKingsDesc,
+  holesDesc,
+  laneDesc,
+} from "./copy.ts";
 
 const ADJ = [
   "Sunny",
@@ -282,11 +298,13 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
   const youPos = [jump.you, ...pickSpots(rng, [7, 6, 5], you - 1, [], used, lane)];
   const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used, lane)];
   const file = laneTitle(lane);
-  const feltMods: FeltMod[] = [{ title: "First Jump", desc: "Jump the star first. Captures are the fun part!" }];
+  const feltMods: FeltMod[] = [{ title: "First Jump", desc: FIRST_JUMP_DESC }];
   if (file) {
+    const laneBlurb =
+      lane === "left" ? FIRST_LANE_LEFT : lane === "right" ? FIRST_LANE_RIGHT : FIRST_LANE_CENTER;
     feltMods.push({
       title: file,
-      desc: "This climb parked the opening star on this file. A New climb puts it somewhere else.",
+      desc: laneBlurb,
     });
   }
   return {
@@ -301,7 +319,7 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
     themFly: false,
     youPos,
     themPos,
-    blurb: "Jump the star first. Captures are the fun part!",
+    blurb: FIRST_JUMP_DESC,
     feltMods,
   };
 }
@@ -320,35 +338,35 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   if (rng.chance(tier.race)) {
     youRows = [3, 2];
     themRows = [6, 5, 7];
-    feltMods.push({ title: "Race to the Far Row", desc: "Make a King before the Enemy does." });
+    feltMods.push({ title: "Race to the Far Row", desc: RACE_DESC });
   } else if (shape < 0.2) {
     youLane = rng.pick(["left", "right"]);
     themLane = youLane;
     feltMods.push({
       title: youLane === "left" ? "Left File" : "Right File",
-      desc: "Both sides packed onto one file. A New climb can flip the lane.",
+      desc: laneDesc(youLane),
     });
   } else if (shape < 0.38) {
     youLane = rng.pick(["left", "right"]);
     themLane = youLane === "left" ? "right" : "left";
     feltMods.push({
       title: "Opposite Wings",
-      desc: "You start on one wing, the Enemy on the other.",
+      desc: OPPOSITE_WINGS_DESC,
     });
   } else if (shape < 0.52 && i >= 2) {
     youRows = [6, 5];
     themRows = [1, 2];
-    feltMods.push({ title: "Close Quarters", desc: "Everyone starts a row closer. Less room to hide." });
+    feltMods.push({ title: "Close Quarters", desc: CLOSE_QUARTERS_DESC });
   } else if (shape < 0.66) {
     youRows = [7, 6, 5];
     themRows = [0, 1, 2];
     youLane = "center";
     themLane = "center";
-    feltMods.push({ title: "Center Crowd", desc: "The fight bunches in the middle files." });
+    feltMods.push({ title: "Center Crowd", desc: laneDesc("center") });
   } else if (shape < 0.8) {
     youRows = [7, 6, 5];
     themRows = [0, 1, 2];
-    feltMods.push({ title: "Staggered Line", desc: "Pieces sit on three rows, not a flat back rank." });
+    feltMods.push({ title: "Staggered Line", desc: STAGGER_DESC });
   }
 
   const them = between(rng, tier.them);
@@ -364,24 +382,24 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   if (holes.length) {
     feltMods.push({
       title: holes.length === 1 ? "A Hole in the Felt" : "Holes in the Felt",
-      desc: "Don't land in a pit.",
+      desc: holes.length === 1 ? HOLE_ONE_DESC : holesDesc(holes.length),
     });
   }
-  if (themKings === 1) feltMods.push({ title: "An Enemy King", desc: "The Enemy starts with a King.", side: "them" });
+  if (themKings === 1) feltMods.push({ title: "An Enemy King", desc: enemyKingsDesc(1), side: "them" });
   else if (themKings > 1) {
     feltMods.push({
       title: "Enemy Kings",
-      desc: `The Enemy starts with ${themKings} Kings.`,
+      desc: enemyKingsDesc(themKings),
       side: "them",
     });
   }
   if (bounce) {
     feltMods.push({
       title: "Everyone May Jump Backward",
-      desc: "Player and Enemy pieces may jump backward.",
+      desc: JUMP_BACK_BOTH_DESC,
     });
   }
-  if (themFly) feltMods.push({ title: "Long King", desc: "Enemy Kings slide extra far.", side: "them" });
+  if (themFly) feltMods.push({ title: "Long King", desc: LONG_KING_DESC, side: "them" });
   const blurb = feltMods.length ? feltMods.map((m) => m.title).join(" · ") : `${them} Enemy vs ${you} player pieces`;
   return {
     you,

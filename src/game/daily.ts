@@ -1,6 +1,13 @@
 import type { BoardSetup, FeltMod } from "./types.ts";
 import { Rng, dailySeed, hashSeed } from "./rng.ts";
 import { pickHoles, pickSpots } from "./setup.ts";
+import {
+  HOLE_ONE_DESC,
+  JUMP_BACK_BOTH_DESC,
+  LONG_KING_DESC,
+  enemyKingsDesc,
+  holesDesc,
+} from "./copy.ts";
 
 const ADJ = ["Ash", "Iron", "Long", "Crowded", "Night", "Thorn", "Quiet", "Bitter"];
 const NOUN = ["File", "Pit", "Gate", "Row", "Crown", "Corner", "Well", "March"];
@@ -23,11 +30,11 @@ type Flavor = {
 };
 
 const FLAVORS: Flavor[] = [
-  { you: 4, them: 8, themKings: 1, holeN: 0, bounce: false, themFly: false, hint: "Outnumbered. Plan every hop — fewest moves sits on top." },
-  { you: 4, them: 7, themKings: 1, holeN: 4, bounce: false, themFly: false, hint: "Holes in the middle. Don't land in a pit." },
-  { you: 3, them: 7, themKings: 2, holeN: 0, bounce: false, themFly: false, hint: "Two Enemy Kings. Three player pieces. Be tidy." },
-  { you: 4, them: 8, themKings: 1, holeN: 0, bounce: true, themFly: false, hint: "Everyone jumps backward. Chaos favors the Enemy." },
-  { you: 4, them: 9, themKings: 1, holeN: 2, bounce: false, themFly: true, hint: "Their King slides far. Steal it or get walked." },
+  { you: 4, them: 8, themKings: 1, holeN: 0, bounce: false, themFly: false, hint: "8 Enemy vs 4 of you. Plan every hop — fewest moves sits on top." },
+  { you: 4, them: 7, themKings: 1, holeN: 4, bounce: false, themFly: false, hint: "4 pits in the middle. Nobody may land on them." },
+  { you: 3, them: 7, themKings: 2, holeN: 0, bounce: false, themFly: false, hint: "2 Enemy Kings (1 square any diagonal). 3 player pieces. Be tidy." },
+  { you: 4, them: 8, themKings: 1, holeN: 0, bounce: true, themFly: false, hint: "Everyone may jump all 4 diagonals. Quiet slides still go forward 1 square." },
+  { you: 4, them: 9, themKings: 1, holeN: 2, bounce: false, themFly: true, hint: "Their King slides up to 7 empty squares on a diagonal. Steal it or get walked." },
 ];
 
 /** One mean board, same for everyone on this UTC day. */
@@ -40,22 +47,27 @@ export function dailySpec(day = dailySeed()): BoardSetup {
   const youPos = pickSpots(rng, [7, 6, 5], flavor.you, holes, used);
   const themPos = pickSpots(rng, [0, 1, 2], flavor.them, holes, used);
   const feltMods: FeltMod[] = [];
-  if (flavor.themKings === 1) feltMods.push({ title: "An Enemy King", desc: "The Enemy starts with a King.", side: "them" });
+  if (flavor.themKings === 1) feltMods.push({ title: "An Enemy King", desc: enemyKingsDesc(1), side: "them" });
   else if (flavor.themKings > 1) {
     feltMods.push({
       title: "Enemy Kings",
-      desc: `The Enemy starts with ${flavor.themKings} Kings.`,
+      desc: enemyKingsDesc(flavor.themKings),
       side: "them",
     });
   }
-  if (flavor.holeN) feltMods.push({ title: "Holes in the Felt", desc: "Don't land in a pit." });
+  if (flavor.holeN) {
+    feltMods.push({
+      title: flavor.holeN === 1 ? "A Hole in the Felt" : "Holes in the Felt",
+      desc: flavor.holeN === 1 ? HOLE_ONE_DESC : holesDesc(flavor.holeN),
+    });
+  }
   if (flavor.bounce) {
     feltMods.push({
       title: "Everyone May Jump Backward",
-      desc: "Player and Enemy pieces may jump backward.",
+      desc: JUMP_BACK_BOTH_DESC,
     });
   }
-  if (flavor.themFly) feltMods.push({ title: "Long King", desc: "Enemy Kings slide extra far.", side: "them" });
+  if (flavor.themFly) feltMods.push({ title: "Long King", desc: LONG_KING_DESC, side: "them" });
   return {
     you: flavor.you,
     them: flavor.them,

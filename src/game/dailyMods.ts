@@ -1,6 +1,18 @@
 import { dailySeed, hashSeed, Rng } from "./rng.ts";
 import type { BoardSetup, FeltMod, Laws } from "./types.ts";
 import { emptyLaws } from "./types.ts";
+import {
+  EXTRA_THEM_DESC,
+  EXTRA_YOU_DAILY_DESC,
+  HOUSE_KING_DESC,
+  JUMP_BACK_THEM_DESC,
+  JUMP_BACK_YOU_DESC,
+  LONG_KING_DESC,
+  ONE_OOPS_DESC,
+  OPEN_KING_YOU_DESC,
+  SKIP_JUMP_DESC,
+  THIRD_OOPS_DESC,
+} from "./copy.ts";
 
 export type DailyModId =
   | "ivoryKing"
@@ -22,19 +34,19 @@ export interface DailyMod {
 }
 
 const PLAYER: DailyMod[] = [
-  { id: "ivoryKing", side: "you", name: "Start as King", desc: "One player piece starts as a King." },
-  { id: "extraIvory", side: "you", name: "Plus One", desc: "You sit one extra player piece." },
-  { id: "jumpBack", side: "you", name: "Player Boing", desc: "Player pieces may jump backward." },
-  { id: "skipJump", side: "you", name: "Skip the Jump", desc: "Tap Skip jump to walk instead of capturing. You can stop a combo too. The Enemy still must jump." },
-  { id: "thirdOops", side: "you", name: "Third Oops", desc: "Three take-backs instead of two." },
+  { id: "ivoryKing", side: "you", name: "Start as King", desc: OPEN_KING_YOU_DESC },
+  { id: "extraIvory", side: "you", name: "Plus One", desc: EXTRA_YOU_DAILY_DESC },
+  { id: "jumpBack", side: "you", name: "Player Boing", desc: JUMP_BACK_YOU_DESC },
+  { id: "skipJump", side: "you", name: "Skip the Jump", desc: SKIP_JUMP_DESC },
+  { id: "thirdOops", side: "you", name: "Third Oops", desc: THIRD_OOPS_DESC },
 ];
 
 const ENEMY: DailyMod[] = [
-  { id: "houseKing", side: "them", name: "An Enemy King", desc: "The Enemy starts with an extra King." },
-  { id: "extraHouse", side: "them", name: "Crowded Felt", desc: "One more Enemy piece." },
-  { id: "houseBack", side: "them", name: "Enemy Boing", desc: "Enemy pieces may jump backward." },
-  { id: "houseFly", side: "them", name: "Long King", desc: "Enemy Kings slide extra far." },
-  { id: "oneOops", side: "them", name: "Tight Rope", desc: "Only one Oops today." },
+  { id: "houseKing", side: "them", name: "An Enemy King", desc: HOUSE_KING_DESC },
+  { id: "extraHouse", side: "them", name: "Crowded Felt", desc: EXTRA_THEM_DESC },
+  { id: "houseBack", side: "them", name: "Enemy Boing", desc: JUMP_BACK_THEM_DESC },
+  { id: "houseFly", side: "them", name: "Long King", desc: LONG_KING_DESC },
+  { id: "oneOops", side: "them", name: "Tight Rope", desc: ONE_OOPS_DESC },
 ];
 
 function oopsConflict(a: DailyModId, b: DailyModId): boolean {

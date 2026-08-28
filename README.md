@@ -49,14 +49,14 @@ A climb is not shared. Tap **New climb** for a path nobody else has.
 
 After each win you pick one that lasts the rest of the run:
 
-- **Jump Back** — player pieces may jump backward
-- **Super King** — player Kings slide any empty diagonal
-- **Buddy Up** — captures try to seat a new player piece
-- **Second Chance** — once, losing everyone saves a King
-- **Start as King** — one player piece starts as a King
-- **Extra Piece** — +1 starting player piece
-- **Skip the Jump** — tap **Skip jump** to walk instead of capturing, or to stop a combo; the Enemy still must jump
-- **Hop Party** — every 4 captures, a random player piece becomes a King
+- **Jump Back** — your pieces may jump all 4 diagonals (not just toward the Enemy). Quiet slides still go forward 1 square.
+- **Super King** — your Kings slide any empty diagonal, up to 7 squares (a normal King steps 1)
+- **Buddy Up** — after each capture, a new player piece sits on an empty square of your bottom row
+- **Second Chance** — once this climb, if you lose every piece, one King comes back
+- **Start as King** — every board, one of your pieces starts already a King
+- **Extra Piece** — +1 player piece at the start of every board
+- **Skip the Jump** — tap **Skip jump** to walk 1 square instead of capturing, or to stop a combo; the Enemy still must jump
+- **Hop Party** — every 4 captures this climb, one random non-King player piece becomes a King
 
 ## Run locally
 

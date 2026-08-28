@@ -1,4 +1,14 @@
 import type { Laws } from "./types.ts";
+import {
+  BUDDY_UP_DESC,
+  EXTRA_YOU_DESC,
+  HOP_PARTY_DESC,
+  JUMP_BACK_YOU_DESC,
+  OPEN_KING_LAW_DESC,
+  SECOND_CHANCE_DESC,
+  SKIP_JUMP_DESC,
+  SUPER_KING_DESC,
+} from "./copy.ts";
 
 export interface LawDef {
   id: keyof Laws;
@@ -11,49 +21,49 @@ export const LAW_DEFS: LawDef[] = [
   {
     id: "backJump",
     name: "Jump Back",
-    desc: "Player pieces may jump backward too.",
+    desc: JUMP_BACK_YOU_DESC,
     icon: "↩️",
   },
   {
     id: "flyingKings",
     name: "Super King",
-    desc: "Player Kings slide as far as they want on an empty diagonal.",
+    desc: SUPER_KING_DESC,
     icon: "👑",
   },
   {
     id: "recruit",
     name: "Buddy Up",
-    desc: "Each capture tries to seat a new player piece on your back row.",
+    desc: BUDDY_UP_DESC,
     icon: "🤝",
   },
   {
     id: "lastRites",
     name: "Second Chance",
-    desc: "Once per climb, if you lose everyone, a King pops back on.",
+    desc: SECOND_CHANCE_DESC,
     icon: "💖",
   },
   {
     id: "openKing",
     name: "Start as King",
-    desc: "Every board, one player piece starts as a King.",
+    desc: OPEN_KING_LAW_DESC,
     icon: "⭐",
   },
   {
     id: "extraMan",
     name: "Extra Piece",
-    desc: "You start every board with one extra player piece.",
+    desc: EXTRA_YOU_DESC,
     icon: "➕",
   },
   {
     id: "freeJump",
     name: "Skip the Jump",
-    desc: "When a star is up, tap Skip jump to walk instead. You can stop a combo too. The Enemy still must jump.",
+    desc: SKIP_JUMP_DESC,
     icon: "🎈",
   },
   {
     id: "hopCrown",
     name: "Hop Party",
-    desc: "Every 4 captures this climb, a random player piece becomes a King.",
+    desc: HOP_PARTY_DESC,
     icon: "🎉",
   },
 ];
