@@ -4,17 +4,13 @@ Kid-friendly **anime checkers** with a climb. You sit **ivory**. They sit **char
 
 ## Play with a friend
 
-This Cursor Preview is only on this machine. Friends need the **public Netlify URL**.
+Share this live link (anyone can open it, no Netlify login):
 
-Once Netlify is connected, every push to `main` republishes that URL:
+**https://jumpgrave-ajrr1z.netlify.app**
 
-1. Create a free [Netlify](https://app.netlify.com) account.
-2. Add a personal access token: [User settings → Applications](https://app.netlify.com/user/settings#applications) → New access token. Name it Jumpgrave.
-3. Put `NETLIFY_AUTH_TOKEN` in this Cloud Agent environment (and `NETLIFY_SITE_ID` after the first publish, optional).
-4. Run `npm run publish` once. The script creates the site, prints the `https://….netlify.app` link, and deploys.
-5. After that, each push to `main` from here (or GitHub Actions, if this repo is on GitHub) rebuilds the same link.
+This Cursor Preview is only on this machine. Friends should use that Netlify URL, not `127.0.0.1`.
 
-Friends always open that one Netlify URL. They do not use `127.0.0.1`.
+Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. The publish script also turns off team-login protection so the URL stays public.
 
 The daily fewest-moves board is **shared** on Netlify (everyone on the link sees the same list). On a static Drop without functions, each browser keeps its own list.
 

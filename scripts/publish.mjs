@@ -19,8 +19,16 @@ function run(cmd, args, opts = {}) {
 }
 
 const idFile = path.join(process.cwd(), ".netlify-site-id");
+const committed = path.join(process.cwd(), "netlify.site.json");
 let siteId = process.env.NETLIFY_SITE_ID || "";
 if (!siteId && fs.existsSync(idFile)) siteId = fs.readFileSync(idFile, "utf8").trim();
+if (!siteId && fs.existsSync(committed)) {
+  try {
+    siteId = JSON.parse(fs.readFileSync(committed, "utf8")).id || "";
+  } catch {
+    siteId = "";
+  }
+}
 
 if (!siteId) {
   const slug = `jumpgrave-${Math.random().toString(36).slice(2, 8)}`;
@@ -39,8 +47,29 @@ if (!siteId) {
   const site = await created.json();
   siteId = site.id;
   fs.writeFileSync(idFile, `${siteId}\n`);
+  fs.writeFileSync(
+    committed,
+    `${JSON.stringify({ id: siteId, url: site.ssl_url || site.url || `https://${site.name}.netlify.app` }, null, 2)}\n`,
+  );
   console.log(`Created Netlify site ${site.name} → ${site.ssl_url || site.url}`);
 }
+
+async function makePublic() {
+  const res = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sso_login: false }),
+  });
+  if (!res.ok) {
+    console.error("Could not open the site to the public:", await res.text());
+    process.exit(1);
+  }
+}
+
+await makePublic();
 
 run("npm", ["run", "build"]);
 const deploy = run("npx", ["--yes", "netlify-cli", "deploy", "--prod", "--dir=dist", "--auth", token, "--site", siteId], {
@@ -48,3 +77,4 @@ const deploy = run("npx", ["--yes", "netlify-cli", "deploy", "--prod", "--dir=di
 });
 process.stdout.write(deploy.stdout || "");
 process.stderr.write(deploy.stderr || "");
+console.log("Public URL: https://jumpgrave-ajrr1z.netlify.app");
