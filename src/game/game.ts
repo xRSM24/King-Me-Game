@@ -53,6 +53,16 @@ export class Game {
   snapshot: Board | null = null;
   snapshotHops = 0;
   snapshotMoves = 0;
+  drag: {
+    from: Pos;
+    startX: number;
+    startY: number;
+    pointerId: number;
+    flyer: HTMLElement | null;
+    origin: HTMLElement | null;
+    sliding: boolean;
+  } | null = null;
+  skipClick = false;
   offers: LawDef[] = [];
   log: string[] = [];
   returnTo: Screen = "title";
@@ -94,6 +104,10 @@ export class Game {
         }
         return;
       }
+      if (this.skipClick) {
+        this.skipClick = false;
+        return;
+      }
       const sq = t.closest("[data-r]");
       if (sq instanceof HTMLElement && this.screen === "playing") {
         const r = Number(sq.getAttribute("data-r"));
@@ -101,6 +115,10 @@ export class Game {
         if (Number.isFinite(r) && Number.isFinite(c)) this.clickSquare(r, c);
       }
     });
+    document.addEventListener("pointerdown", (e) => this.onPointerDown(e));
+    document.addEventListener("pointermove", (e) => this.onPointerMove(e));
+    document.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    document.addEventListener("pointercancel", (e) => this.onPointerUp(e));
     document.addEventListener("submit", (e) => {
       if (e.target instanceof HTMLFormElement && e.target.id === "score-form") {
         e.preventDefault();
@@ -330,6 +348,118 @@ export class Game {
     this.renderAll();
   }
 
+  private onPointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    if (!(e.target instanceof HTMLElement)) return;
+    if (this.turn !== "you" || this.screen !== "playing" || this.thinking || this.animating) return;
+    const sq = e.target.closest("[data-r]");
+    if (!(sq instanceof HTMLElement)) return;
+    const r = Number(sq.getAttribute("data-r"));
+    const c = Number(sq.getAttribute("data-c"));
+    if (!Number.isFinite(r) || !Number.isFinite(c)) return;
+    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const canFrom = legal.some((m) => m.from.r === r && m.from.c === c);
+    if (!canFrom) return;
+    this.unlock();
+    e.preventDefault();
+    if (!this.selected || this.selected.r !== r || this.selected.c !== c) {
+      this.selected = { r, c };
+      this.renderBoard();
+      this.renderHud();
+    }
+    const origin = this.squareEl({ r, c })?.querySelector(".man");
+    if (!(origin instanceof HTMLElement)) return;
+    const board = document.getElementById("board");
+    try {
+      board?.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    this.drag = {
+      from: { r, c },
+      startX: e.clientX,
+      startY: e.clientY,
+      pointerId: e.pointerId,
+      flyer: null,
+      origin,
+      sliding: false,
+    };
+  }
+
+  private onPointerMove(e: PointerEvent): void {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+    if (!d.sliding && dist < 12) return;
+    if (!d.sliding) {
+      d.sliding = true;
+      const box = d.origin?.getBoundingClientRect();
+      if (!d.origin || !box) return;
+      const fly = d.origin.cloneNode(true) as HTMLElement;
+      fly.classList.add("flyer", "slide");
+      fly.style.width = `${box.width}px`;
+      fly.style.height = `${box.height}px`;
+      fly.style.left = `${e.clientX - box.width / 2}px`;
+      fly.style.top = `${e.clientY - box.height / 2}px`;
+      d.origin.style.opacity = "0";
+      document.body.appendChild(fly);
+      d.flyer = fly;
+    }
+    if (d.flyer) {
+      const w = d.flyer.offsetWidth;
+      const h = d.flyer.offsetHeight;
+      d.flyer.style.left = `${e.clientX - w / 2}px`;
+      d.flyer.style.top = `${e.clientY - h / 2}px`;
+    }
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const sq = under instanceof Element ? under.closest("[data-r]") : null;
+    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
+    if (sq instanceof HTMLElement) {
+      const r = Number(sq.getAttribute("data-r"));
+      const c = Number(sq.getAttribute("data-c"));
+      const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+      const ok = legal.some((m) => m.from.r === d.from.r && m.from.c === d.from.c && m.to.r === r && m.to.c === c);
+      if (ok) sq.classList.add("drop");
+    }
+  }
+
+  private onPointerUp(e: PointerEvent): void {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    const sliding = d.sliding;
+    const from = d.from;
+    if (sliding) this.skipClick = true;
+    let drop: Pos | null = null;
+    if (sliding) {
+      d.flyer?.remove();
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const sq = under instanceof Element ? under.closest("[data-r]") : null;
+      if (sq instanceof HTMLElement) {
+        drop = { r: Number(sq.getAttribute("data-r")), c: Number(sq.getAttribute("data-c")) };
+      }
+    }
+    this.drag = null;
+    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
+    if (sliding && drop && Number.isFinite(drop.r) && Number.isFinite(drop.c)) {
+      const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+      const move = legal.find((m) => m.from.r === from.r && m.from.c === from.c && m.to.r === drop!.r && m.to.c === drop!.c);
+      if (move) {
+        void this.play(move, true);
+        return;
+      }
+    }
+    if (d.origin) d.origin.style.opacity = "";
+    if (sliding) this.renderBoard();
+  }
+
+  private cancelDrag(): void {
+    if (!this.drag) return;
+    this.drag.flyer?.remove();
+    if (this.drag.origin) this.drag.origin.style.opacity = "";
+    this.drag = null;
+    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
+  }
+
   clickSquare(r: number, c: number): void {
     if (this.turn !== "you" || this.screen !== "playing" || this.thinking || this.animating) return;
     const pos = { r, c };
@@ -359,7 +489,7 @@ export class Game {
     }
   }
 
-  private async play(move: Move): Promise<void> {
+  private async play(move: Move, fromDrag = false): Promise<void> {
     if (!this.lock) {
       this.snapshot = cloneBoard(this.board);
       this.snapshotHops = this.hops;
@@ -367,7 +497,20 @@ export class Game {
     }
     this.animating = true;
     const wasKing = at(this.board, move.from)?.king ?? false;
-    await this.animateHop(move, "you");
+    if (fromDrag) {
+      if (move.capture) {
+        const capEl = this.squareEl(move.capture);
+        const capMan = capEl?.querySelector(".man") as HTMLElement | null;
+        if (capEl && capMan) {
+          capMan.classList.add("pop");
+          this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
+          this.puffAt(capEl);
+          await this.wait(160);
+        }
+      }
+    } else {
+      await this.animateHop(move, "you");
+    }
     this.board = applyMove(this.board, move);
     const nowKing = at(this.board, move.to)?.king ?? false;
     let partyPos: Pos | null = null;
@@ -735,6 +878,7 @@ export class Game {
   }
 
   show(name: Screen): void {
+    if (name !== "playing") this.cancelDrag();
     this.screen = name;
     document.querySelectorAll("[data-screen]").forEach((el) => {
       el.classList.toggle("hidden", el.getAttribute("data-screen") !== name);
@@ -915,9 +1059,9 @@ export class Game {
               ? "Jump the star."
               : "Jump ready — gold ring, then the star."
             : this.selected
-              ? "Tap a pip to hop."
+              ? "Slide onto a pip."
               : this.turn === "you"
-                ? "Your hop."
+                ? "Slide a gold ring, or tap then tap."
                 : "Wait.";
     }
     const counts = document.getElementById("counts");

@@ -58,9 +58,9 @@ Progress lives in the browser (`localStorage`).
 
 | Action | How |
 | --- | --- |
-| Select a piece | Tap a gold ring |
-| Hop | Tap a cream pip |
-| Capture | Tap a gold star |
+| Select / slide | Drag a gold ring onto a pip |
+| Hop | Drop on a cream pip, or tap then tap |
+| Capture | Drop on a gold star |
 | Take-back | Oops (once per board) |
 | Pause | Menu |
 
