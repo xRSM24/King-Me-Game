@@ -1,3 +1,16 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/daily/:day"
+  to = "/.netlify/functions/daily?day=:day"
+  status = 200
+  force = true

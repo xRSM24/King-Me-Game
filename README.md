@@ -4,33 +4,28 @@ Kid-friendly **anime checkers** with a climb. You sit **ivory**. They sit **char
 
 ## Play with a friend
 
-This Preview is only on your machine. A friend cannot open `127.0.0.1`. Send them a **public link** or the repo.
+This Cursor Preview is only on this machine. Friends need the **public Netlify URL**.
 
-### Fastest: a public URL (Netlify Drop)
+Once Netlify is connected, every push to `main` republishes that URL:
 
-On your computer:
+1. Create a free [Netlify](https://app.netlify.com) account.
+2. Add a personal access token: [User settings → Applications](https://app.netlify.com/user/settings#applications) → New access token. Name it Jumpgrave.
+3. Put `NETLIFY_AUTH_TOKEN` in this Cloud Agent environment (and `NETLIFY_SITE_ID` after the first publish, optional).
+4. Run `npm run publish` once. The script creates the site, prints the `https://….netlify.app` link, and deploys.
+5. After that, each push to `main` from here (or GitHub Actions, if this repo is on GitHub) rebuilds the same link.
 
-```bash
-npm install
-npm run build
-```
+Friends always open that one Netlify URL. They do not use `127.0.0.1`.
 
-Open [https://app.netlify.com/drop](https://app.netlify.com/drop), drag the `dist` folder onto the page, and send them the `https://….netlify.app` link. They play in the browser. No install.
+The daily fewest-moves board is **shared** on Netlify (everyone on the link sees the same list). On a static Drop without functions, each browser keeps its own list.
 
-The climb, daily board, drag-hops, and anime table all work. Today's fewest-moves list is **per browser** on a static host (no shared server). If you both play on this same `npm run dev` machine, you share one leaderboard.
-
-### They have Node
-
-If they can clone the repo:
+### Local
 
 ```bash
-git clone https://origin.cursor.com/git/khepri-sun/tmp-2bcbb7e9070a385f.git jumpgrave
-cd jumpgrave
 npm install
 npm run dev
 ```
 
-Invite them on Origin if the repo is private.
+Open the URL Vite prints (this project pins **http://127.0.0.1:43181**).
 
 ## The goal
 
@@ -48,13 +43,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## Today's board
 
-One hard felt per UTC day. Same pieces for everybody. No powers. **Two Oops.** Clear it, pin your **move count** (a multi-jump is one move). The shared leaderboard is sorted fewest moves first; a name keeps only its best.
-
-```bash
-npm run dev
-```
-
-Scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`). If the API is down, this browser still remembers scores locally.
+One hard felt per UTC day. Same pieces for everybody. No powers. **Two Oops.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
 
 ## Powers
 
@@ -92,7 +81,7 @@ Progress lives in the browser (`localStorage`).
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
 | Capture | Drop on a gold star |
-| Take-back | Oops (once per board) |
+| Take-back | Oops (×1 on the climb, ×2 on today) |
 | Pause | Menu |
 
 ## License

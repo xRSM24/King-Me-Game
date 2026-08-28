@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 data/daily-leaderboard.json
+.netlify
+.netlify-site-id
 
 # Editor directories and files
 .vscode/*
