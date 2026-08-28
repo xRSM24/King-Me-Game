@@ -29,14 +29,15 @@
           <p class="tagline">Six boards. Beat the Crown.</p>
           <button class="play-btn" data-cmd="new" type="button">Play</button>
           <nav class="title-nav">
-            <button class="texty" data-cmd="daily" type="button">Today</button>
+            <button class="texty" data-cmd="daily" type="button">Leaderboard</button>
             <button class="texty" data-cmd="how" type="button">How</button>
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
           </nav>
           <p class="stars-chip">★ <strong id="notch-count">0</strong> stars</p>
           <div class="title-daily">
-            <p class="kicker">Today's fewest · <span id="daily-chip">Daily</span></p>
+            <p class="kicker">Leaderboard · <span id="daily-chip">Daily</span></p>
             <ol id="title-leaders" class="leaderboard compact"></ol>
+            <button type="button" data-cmd="daily">Open leaderboard</button>
           </div>
         </div>
       </section>
@@ -96,17 +97,17 @@
 
       <section class="screen hidden" data-screen="daily">
         <div class="veil">
-          <p class="kicker">Daily challenge · <span id="daily-date"></span></p>
+          <p class="kicker">Daily leaderboard · <span id="daily-date"></span></p>
           <h2 id="daily-heading">Today's board</h2>
           <p class="lead" id="daily-lead">
-            One mean felt, same for everybody until midnight UTC. Beat it, then pin how many
-            moves it took. Lowest number sits on top. No powers. No Oops.
+            Same hard felt for everybody until midnight UTC. Beat it, pin your move count.
+            Lowest moves sits on top. No powers. No Oops.
           </p>
           <div class="row">
             <button data-cmd="daily-play" type="button">Hop today's board</button>
             <button class="ghost" data-cmd="title" type="button">Home</button>
           </div>
-          <p class="kicker">Leaderboard · fewest moves</p>
+          <p class="kicker">Fewest moves</p>
           <p class="quiet" id="daily-count"></p>
           <ol id="daily-board" class="leaderboard"></ol>
         </div>

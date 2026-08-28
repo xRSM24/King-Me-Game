@@ -197,9 +197,9 @@ h2 {
   color: var(--ivory);
   box-shadow: none;
   border: 2px solid var(--line);
-  padding: 10px 14px;
-  font-size: 0.95rem;
-  flex: 1 1 auto;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  flex: 1 1 0;
   min-width: 0;
   white-space: nowrap;
 }
@@ -903,6 +903,23 @@ button small {
   font-size: 0.85em;
 }
 
+.leaderboard .head {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.leaderboard .head em {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.leaderboard .head em::after {
+  content: none;
+}
+
 .leaderboard .me span {
   color: var(--gold);
 }
@@ -946,10 +963,9 @@ button small {
   white-space: normal;
 }
 
-.title-daily .ghost {
+.title-daily > button {
   width: 100%;
-  margin-top: 8px;
-  text-align: center;
+  margin-top: 12px;
 }
 
 .leaderboard.compact {

@@ -959,11 +959,12 @@ export class Game {
   }
 
   private scoreList(limit = 12): string {
+    const head = `<li class="head"><b>#</b><span>Name</span><em>Moves</em></li>`;
     if (!this.scores.length) {
-      return `<li class="quiet">Nobody's pinned a score yet. Beat today's board and put your name first.</li>`;
+      return `${head}<li class="quiet">Nobody on the board yet. Win today's map and pin your moves.</li>`;
     }
     const mine = loadName().toLowerCase();
-    return this.scores
+    const rows = this.scores
       .slice(0, limit)
       .map((s, i) => {
         const me = s.name.toLowerCase() === mine ? " me" : "";
@@ -971,6 +972,7 @@ export class Game {
         return `<li class="score${me}${podium}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em></li>`;
       })
       .join("");
+    return head + rows;
   }
 
   show(name: Screen): void {
@@ -1008,11 +1010,7 @@ export class Game {
     const dlabel = document.getElementById("daily-chip");
     if (dlabel) dlabel.textContent = dailyTitle();
     const mini = document.getElementById("title-leaders");
-    if (mini) {
-      mini.innerHTML = this.scores.length
-        ? this.scoreList(5)
-        : `<li class="quiet">Be first on today's board.</li>`;
-    }
+    if (mini) mini.innerHTML = this.scoreList(5);
     void this.warmTitleScores();
   }
 
@@ -1024,9 +1022,7 @@ export class Game {
     this.scores = board.scores;
     if (this.screen === "title") {
       const mini = document.getElementById("title-leaders");
-      if (mini) {
-        mini.innerHTML = this.scores.length ? this.scoreList(5) : `<li class="quiet">Be first on today's board.</li>`;
-      }
+      if (mini) mini.innerHTML = this.scoreList(5);
     }
   }
 
