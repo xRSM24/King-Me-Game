@@ -57,6 +57,7 @@ function jumpDirs(piece: Piece, laws: Laws, mods: BoardMods): Pos[] {
   if (piece.king) return ALL;
   if (mods.bounce) return ALL;
   if (piece.side === "you" && laws.backJump) return ALL;
+  if (piece.side === "them" && mods.themBack) return ALL;
   return fwd(piece.side);
 }
 
@@ -191,7 +192,7 @@ export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
     board.push(row);
   }
 
-  const mods: BoardMods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
+  const mods: BoardMods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly, themBack: false };
 
   const stamp = (side: Side, pos: Pos, king: boolean) => {
     if (!playable(pos.r, pos.c, mods)) return false;

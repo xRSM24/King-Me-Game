@@ -1,6 +1,8 @@
 import { think } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
+import { comboName, comboTier } from "./combo.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
+import { applyDailyMods, dailyMods, type DailyMod } from "./dailyMods.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
 import { escapeHtml, fetchBoard, loadName, postScore, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
@@ -19,11 +21,10 @@ import {
   setupBoard,
   type Board,
 } from "./rules.ts";
+import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL } from "./setup.ts";
 import type { BoardMods, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, samePos } from "./types.ts";
-
-const CHEERS = ["Yatta!", "Jump!", "Got 'em!", "Kiai!", "Wow!", "Super hop!"];
+import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export class Game {
   meta: Meta = loadMeta();
@@ -42,6 +43,7 @@ export class Game {
   boardIndex = 0;
   mode: "run" | "daily" = "run";
   dailyLabel = "";
+  twists: DailyMod[] = [];
   scores: Score[] = [];
   posted = false;
   turn: "you" | "them" = "you";
@@ -78,9 +80,12 @@ export class Game {
   } | null = null;
   idSeq = 1;
   cheerTimer: number | null = null;
+  coachOn = false;
+  keyFocus: Pos | null = null;
 
   constructor() {
     this.bind();
+    this.applyPrefs();
     this.show("title");
   }
 
@@ -125,17 +130,11 @@ export class Game {
     document.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.finishDrag(e.clientX, e.clientY);
     });
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-      const sq = t.closest("#board [data-r]");
-      if (!(sq instanceof HTMLElement) || this.screen !== "playing") return;
-      e.preventDefault();
-      const r = Number(sq.getAttribute("data-r"));
-      const c = Number(sq.getAttribute("data-c"));
-      if (Number.isFinite(r) && Number.isFinite(c)) this.clickSquare(r, c);
+    document.addEventListener("keydown", (e) => this.onKey(e));
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") this.persistClimb();
     });
+    window.addEventListener("pagehide", () => this.persistClimb());
     document.addEventListener("submit", (e) => {
       if (e.target instanceof HTMLFormElement && e.target.id === "score-form") {
         e.preventDefault();
@@ -148,7 +147,16 @@ export class Game {
     this.unlock();
     if (cmd !== "oops") this.audio.ui();
     if (cmd === "new") {
+      if (hasClimb()) this.continueClimb();
+      else this.newRun();
+      return;
+    }
+    if (cmd === "fresh") {
       this.newRun();
+      return;
+    }
+    if (cmd === "continue") {
+      this.continueClimb();
       return;
     }
     if (cmd === "daily") {
@@ -176,7 +184,33 @@ export class Game {
       return;
     }
     if (cmd === "pause") {
-      if (this.screen === "playing") this.show("pause");
+      if (this.screen === "playing") {
+        this.persistClimb();
+        this.show("pause");
+      }
+      return;
+    }
+    if (cmd === "home") {
+      this.persistClimb();
+      this.show("title");
+      return;
+    }
+    if (cmd === "coach-ok") {
+      this.finishCoach();
+      return;
+    }
+    if (cmd === "colorblind") {
+      this.meta.colorblind = !this.meta.colorblind;
+      saveMeta(this.meta);
+      this.applyPrefs();
+      this.renderChrome();
+      return;
+    }
+    if (cmd === "motion") {
+      this.meta.reduceMotion = !this.meta.reduceMotion;
+      saveMeta(this.meta);
+      this.applyPrefs();
+      this.renderChrome();
       return;
     }
     if (cmd === "resume") {
@@ -208,6 +242,7 @@ export class Game {
         this.boardIndex += 1;
         this.loadBoard();
         this.show("playing");
+        this.persistClimb();
       }
     }
   }
@@ -215,11 +250,13 @@ export class Game {
   newRun(): void {
     this.unlock();
     this.mode = "run";
+    clearClimb();
     const seed = (Math.random() * 0xffffffff) | 0;
     this.runSeed = seed;
     this.rng = new Rng(seed);
     this.pathNames = climbNames(seed);
     this.laws = emptyLaws();
+    this.twists = [];
     this.hops = 0;
     this.moves = 0;
     this.combo = 0;
@@ -234,11 +271,101 @@ export class Game {
     this.pushLog("Tap a gold ring, then a pip. Stars mean jump!");
     this.show("playing");
     this.cheer("Let's hop!");
+    this.maybeCoach();
+    this.persistClimb();
+  }
+
+  continueClimb(): void {
+    const saved = loadClimb();
+    if (!saved) {
+      this.newRun();
+      return;
+    }
+    this.unlock();
+    this.mode = "run";
+    this.end = null;
+    this.posted = false;
+    this.twists = [];
+    this.runSeed = saved.runSeed;
+    this.rng = new Rng(saved.runSeed + saved.hops * 17 + saved.boardIndex * 31);
+    this.pathNames = saved.pathNames.length ? saved.pathNames : climbNames(saved.runSeed);
+    this.board = unpackBoard(saved.board);
+    this.laws = saved.laws;
+    this.mods = { ...emptyMods(), ...saved.mods };
+    this.blurb = saved.blurb;
+    this.hops = saved.hops;
+    this.moves = saved.moves;
+    this.combo = saved.combo;
+    this.boardIndex = saved.boardIndex;
+    this.turn = saved.turn;
+    this.lock = saved.lock;
+    this.selected = saved.lock;
+    this.lastRitesUsed = saved.lastRitesUsed;
+    this.oopsLeft = saved.oopsLeft;
+    this.snapshot = saved.snapshot ? unpackBoard(saved.snapshot) : null;
+    this.snapshotHops = saved.snapshotHops;
+    this.snapshotMoves = saved.snapshotMoves;
+    this.idSeq = Math.max(saved.idSeq, this.maxPieceId() + 1);
+    this.log = saved.log;
+    this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
+    this.thinking = saved.turn === "them";
+    this.animating = false;
+    this.clearAi();
+    this.coachOn = false;
+    this.hideCoach();
+    if (saved.screen === "pick" && this.offers.length) {
+      this.show("pick");
+      return;
+    }
+    this.show("playing");
+    this.pushLog("Welcome back. The pieces waited.");
+    this.cheer("Welcome back!");
+    if (this.turn === "them") this.scheduleAi(280);
+  }
+
+  private maxPieceId(): number {
+    let n = 0;
+    for (const row of this.board) {
+      for (const p of row) {
+        if (p && p.id > n) n = p.id;
+      }
+    }
+    return n;
+  }
+
+  private persistClimb(): void {
+    if (this.mode !== "run" || this.end) return;
+    if (this.screen !== "playing" && this.screen !== "pick" && this.screen !== "pause") return;
+    saveClimb({
+      v: 1,
+      runSeed: this.runSeed,
+      pathNames: this.pathNames,
+      board: packBoard(this.board),
+      laws: this.laws,
+      mods: this.mods,
+      blurb: this.blurb,
+      hops: this.hops,
+      moves: this.moves,
+      combo: this.combo,
+      boardIndex: this.boardIndex,
+      turn: this.turn,
+      lock: this.lock,
+      lastRitesUsed: this.lastRitesUsed,
+      oopsLeft: this.oopsLeft,
+      snapshot: this.snapshot ? packBoard(this.snapshot) : null,
+      snapshotHops: this.snapshotHops,
+      snapshotMoves: this.snapshotMoves,
+      idSeq: this.idSeq,
+      log: this.log,
+      offers: this.offers.map((o) => o.id),
+      screen: this.screen === "pick" ? "pick" : "playing",
+    });
   }
 
   private async openDaily(): Promise<void> {
     this.unlock();
     this.dailyLabel = dailyTitle();
+    this.twists = dailyMods();
     this.show("daily");
     const board = await fetchBoard(utcDayKey());
     this.scores = board.scores;
@@ -249,7 +376,9 @@ export class Game {
     this.unlock();
     this.mode = "daily";
     this.rng = new Rng(hashSeed(dailySeed() * 97 + 13));
-    this.laws = emptyLaws();
+    this.twists = dailyMods();
+    const applied = applyDailyMods(dailySpec(), this.twists);
+    this.laws = applied.laws;
     this.hops = 0;
     this.moves = 0;
     this.combo = 0;
@@ -258,9 +387,14 @@ export class Game {
     this.end = null;
     this.posted = false;
     this.idSeq = 1;
-    const spec = dailySpec();
+    const spec = applied.spec;
     this.dailyLabel = dailyTitle();
-    this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
+    this.mods = {
+      holes: spec.holes,
+      bounce: spec.bounce,
+      themFly: applied.themFly,
+      themBack: applied.themBack,
+    };
     this.blurb = spec.blurb;
     this.board = setupBoard(spec, this.pid);
     this.turn = "you";
@@ -268,10 +402,13 @@ export class Game {
     this.lock = null;
     this.thinking = false;
     this.animating = false;
-    this.oopsLeft = 2;
+    this.oopsLeft = applied.oops;
     this.snapshot = null;
+    this.coachOn = false;
+    this.hideCoach();
     this.clearAi();
-    this.pushLog(`${this.dailyLabel}. Two Oops. Fewest moves wins today.`);
+    const twistLine = this.twists.map((t) => t.name).join(" · ");
+    this.pushLog(`${this.dailyLabel}. ${twistLine}. Fewest moves wins today.`);
     this.show("playing");
     this.cheer("Daily!");
   }
@@ -313,7 +450,7 @@ export class Game {
     const openKing = this.laws.openKing || this.rng.chance(notchBonus(this.meta.notches).kingChance);
     const boardRng = new Rng(hashSeed(this.runSeed + (this.boardIndex + 1) * 104729));
     const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng);
-    this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly };
+    this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly, themBack: false };
     this.blurb = spec.blurb;
     this.board = setupBoard(spec, this.pid);
     this.turn = "you";
@@ -327,6 +464,7 @@ export class Game {
     this.clearAi();
     const name = this.pathNames[this.boardIndex] ?? "Next board";
     this.pushLog(`${name}. ${spec.blurb}`);
+    this.persistClimb();
   }
 
   private pushLog(msg: string): void {
@@ -334,20 +472,144 @@ export class Game {
     if (this.log.length > 3) this.log.length = 3;
   }
 
-  private cheer(text: string): void {
+  private applyPrefs(): void {
+    document.documentElement.classList.toggle("cb", this.meta.colorblind);
+    document.documentElement.classList.toggle("calm", this.meta.reduceMotion);
+    this.audio.setMuted(this.meta.mute);
+  }
+
+  private wantsFx(): boolean {
+    return !this.meta.reduceMotion;
+  }
+
+  private maybeCoach(): void {
+    if (this.meta.sawTutorial || this.mode !== "run" || this.boardIndex !== 0) {
+      this.coachOn = false;
+      this.hideCoach();
+      return;
+    }
+    this.coachOn = true;
+    const el = document.getElementById("coach");
+    if (el) el.classList.remove("hidden");
+    document.getElementById("board")?.classList.add("coaching");
+    const status = document.getElementById("status");
+    if (status) status.textContent = "Drag the gold ring onto the star.";
+  }
+
+  private finishCoach(): void {
+    if (!this.coachOn && this.meta.sawTutorial) {
+      this.hideCoach();
+      return;
+    }
+    this.coachOn = false;
+    this.meta.sawTutorial = true;
+    saveMeta(this.meta);
+    this.hideCoach();
+  }
+
+  private hideCoach(): void {
+    document.getElementById("coach")?.classList.add("hidden");
+    document.getElementById("board")?.classList.remove("coaching");
+  }
+
+  private petalBurst(): void {
+    if (!this.wantsFx()) return;
+    const host = document.querySelector(".petals");
+    if (!(host instanceof HTMLElement)) return;
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement("i");
+      p.className = "burst";
+      p.style.left = `${8 + Math.random() * 84}%`;
+      p.style.animationDuration = `${0.9 + Math.random() * 0.8}s`;
+      p.style.animationDelay = `${Math.random() * 0.12}s`;
+      host.appendChild(p);
+      window.setTimeout(() => p.remove(), 1800);
+    }
+  }
+
+  private onKey(e: KeyboardEvent): void {
+    const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    if (e.key === "Escape" && this.screen === "playing" && !typing) {
+      e.preventDefault();
+      this.command("pause");
+      return;
+    }
+    if (this.screen !== "playing" || typing) {
+      if ((e.key === "Enter" || e.key === " ") && !typing) {
+        const t = e.target;
+        if (t instanceof HTMLElement && t.closest("#board [data-r]")) {
+          /* handled below when playing */
+        }
+      }
+      return;
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const sq = t.closest("#board [data-r]");
+      if (!(sq instanceof HTMLElement)) return;
+      e.preventDefault();
+      const r = Number(sq.getAttribute("data-r"));
+      const c = Number(sq.getAttribute("data-c"));
+      if (Number.isFinite(r) && Number.isFinite(c)) this.clickSquare(r, c);
+      return;
+    }
+    const step: Record<string, Pos> = {
+      ArrowUp: { r: -1, c: 0 },
+      ArrowDown: { r: 1, c: 0 },
+      ArrowLeft: { r: 0, c: -1 },
+      ArrowRight: { r: 0, c: 1 },
+    };
+    const dir = step[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    this.moveFocus(dir);
+  }
+
+  private moveFocus(dir: Pos): void {
+    const active = document.activeElement;
+    let r = this.keyFocus?.r ?? 7;
+    let c = this.keyFocus?.c ?? 0;
+    if (active instanceof HTMLElement && active.hasAttribute("data-r")) {
+      r = Number(active.getAttribute("data-r"));
+      c = Number(active.getAttribute("data-c"));
+    }
+    for (let i = 1; i < 16; i++) {
+      const nr = r + dir.r * i;
+      const nc = c + dir.c * i;
+      if (!inBoard(nr, nc)) break;
+      if (!isDark(nr, nc) || isHole(this.mods, nr, nc)) continue;
+      this.keyFocus = { r: nr, c: nc };
+      this.squareEl(this.keyFocus)?.focus();
+      return;
+    }
+    for (let i = 1; i < 12; i++) {
+      for (const tilt of [-1, 1]) {
+        const nr = r + dir.r * i + (dir.r === 0 ? tilt : 0);
+        const nc = c + dir.c * i + (dir.c === 0 ? tilt : 0);
+        if (!inBoard(nr, nc) || !isDark(nr, nc) || isHole(this.mods, nr, nc)) continue;
+        this.keyFocus = { r: nr, c: nc };
+        this.squareEl(this.keyFocus)?.focus();
+        return;
+      }
+    }
+  }
+
+  private cheer(text: string, combo = 0): void {
     const el = document.getElementById("cheer");
     if (!el) return;
     el.textContent = text;
     el.classList.remove("hidden");
     el.classList.remove("popin");
+    el.className = `cheer${combo >= 2 ? ` combo-${comboTier(combo)}` : ""}`;
     void el.offsetWidth;
     el.classList.add("popin");
-    this.audio.chirp();
+    if (combo < 2) this.audio.chirp();
     if (this.cheerTimer != null) window.clearTimeout(this.cheerTimer);
     this.cheerTimer = window.setTimeout(() => {
       el.classList.add("hidden");
       this.cheerTimer = null;
-    }, 720);
+    }, combo >= 3 ? 980 : 720);
   }
 
   private canOops(): boolean {
@@ -375,6 +637,7 @@ export class Game {
     this.pushLog("Oops! That hop didn't count.");
     this.cheer("Oops!");
     this.renderAll();
+    this.persistClimb();
   }
 
   private onPointerDown(e: PointerEvent): void {
@@ -602,8 +865,10 @@ export class Game {
         this.hops += 1;
         this.combo += 1;
         this.audio.capture(this.combo);
-        this.cheer(this.combo >= 2 ? "Double hop!" : CHEERS[this.combo % CHEERS.length]!);
-        this.pushLog(this.combo >= 2 ? `Combo x${this.combo}!` : "Got one!");
+        const yell = comboName(this.combo);
+        this.cheer(yell, this.combo);
+        this.pushLog(this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
+        if (this.coachOn) this.finishCoach();
         if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
         if (this.laws.hopCrown && this.hops % 4 === 0) {
           const c = crownRandom(this.board, "you", (n) => this.rng.int(n));
@@ -622,6 +887,7 @@ export class Game {
       await this.settle(move.to, !wasKing && nowKing, keepJumping);
       if (!wasKing && nowKing) {
         this.audio.crown();
+        this.audio.fanfare();
         this.cheer("Crowned!");
         this.pushLog("Crowned! Kings hop every way.");
         await this.animateCrown(move.to);
@@ -645,6 +911,7 @@ export class Game {
     this.lock = null;
     this.selected = null;
     this.afterYou();
+    this.persistClimb();
   }
 
   private afterYou(): void {
@@ -710,6 +977,7 @@ export class Game {
     this.thinking = false;
     this.snapshot = null;
     this.renderAll();
+    this.persistClimb();
   }
 
   private squareEl(p: Pos): HTMLElement | null {
@@ -727,6 +995,7 @@ export class Game {
   }
 
   private sparkAt(target: HTMLElement, count: number, colors: string[], dist = 36): void {
+    if (!this.wantsFx()) return;
     this.audio.sparkle();
     const box = target.getBoundingClientRect();
     const cx = box.left + box.width / 2;
@@ -746,6 +1015,7 @@ export class Game {
   }
 
   private puffAt(target: HTMLElement): void {
+    if (!this.wantsFx()) return;
     this.audio.puff();
     const box = target.getBoundingClientRect();
     const p = document.createElement("span");
@@ -756,6 +1026,7 @@ export class Game {
   }
 
   private async animateHop(move: Move, side: "you" | "them"): Promise<void> {
+    if (!this.wantsFx()) return this.wait(70);
     const fromEl = this.squareEl(move.from);
     const toEl = this.squareEl(move.to);
     const man = fromEl?.querySelector(".man") as HTMLElement | null;
@@ -838,6 +1109,7 @@ export class Game {
   }
 
   private async animateCrown(pos: Pos): Promise<void> {
+    if (!this.wantsFx()) return this.wait(80);
     const sq = this.squareEl(pos);
     const man = sq?.querySelector(".man") as HTMLElement | null;
     if (!sq || !man) return;
@@ -903,6 +1175,7 @@ export class Game {
       this.rng.shuffle(pool);
       this.offers = pool.slice(0, Math.min(3, pool.length));
       this.show("pick");
+      this.persistClimb();
     }, 720);
   }
 
@@ -910,7 +1183,10 @@ export class Game {
     this.clearAi();
     this.thinking = false;
     this.animating = false;
+    this.hideCoach();
+    this.coachOn = false;
     if (this.mode === "run") {
+      clearClimb();
       const gained = notchesFromRun(this.hops, this.meta.notches);
       this.meta.notches += gained;
       this.meta.bestBoard = Math.max(this.meta.bestBoard, this.boardIndex + 1);
@@ -932,8 +1208,14 @@ export class Game {
         board: 1,
       };
     }
-    if (win) this.audio.win();
-    else this.audio.lose();
+    if (win) {
+      this.audio.win();
+      if (this.mode === "run" && this.boardIndex >= PATH_END - 1) {
+        this.audio.fanfare();
+        this.petalBurst();
+        this.cheer("The Crown falls!", 5);
+      }
+    } else this.audio.lose();
     this.show("end");
     if (this.mode === "daily" && win) void this.refreshScores();
   }
@@ -1002,6 +1284,10 @@ export class Game {
     if (titleMute) titleMute.textContent = this.meta.mute ? "Muted" : "Sound";
     const hudMute = document.getElementById("btn-mute");
     if (hudMute) hudMute.textContent = this.meta.mute ? "Sound off" : "Sound on";
+    const cb = document.getElementById("opt-cb");
+    if (cb) cb.textContent = this.meta.colorblind ? "Colorblind on" : "Colorblind off";
+    const motion = document.getElementById("opt-motion");
+    if (motion) motion.textContent = this.meta.reduceMotion ? "Motion off" : "Motion on";
   }
 
   private renderTitle(): void {
@@ -1011,6 +1297,14 @@ export class Game {
     if (dlabel) dlabel.textContent = dailyTitle();
     const mini = document.getElementById("title-leaders");
     if (mini) mini.innerHTML = this.scoreList(5);
+    const main = document.getElementById("play-main");
+    const fresh = document.getElementById("play-fresh");
+    const saved = hasClimb();
+    if (main) {
+      main.textContent = saved ? "Continue" : "Play";
+      main.setAttribute("data-cmd", saved ? "continue" : "new");
+    }
+    if (fresh) fresh.classList.toggle("hidden", !saved);
     void this.warmTitleScores();
   }
 
@@ -1039,6 +1333,16 @@ export class Game {
       count.textContent = n
         ? `${n} hopper${n === 1 ? "" : "s"} on the board. Lowest moves wins.`
         : "The board is empty. Win it and pin your move count.";
+    }
+    const mods = document.getElementById("daily-mods");
+    if (mods) {
+      const list = this.twists.length ? this.twists : dailyMods();
+      mods.innerHTML = list
+        .map(
+          (m) =>
+            `<li class="${m.side === "you" ? "help-you" : "help-them"}"><b>${m.name}</b> ${m.desc}</li>`,
+        )
+        .join("");
     }
   }
 
@@ -1184,7 +1488,10 @@ export class Game {
     const laws = document.getElementById("laws");
     if (laws) {
       if (this.mode === "daily") {
-        laws.innerHTML = `<li class="quiet">No powers today. Two Oops. Fewest moves wins.</li>`;
+        const list = this.twists.length ? this.twists : dailyMods();
+        laws.innerHTML = list
+          .map((d) => `<li class="${d.side === "you" ? "help-you" : "help-them"}"><b>${d.name}</b> ${d.desc}</li>`)
+          .join("");
       } else {
         const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
         laws.innerHTML = owned.length
@@ -1225,5 +1532,8 @@ export class Game {
       }
     }
     el.innerHTML = html;
+    el.classList.toggle("coaching", this.coachOn);
+    const keep = this.keyFocus ?? this.selected;
+    if (keep) this.squareEl(keep)?.focus();
   }
 }

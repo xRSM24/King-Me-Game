@@ -209,6 +209,34 @@ h2 {
   background: rgba(255, 142, 200, 0.12);
 }
 
+#play-fresh {
+  display: block;
+  width: min(320px, 100%);
+  margin: 0 auto 12px;
+}
+
+.opts {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.opts button.texty {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  border: 2px solid var(--line);
+  padding: 10px 12px;
+  min-height: 44px;
+  font-size: 0.85rem;
+}
+
+.opts button.texty:hover {
+  border-color: var(--gold);
+  color: var(--ivory);
+}
+
 .stars-chip {
   margin: 22px 0 0;
   color: var(--gold);
@@ -789,6 +817,29 @@ button small {
   animation: cheer-in 0.7s ease;
 }
 
+.cheer.combo-2 {
+  font-size: clamp(36px, 9vw, 64px);
+  color: #ffe08a;
+}
+
+.cheer.combo-3 {
+  font-size: clamp(40px, 10vw, 70px);
+  color: #ffd45a;
+  text-shadow:
+    0 0 18px #ffd45a,
+    0 4px 0 #c44d86;
+}
+
+.cheer.combo-4,
+.cheer.combo-5 {
+  font-size: clamp(44px, 11vw, 76px);
+  color: #fff8ea;
+  text-shadow:
+    0 0 22px #ff8ec8,
+    0 0 12px #ffd45a,
+    0 5px 0 #c44d86;
+}
+
 @keyframes cheer-in {
   0% {
     transform: translate(-50%, -50%) scale(0.4);
@@ -830,6 +881,125 @@ button small {
 #laws b {
   color: var(--gold);
   margin-right: 6px;
+}
+
+#laws .help-you b,
+.mod-list .help-you b {
+  color: #ffe4f0;
+}
+
+#laws .help-them b,
+.mod-list .help-them b {
+  color: #9ad7ff;
+}
+
+.mod-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.mod-list li {
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.coach {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 8;
+  background: rgba(20, 12, 40, 0.94);
+  border: 3px solid var(--gold);
+  border-radius: 16px;
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.coach p {
+  margin: 0 0 10px;
+  font-weight: 800;
+  color: var(--ivory);
+}
+
+.coach button {
+  min-height: 48px;
+}
+
+#board.coaching .sq.can {
+  box-shadow: inset 0 0 0 4px var(--gold);
+  animation: coach-pulse 1s ease-in-out infinite;
+}
+
+#board.coaching .land.jump {
+  transform: scale(1.15);
+}
+
+@keyframes coach-pulse {
+  50% {
+    box-shadow: inset 0 0 0 6px #fff3d4;
+  }
+}
+
+.sq:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+
+.petals i.burst {
+  animation-name: burst-fall;
+  opacity: 1;
+}
+
+@keyframes burst-fall {
+  0% {
+    transform: translateY(40vh) rotate(0deg) scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(280deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+html.cb .man.you {
+  background: #fff8ea;
+  border: 4px solid #e8a00c;
+}
+
+html.cb .man.them {
+  border-radius: 18%;
+  background: radial-gradient(circle at 32% 28%, #3ecfc4, #0a3d3a 58%, #041616);
+  border: 4px solid #041616;
+}
+
+html.cb .man.them .face::before,
+html.cb .man.them .face::after {
+  background: #fff8ea;
+}
+
+html.calm .mascots .man,
+html.calm .play-btn,
+html.calm .petals i,
+html.calm .screen.enter .veil,
+html.calm .sq.can .man,
+html.calm #board.coaching .sq.can,
+html.calm .cheer.popin,
+html.calm .man.pop,
+html.calm #board .man.just-landed,
+html.calm #board .man.just-crowned {
+  animation: none;
+}
+
+html.calm .petals {
+  opacity: 0.25;
 }
 
 #log {
@@ -1002,11 +1172,37 @@ button small {
   .table-top .row.tiny {
     justify-content: flex-start;
   }
+  .hud-btn,
+  .title-nav button.texty,
+  .opts button.texty,
+  button {
+    min-height: 48px;
+  }
+  .hud-btn {
+    min-width: 48px;
+    padding: 12px 16px;
+  }
+  .land {
+    width: 38%;
+    height: 38%;
+  }
+  .land.jump {
+    width: 48%;
+    height: 48%;
+  }
+  .man {
+    width: 80%;
+    height: 80%;
+  }
   #board {
     border-width: 7px;
   }
   #status {
     min-height: 2.7em;
+  }
+  .path li {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -1036,4 +1232,11 @@ button small {
   .screen.enter .veil {
     animation: none;
   }
+}
+
+html.calm .spark,
+html.calm .puff,
+html.calm .crown-drop,
+html.calm .crown-ring {
+  display: none;
 }

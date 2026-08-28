@@ -133,10 +133,11 @@ export class AudioSys {
   }
 
   crown(): void {
-    this.tone(523, 0.12, "triangle", 0.06);
-    this.tone(659, 0.16, "sine", 0.05);
-    this.tone(784, 0.22, "triangle", 0.05);
-    this.tone(1046, 0.18, "sine", 0.03);
+    this.tone(523, 0.12, "triangle", 0.07);
+    this.tone(659, 0.16, "sine", 0.06);
+    this.tone(784, 0.22, "triangle", 0.055);
+    this.tone(1046, 0.24, "sine", 0.045);
+    this.tone(1318, 0.18, "sine", 0.03);
   }
 
   win(): void {
@@ -157,7 +158,17 @@ export class AudioSys {
   }
 
   oops(): void {
-    this.tone(300, 0.08, "sine", 0.04, -60);
-    this.burst(0.1, 0.03, 240, -60);
+    this.tone(420, 0.07, "triangle", 0.05, -90);
+    this.tone(280, 0.14, "sine", 0.055, -120);
+    this.burst(0.16, 0.05, 180, -40);
+    this.tone(160, 0.18, "square", 0.025, -50);
+  }
+
+  fanfare(): void {
+    this.tone(523, 0.12, "triangle", 0.06);
+    this.tone(659, 0.14, "sine", 0.055);
+    this.tone(784, 0.16, "triangle", 0.06);
+    this.tone(1046, 0.22, "sine", 0.05);
+    this.tone(1318, 0.28, "triangle", 0.04);
   }
 }

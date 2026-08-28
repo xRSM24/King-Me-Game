@@ -31,15 +31,16 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## How it feels
 
-- The first board starts with a jump (the gold **star**), but the squares change every climb.
+- The first climb shows a one-time coach: drag the gold ring onto the star.
 - Later boards pile on charcoal, holes, bouncing jumps, and flying kings.
-- Pieces hop. Captures pop. Double jumps cheer.
-- One **Oops** per climb board if you tap the wrong square. Today's board gives you **two**.
-- Each board is a different puzzle: a race to crown, holes in the felt, a shadow king, backward jumps, then the Crown.
+- Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
+- One **Oops** per climb board if you tap the wrong square (it boings). Today's board usually gives you **two**, unless a daily twist says otherwise.
+- Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
+- Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
 
 ## Today's board
 
-One hard felt per UTC day. Same pieces for everybody. No powers. **Two Oops.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
+One hard felt per UTC day. Same pieces **and the same modifiers** for everybody. Some twists help ivory, some help the house. **Oops count follows the twist.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
 
 ## Powers
 
@@ -77,8 +78,9 @@ Progress lives in the browser (`localStorage`).
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
 | Capture | Drop on a gold star |
-| Take-back | Oops (×1 on the climb, ×2 on today) |
-| Pause | Menu |
+| Take-back | Oops (×1 on the climb, daily follows today's twist) |
+| Pause / save | Menu → Go home (climb waits) |
+| Keyboard | Arrows, Enter, Escape |
 
 ## License
 

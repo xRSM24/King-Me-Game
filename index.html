@@ -27,12 +27,17 @@
           <p class="kicker">Anime checkers</p>
           <h1>Jumpgrave</h1>
           <p class="tagline">Six boards. Beat the Crown.</p>
-          <button class="play-btn" data-cmd="new" type="button">Play</button>
+          <button class="play-btn" id="play-main" data-cmd="new" type="button">Play</button>
+          <button class="ghost hidden" id="play-fresh" data-cmd="fresh" type="button">New climb</button>
           <nav class="title-nav">
             <button class="texty" data-cmd="daily" type="button">Leaderboard</button>
             <button class="texty" data-cmd="how" type="button">How</button>
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
           </nav>
+          <div class="opts">
+            <button class="texty" id="opt-cb" data-cmd="colorblind" type="button">Colorblind off</button>
+            <button class="texty" id="opt-motion" data-cmd="motion" type="button">Motion on</button>
+          </div>
           <p class="stars-chip">★ <strong id="notch-count">0</strong> stars</p>
           <div class="title-daily">
             <p class="kicker">Leaderboard · <span id="daily-chip">Daily</span></p>
@@ -65,7 +70,13 @@
             </li>
             <li>
               <b>Today's board is a toughie.</b> Everyone gets the same hard felt until midnight
-              UTC. Two Oops, no powers. Win it, pin your move count. Lowest moves sits on top.
+              UTC. Two Oops unless a daily twist says otherwise. Each day rolls a few modifiers —
+              some help ivory, some help the house. Win it, pin your move count. Lowest moves sits on top.
+            </li>
+            <li>
+              <b>Keys and comfort.</b> Arrows move the gold outline. Enter hops. Escape opens Menu.
+              Colorblind paints ivory round-and-gold and charcoal square-and-teal. Motion off
+              skips hops and petals.
             </li>
           </ol>
           <button data-cmd="back" type="button">Back</button>
@@ -88,6 +99,10 @@
         <div id="board-wrap">
           <div id="board" role="grid" aria-label="Checkers board"></div>
           <div id="cheer" class="cheer hidden" aria-live="polite"></div>
+          <div id="coach" class="coach hidden">
+            <p id="coach-text">Drag the gold ring onto the star. That's a jump.</p>
+            <button data-cmd="coach-ok" type="button">Got it</button>
+          </div>
         </div>
         <p id="blurb" class="blurb"></p>
         <p id="counts"></p>
@@ -101,8 +116,9 @@
           <h2 id="daily-heading">Today's board</h2>
           <p class="lead" id="daily-lead">
             Same hard felt for everybody until midnight UTC. Beat it, pin your move count.
-            Lowest moves sits on top. No powers. Two Oops.
+            Lowest moves sits on top. Today's twists help ivory and the house.
           </p>
+          <ul id="daily-mods" class="mod-list"></ul>
           <div class="row">
             <button data-cmd="daily-play" type="button">Hop today's board</button>
             <button class="ghost" data-cmd="title" type="button">Home</button>
@@ -123,11 +139,12 @@
         <div class="veil narrow">
           <p class="kicker">Paused</p>
           <h2>The pieces wait</h2>
-          <p class="lead">Nobody hops until you come back.</p>
+          <p class="lead">Nobody hops until you come back. Go home and this climb waits on this device.</p>
           <div class="col">
             <button data-cmd="resume" type="button">Keep playing</button>
             <button class="ghost" data-cmd="how" type="button">How to Play</button>
-            <button class="ghost" data-cmd="abandon" type="button">Go home</button>
+            <button class="ghost" data-cmd="home" type="button">Go home</button>
+            <button class="ghost" data-cmd="abandon" type="button">Give up</button>
           </div>
         </div>
       </section>

@@ -36,6 +36,7 @@ export interface BoardMods {
   holes: Pos[];
   bounce: boolean;
   themFly: boolean;
+  themBack: boolean;
 }
 
 export interface Meta {
@@ -44,6 +45,9 @@ export interface Meta {
   wins: number;
   bestBoard: number;
   mute: boolean;
+  colorblind: boolean;
+  reduceMotion: boolean;
+  sawTutorial: boolean;
 }
 
 export interface BoardSetup {
@@ -95,7 +99,7 @@ export function emptyLaws(): Laws {
 }
 
 export function emptyMods(): BoardMods {
-  return { holes: [], bounce: false, themFly: false };
+  return { holes: [], bounce: false, themFly: false, themBack: false };
 }
 
 export const BOARD_NAMES = [

@@ -8,20 +8,35 @@ const EMPTY: Meta = {
   wins: 0,
   bestBoard: 0,
   mute: false,
+  colorblind: false,
+  reduceMotion: false,
+  sawTutorial: false,
 };
+
+function osCalm(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
 
 export function loadMeta(): Meta {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...EMPTY };
+    if (!raw) return { ...EMPTY, reduceMotion: osCalm() };
     const p = JSON.parse(raw) as Partial<Meta>;
     return {
       ...EMPTY,
       ...p,
       notches: typeof p.notches === "number" ? p.notches : 0,
+      mute: !!p.mute,
+      colorblind: !!p.colorblind,
+      reduceMotion: typeof p.reduceMotion === "boolean" ? p.reduceMotion : osCalm(),
+      sawTutorial: !!p.sawTutorial,
     };
   } catch {
-    return { ...EMPTY };
+    return { ...EMPTY, reduceMotion: osCalm() };
   }
 }
 
