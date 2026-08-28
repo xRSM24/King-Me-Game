@@ -118,7 +118,7 @@ export class Game {
     document.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     document.addEventListener("pointermove", (e) => this.onPointerMove(e));
     document.addEventListener("pointerup", (e) => this.onPointerUp(e));
-    document.addEventListener("pointercancel", (e) => this.onPointerUp(e));
+    document.addEventListener("pointercancel", (e) => this.onPointerCancel(e));
     document.addEventListener("submit", (e) => {
       if (e.target instanceof HTMLFormElement && e.target.id === "score-form") {
         e.preventDefault();
@@ -360,27 +360,68 @@ export class Game {
     const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
     const canFrom = legal.some((m) => m.from.r === r && m.from.c === c);
     if (!canFrom) return;
+    const origin = sq.querySelector(".man");
+    if (!(origin instanceof HTMLElement)) return;
     this.unlock();
     e.preventDefault();
-    if (!this.selected || this.selected.r !== r || this.selected.c !== c) {
-      this.selected = { r, c };
-      this.renderBoard();
-      this.renderHud();
-    }
-    const origin = this.squareEl({ r, c })?.querySelector(".man");
-    if (!(origin instanceof HTMLElement)) return;
+    this.markSelection({ r, c });
+    this.renderHud();
     const board = document.getElementById("board");
     try {
       board?.setPointerCapture(e.pointerId);
     } catch {
-      /* ignore */
+      /* board still receives bubbling move/up */
     }
+    this.startFlyer({ r, c }, origin, e);
+  }
+
+  /** Highlight without wiping the board — a full render would cancel the pointer. */
+  private markSelection(from: Pos): void {
+    this.selected = from;
+    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const shown = legal.filter((m) => m.from.r === from.r && m.from.c === from.c);
+    const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
+    const jumps = new Set(shown.filter((m) => m.capture).map((m) => `${m.to.r},${m.to.c}`));
+    document.querySelectorAll("#board .sq").forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      const r = Number(node.getAttribute("data-r"));
+      const c = Number(node.getAttribute("data-c"));
+      const key = `${r},${c}`;
+      node.classList.toggle("sel", r === from.r && c === from.c);
+      node.classList.toggle("hint", hints.has(key));
+      const land = node.querySelector(".land");
+      if (hints.has(key) && !this.board[r]![c]) {
+        if (land instanceof HTMLElement) {
+          land.classList.toggle("jump", jumps.has(key));
+        } else {
+          const pip = document.createElement("span");
+          pip.className = `land ${jumps.has(key) ? "jump" : ""}`;
+          pip.setAttribute("aria-hidden", "true");
+          node.appendChild(pip);
+        }
+      } else if (land) {
+        land.remove();
+      }
+    });
+  }
+
+  private startFlyer(from: Pos, origin: HTMLElement, e: PointerEvent): void {
+    this.cancelDrag();
+    const box = origin.getBoundingClientRect();
+    const fly = origin.cloneNode(true) as HTMLElement;
+    fly.classList.add("flyer", "slide");
+    fly.style.width = `${box.width}px`;
+    fly.style.height = `${box.height}px`;
+    fly.style.left = `${e.clientX - box.width / 2}px`;
+    fly.style.top = `${e.clientY - box.height / 2}px`;
+    origin.style.opacity = "0.35";
+    document.body.appendChild(fly);
     this.drag = {
-      from: { r, c },
+      from,
       startX: e.clientX,
       startY: e.clientY,
       pointerId: e.pointerId,
-      flyer: null,
+      flyer: fly,
       origin,
       sliding: false,
     };
@@ -389,32 +430,19 @@ export class Game {
   private onPointerMove(e: PointerEvent): void {
     const d = this.drag;
     if (!d || e.pointerId !== d.pointerId) return;
+    e.preventDefault();
     const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
-    if (!d.sliding && dist < 12) return;
-    if (!d.sliding) {
-      d.sliding = true;
-      const box = d.origin?.getBoundingClientRect();
-      if (!d.origin || !box) return;
-      const fly = d.origin.cloneNode(true) as HTMLElement;
-      fly.classList.add("flyer", "slide");
-      fly.style.width = `${box.width}px`;
-      fly.style.height = `${box.height}px`;
-      fly.style.left = `${e.clientX - box.width / 2}px`;
-      fly.style.top = `${e.clientY - box.height / 2}px`;
-      d.origin.style.opacity = "0";
-      document.body.appendChild(fly);
-      d.flyer = fly;
-    }
+    if (dist >= 8) d.sliding = true;
     if (d.flyer) {
       const w = d.flyer.offsetWidth;
       const h = d.flyer.offsetHeight;
       d.flyer.style.left = `${e.clientX - w / 2}px`;
       d.flyer.style.top = `${e.clientY - h / 2}px`;
     }
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    const sq = under instanceof Element ? under.closest("[data-r]") : null;
     document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
-    if (sq instanceof HTMLElement) {
+    if (!d.sliding) return;
+    const sq = this.squareUnder(e.clientX, e.clientY);
+    if (sq) {
       const r = Number(sq.getAttribute("data-r"));
       const c = Number(sq.getAttribute("data-c"));
       const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
@@ -428,36 +456,51 @@ export class Game {
     if (!d || e.pointerId !== d.pointerId) return;
     const sliding = d.sliding;
     const from = d.from;
+    const dropSq = sliding ? this.squareUnder(e.clientX, e.clientY) : null;
+    const drop = dropSq
+      ? { r: Number(dropSq.getAttribute("data-r")), c: Number(dropSq.getAttribute("data-c")) }
+      : null;
+    this.releasePointer(e.pointerId);
+    this.cancelDrag();
     if (sliding) this.skipClick = true;
-    let drop: Pos | null = null;
-    if (sliding) {
-      d.flyer?.remove();
-      const under = document.elementFromPoint(e.clientX, e.clientY);
-      const sq = under instanceof Element ? under.closest("[data-r]") : null;
-      if (sq instanceof HTMLElement) {
-        drop = { r: Number(sq.getAttribute("data-r")), c: Number(sq.getAttribute("data-c")) };
-      }
-    }
-    this.drag = null;
-    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
     if (sliding && drop && Number.isFinite(drop.r) && Number.isFinite(drop.c)) {
       const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
-      const move = legal.find((m) => m.from.r === from.r && m.from.c === from.c && m.to.r === drop!.r && m.to.c === drop!.c);
+      const move = legal.find((m) => m.from.r === from.r && m.from.c === from.c && m.to.r === drop.r && m.to.c === drop.c);
       if (move) {
         void this.play(move, true);
         return;
       }
     }
-    if (d.origin) d.origin.style.opacity = "";
     if (sliding) this.renderBoard();
   }
 
+  private onPointerCancel(e: PointerEvent): void {
+    if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    this.releasePointer(e.pointerId);
+    this.cancelDrag();
+  }
+
+  private squareUnder(x: number, y: number): HTMLElement | null {
+    const under = document.elementFromPoint(x, y);
+    const sq = under instanceof Element ? under.closest("[data-r]") : null;
+    return sq instanceof HTMLElement ? sq : null;
+  }
+
+  private releasePointer(pointerId: number): void {
+    const board = document.getElementById("board");
+    try {
+      if (board?.hasPointerCapture(pointerId)) board.releasePointerCapture(pointerId);
+    } catch {
+      /* already released */
+    }
+  }
+
   private cancelDrag(): void {
+    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
     if (!this.drag) return;
     this.drag.flyer?.remove();
     if (this.drag.origin) this.drag.origin.style.opacity = "";
     this.drag = null;
-    document.querySelectorAll(".sq.drop").forEach((el) => el.classList.remove("drop"));
   }
 
   clickSquare(r: number, c: number): void {

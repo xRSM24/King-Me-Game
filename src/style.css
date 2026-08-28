@@ -299,6 +299,7 @@ button small {
   border: 10px solid #ff8ec8;
   border-radius: 18px;
   user-select: none;
+  touch-action: none;
   box-shadow:
     0 0 0 4px #ffd45a,
     0 0 0 8px #3d2466,
