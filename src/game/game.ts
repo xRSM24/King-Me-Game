@@ -4,7 +4,7 @@ import { comboName, comboTier } from "./combo.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, dailyMods, type DailyMod } from "./dailyMods.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
-import { escapeHtml, fetchBoard, loadName, postScore, type Score } from "./leaderboard.ts";
+import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
 import { dailySeed, hashSeed, Rng } from "./rng.ts";
 import {
@@ -136,9 +136,22 @@ export class Game {
     });
     window.addEventListener("pagehide", () => this.persistClimb());
     document.addEventListener("submit", (e) => {
-      if (e.target instanceof HTMLFormElement && e.target.id === "score-form") {
+      if (!(e.target instanceof HTMLFormElement)) return;
+      if (e.target.id === "score-form") {
         e.preventDefault();
         void this.submitDaily();
+        return;
+      }
+      if (e.target.id === "name-form" || e.target.id === "pause-name-form") {
+        e.preventDefault();
+        this.saveHopperName(e.target);
+      }
+    });
+    document.addEventListener("focusout", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (t.id === "hopper-name" || t.id === "pause-name" || t.id === "player-name") {
+        this.saveHopperName(t.form ?? t, false);
       }
     });
   }
@@ -245,6 +258,46 @@ export class Game {
         this.persistClimb();
       }
     }
+  }
+
+  private saveHopperName(source: HTMLElement, cheer = true): void {
+    const input =
+      source instanceof HTMLInputElement
+        ? source
+        : source.querySelector("input");
+    const typed = input instanceof HTMLInputElement ? input.value : "";
+    if (!typed.trim()) {
+      this.paintName();
+      return;
+    }
+    const result = commitName(typed);
+    this.paintName();
+    if (!result.saved) {
+      const status = document.getElementById("name-status");
+      if (status) status.textContent = "A bit longer — two letters at least.";
+      return;
+    }
+    if (cheer) {
+      this.unlock();
+      this.audio.ui();
+      if (this.screen === "playing") this.cheer(`Hi, ${result.name}!`);
+    }
+  }
+
+  private paintName(): void {
+    const mine = hasName() ? loadName() : "";
+    for (const id of ["hopper-name", "pause-name", "player-name"]) {
+      const el = document.getElementById(id);
+      if (el instanceof HTMLInputElement && document.activeElement !== el) el.value = mine;
+    }
+    const status = document.getElementById("name-status");
+    if (status) {
+      status.textContent = hasName()
+        ? `${loadName()} — that's you on today's board.`
+        : "Pick a name so friends know you. It stays on this device.";
+    }
+    const hud = document.getElementById("hopper-tag");
+    if (hud) hud.textContent = hasName() ? loadName() : "";
   }
 
   newRun(): void {
@@ -1233,9 +1286,15 @@ export class Game {
   private async submitDaily(): Promise<void> {
     if (this.mode !== "daily" || !this.end?.win || this.posted) return;
     const input = document.getElementById("player-name");
-    const name = input instanceof HTMLInputElement ? input.value : loadName();
+    const typed = input instanceof HTMLInputElement ? input.value : "";
+    const picked = tryName(typed) ?? (hasName() ? loadName() : null);
+    if (!picked) {
+      if (input instanceof HTMLInputElement) input.focus();
+      return;
+    }
+    commitName(picked);
     this.posted = true;
-    const board = await postScore(utcDayKey(), name, this.moves);
+    const board = await postScore(utcDayKey(), picked, this.moves);
     this.scores = board.scores;
     this.renderEnd();
   }
@@ -1275,6 +1334,7 @@ export class Game {
     if (name === "pick") this.renderPick();
     if (name === "daily") this.renderDaily();
     if (name === "playing") this.renderAll();
+    if (name === "pause") this.paintName();
     this.renderChrome();
     if (name !== "playing") this.audio.screen();
   }
@@ -1305,6 +1365,7 @@ export class Game {
       main.setAttribute("data-cmd", saved ? "continue" : "new");
     }
     if (fresh) fresh.classList.toggle("hidden", !saved);
+    this.paintName();
     void this.warmTitleScores();
   }
 
@@ -1344,6 +1405,12 @@ export class Game {
         )
         .join("");
     }
+    const lead = document.getElementById("daily-lead");
+    if (lead) {
+      const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
+      lead.textContent =
+        `Same hard felt for everybody until midnight UTC. Beat it, pin your move count. Lowest moves sits on top. Today's twists help ivory and the house.${who}`;
+    }
   }
 
   private renderPick(): void {
@@ -1381,10 +1448,10 @@ export class Game {
       <p class="lead">The house is off the felt. Lowest moves sits on top. ${rankBit}</p>
       ${
         this.posted
-          ? `<p class="quiet">Pinned. Come back tomorrow for a new board.</p>`
+          ? `<p class="quiet">Pinned as ${escapeHtml(loadName())}. Come back tomorrow for a new board.</p>`
           : `<form id="score-form" class="score-form">
-              <label>Your name <input id="player-name" name="name" maxlength="16" value="${escapeHtml(loadName())}" autocomplete="nickname" /></label>
-              <button type="submit">Pin ${this.moves} moves</button>
+              <label>Your name <input id="player-name" name="name" maxlength="16" value="${escapeHtml(hasName() ? loadName() : "")}" placeholder="Ivory" autocomplete="nickname" /></label>
+              <button type="submit">Pin ${this.moves} moves${hasName() ? ` as ${escapeHtml(loadName())}` : ""}</button>
             </form>`
       }
       <ol class="leaderboard">${this.scoreList(12)}</ol>
@@ -1472,10 +1539,11 @@ export class Game {
     }
     const counts = document.getElementById("counts");
     if (counts) {
+      const who = hasName() ? `${loadName()} · ` : "";
       counts.textContent =
         this.mode === "daily"
-          ? `Moves ${this.moves} · you ${you} · them ${them}`
-          : `You ${you} · them ${them} · hops ${this.hops}`;
+          ? `${who}Moves ${this.moves} · you ${you} · them ${them}`
+          : `${who}You ${you} · them ${them} · hops ${this.hops}`;
     }
     const tip = document.getElementById("blurb");
     if (tip) tip.textContent = this.blurb;

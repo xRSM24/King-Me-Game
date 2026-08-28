@@ -37,6 +37,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - One **Oops** per climb board if you tap the wrong square (it boings). Today's board usually gives you **two**, unless a daily twist says otherwise.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
 - Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
+- Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard. No email or password yet.
 
 ## Today's board
 

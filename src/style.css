@@ -1121,6 +1121,54 @@ html.calm .petals {
   min-width: 12rem;
 }
 
+.name-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  width: min(360px, 100%);
+}
+
+.name-form label {
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.name-form input {
+  font: inherit;
+  font-weight: 800;
+  flex: 1 1 8rem;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--sakura);
+  background: rgba(26, 16, 51, 0.85);
+  color: var(--ivory);
+  text-align: center;
+}
+
+.name-form button {
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+.name-form.compact {
+  margin: 0 0 14px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.name-status {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-weight: 700;
+  min-height: 1.4em;
+}
+
 .title-daily {
   margin: 20px auto 0;
   width: 100%;

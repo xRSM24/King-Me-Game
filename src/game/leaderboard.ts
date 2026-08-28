@@ -20,12 +20,35 @@ export function loadName(): string {
   }
 }
 
+export function hasName(): boolean {
+  try {
+    const raw = localStorage.getItem(NAME_KEY);
+    return !!tryName(raw ?? "");
+  } catch {
+    return false;
+  }
+}
+
 export function saveName(name: string): void {
   try {
     localStorage.setItem(NAME_KEY, name);
   } catch {
     /* ignore */
   }
+}
+
+/** Letters, numbers, space, hyphen, apostrophe. 2–16 characters, or null if too short. */
+export function tryName(raw: string): string | null {
+  const t = raw.replace(/[^\p{L}\p{N} \-']/gu, "").replace(/\s+/g, " ").trim();
+  if (t.length < 2) return null;
+  return t.slice(0, 16);
+}
+
+export function commitName(raw: string): { name: string; saved: boolean } {
+  const next = tryName(raw);
+  if (!next) return { name: loadName(), saved: false };
+  saveName(next);
+  return { name: next, saved: true };
 }
 
 function readLocal(day: string): DailyBoard {
@@ -98,7 +121,5 @@ export function escapeHtml(s: string): string {
 }
 
 export function sanitizeName(raw: string): string {
-  const t = raw.replace(/[^\p{L}\p{N} \-']/gu, "").replace(/\s+/g, " ").trim();
-  if (t.length < 2) return "Ivory";
-  return t.slice(0, 16);
+  return tryName(raw) ?? "Ivory";
 }
