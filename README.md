@@ -1,6 +1,6 @@
 # Jumpgrave
 
-Kid-friendly checkers with a climb. You sit **ivory**. They sit **charcoal**. Hop, capture, pick a power, and try to beat **the Crown** in six boards.
+Kid-friendly **anime checkers** with a climb. You sit **ivory**. They sit **charcoal**. Hop, capture, pick a power, and try to beat **the Crown** in six boards.
 
 ## The goal
 

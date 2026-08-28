@@ -23,7 +23,7 @@ import { boardSpec } from "./setup.ts";
 import type { BoardMods, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, samePos } from "./types.ts";
 
-const CHEERS = ["Nice!", "Jump!", "Got 'em!", "Wow!", "Again!", "Super hop!"];
+const CHEERS = ["Yatta!", "Jump!", "Got 'em!", "Kiai!", "Wow!", "Super hop!"];
 
 export class Game {
   meta: Meta = loadMeta();
@@ -971,7 +971,7 @@ export class Game {
         const can = p && p.side === "you" && froms.has(`${r},${c}`) && !this.lock;
         html += `<button type="button" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${dark && !hole ? "" : "tabindex='-1'"}>`;
         if (p) {
-          html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "ivory" : "charcoal"} ${p.king ? "king" : "man"}"></span>`;
+          html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "ivory" : "charcoal"} ${p.king ? "king" : "man"}"><span class="face" aria-hidden="true"></span></span>`;
         } else if (hint) {
           html += `<span class="land ${jumps.has(`${r},${c}`) ? "jump" : ""}" aria-hidden="true"></span>`;
         }
