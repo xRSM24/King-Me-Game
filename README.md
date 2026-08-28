@@ -34,7 +34,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - The first climb shows a one-time coach: drag the gold ring onto the star.
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
-- One **Oops** per climb board if you tap the wrong square (it boings). Today's board usually gives you **two**, unless a daily twist says otherwise.
+- One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
 - Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
 - Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard. No email or password yet.
@@ -79,7 +79,7 @@ Progress lives in the browser (`localStorage`).
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
 | Capture | Drop on a gold star |
-| Take-back | Oops (×1 on the climb, daily follows today's twist) |
+| Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
 | Keyboard | Arrows, Enter, Escape |
 

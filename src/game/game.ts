@@ -58,6 +58,7 @@ export class Game {
   snapshot: Board | null = null;
   snapshotHops = 0;
   snapshotMoves = 0;
+  snapshotLastRites = false;
   drag: {
     from: Pos;
     startX: number;
@@ -360,6 +361,7 @@ export class Game {
     this.snapshot = saved.snapshot ? unpackBoard(saved.snapshot) : null;
     this.snapshotHops = saved.snapshotHops;
     this.snapshotMoves = saved.snapshotMoves;
+    this.snapshotLastRites = saved.snapshotLastRites ?? saved.lastRitesUsed;
     this.idSeq = Math.max(saved.idSeq, this.maxPieceId() + 1);
     this.log = saved.log;
     this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
@@ -411,6 +413,7 @@ export class Game {
       snapshot: this.snapshot ? packBoard(this.snapshot) : null,
       snapshotHops: this.snapshotHops,
       snapshotMoves: this.snapshotMoves,
+      snapshotLastRites: this.snapshotLastRites,
       idSeq: this.idSeq,
       log: this.log,
       offers: this.offers.map((o) => o.id),
@@ -692,7 +695,7 @@ export class Game {
   private canOops(): boolean {
     if (this.screen !== "playing" || this.animating || !this.snapshot || this.oopsLeft <= 0) return false;
     if (this.turn === "you" && !this.thinking) return true;
-    return this.turn === "them" && this.aiTimer != null;
+    return this.turn === "them";
   }
 
   private oops(): void {
@@ -705,6 +708,7 @@ export class Game {
     this.board = cloneBoard(snap);
     this.hops = this.snapshotHops;
     this.moves = this.snapshotMoves;
+    this.lastRitesUsed = this.snapshotLastRites;
     this.lock = null;
     this.selected = null;
     this.combo = 0;
@@ -915,6 +919,7 @@ export class Game {
       this.snapshot = cloneBoard(this.board);
       this.snapshotHops = this.hops;
       this.snapshotMoves = this.moves;
+      this.snapshotLastRites = this.lastRitesUsed;
     }
     this.animating = true;
     let keepJumping = false;
@@ -1004,7 +1009,7 @@ export class Game {
     }
     this.turn = "them";
     this.thinking = true;
-    this.scheduleAi(this.oopsLeft && this.snapshot ? 520 : 280);
+    this.scheduleAi(280);
     this.renderAll();
   }
 
@@ -1047,12 +1052,12 @@ export class Game {
       return;
     }
     if (over === "you") {
+      this.snapshot = null;
       this.boardCleared();
       return;
     }
     this.turn = "you";
     this.thinking = false;
-    this.snapshot = null;
     this.renderAll();
     this.persistClimb();
   }
@@ -1226,7 +1231,24 @@ export class Game {
       this.selected = null;
       this.renderAll();
       if (target) void this.animateCrown(target.pos);
-      if (outcome(this.board, "you", this.laws, this.mods) === "them") this.finish(false);
+      if (outcome(this.board, "you", this.laws, this.mods) === "them") this.loseOrHoldOops();
+      else this.persistClimb();
+      return;
+    }
+    this.loseOrHoldOops();
+  }
+
+  /** After a wipe, let Oops undo the hop that led here if one is left. */
+  private loseOrHoldOops(): void {
+    this.turn = "you";
+    this.thinking = false;
+    this.animating = false;
+    this.lock = null;
+    this.selected = null;
+    if (this.snapshot && this.oopsLeft > 0) {
+      this.pushLog("Oops that hop if you want it back.");
+      this.renderAll();
+      this.persistClimb();
       return;
     }
     this.finish(false);
@@ -1540,21 +1562,30 @@ export class Game {
     const jumps = legal.filter((m) => m.capture);
     const status = document.getElementById("status");
     if (status) {
+      const lostHold =
+        this.turn === "you" &&
+        !this.thinking &&
+        this.canOops() &&
+        legal.length === 0;
       status.textContent = this.thinking
         ? this.canOops()
           ? "Enemy… Oops still works."
           : "The Enemy is hopping…"
-        : this.lock
-          ? "Keep jumping!"
-          : jumps.length
-            ? this.selected
-              ? "Jump the star."
-              : "Jump ready — gold ring, then the star."
-            : this.selected
-              ? "Slide onto a pip."
-              : this.turn === "you"
-                ? "Slide a gold ring, or tap then tap."
-                : "Wait.";
+        : lostHold
+          ? "Oops that hop, or Menu to give up."
+          : this.lock
+            ? "Keep jumping!"
+            : jumps.length
+              ? this.selected
+                ? "Jump the star."
+                : "Jump ready — gold ring, then the star."
+              : this.selected
+                ? "Slide onto a pip."
+                : this.turn === "you"
+                  ? this.canOops()
+                    ? "Slide a gold ring — or Oops that hop."
+                    : "Slide a gold ring, or tap then tap."
+                  : "Wait.";
     }
     const counts = document.getElementById("counts");
     if (counts) {
