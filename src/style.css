@@ -316,10 +316,12 @@ button:disabled {
   cursor: default;
 }
 
-#btn-skip:not(.hidden):not(:disabled) {
+#btn-skip:not(.hidden):not(:disabled),
+#btn-oops:not(:disabled) {
   background: var(--sakura);
   color: #3a1030;
   box-shadow: 0 3px 0 #c44d86;
+  opacity: 1;
 }
 
 button small {

@@ -53,6 +53,7 @@ export class Game {
   thinking = false;
   animating = false;
   aiTimer: number | null = null;
+  actionGen = 0;
   lastRitesUsed = false;
   oopsLeft = 1;
   snapshot: Board | null = null;
@@ -632,6 +633,13 @@ export class Game {
       }
       return;
     }
+    if (e.key === "o" || e.key === "O") {
+      if (this.canOops()) {
+        e.preventDefault();
+        this.oops();
+      }
+      return;
+    }
     if (e.key === "s" || e.key === "S") {
       if (this.canSkipJump()) {
         e.preventDefault();
@@ -750,16 +758,22 @@ export class Game {
   }
 
   private canOops(): boolean {
-    if (this.screen !== "playing" || this.animating || !this.snapshot || this.oopsLeft <= 0) return false;
-    if (this.turn === "you" && !this.thinking) return true;
-    return this.turn === "them";
+    if (this.screen !== "playing" || !this.snapshot || this.oopsLeft <= 0) return false;
+    return true;
+  }
+
+  private stale(gen: number): boolean {
+    return gen !== this.actionGen;
   }
 
   private oops(): void {
     if (!this.canOops()) return;
     const snap = this.snapshot;
     if (!snap) return;
+    this.actionGen += 1;
     this.clearAi();
+    this.cancelDrag();
+    document.querySelectorAll(".flyer").forEach((el) => el.remove());
     this.audio.oops();
     this.oopsLeft -= 1;
     this.board = cloneBoard(snap);
@@ -773,6 +787,7 @@ export class Game {
     this.skippedJump = false;
     this.turn = "you";
     this.thinking = false;
+    this.animating = false;
     this.pushLog("Oops! That hop didn't count.");
     this.cheer("Oops!");
     this.renderAll();
@@ -973,6 +988,7 @@ export class Game {
   }
 
   private async play(move: Move, fromDrag = false): Promise<void> {
+    const gen = this.actionGen;
     if (!this.lock) {
       this.snapshot = cloneBoard(this.board);
       this.snapshotHops = this.hops;
@@ -993,10 +1009,12 @@ export class Game {
             this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
             this.puffAt(capEl);
             await this.wait(160);
+            if (this.stale(gen)) return;
           }
         }
       } else {
         await this.animateHop(move, "you");
+        if (this.stale(gen)) return;
       }
       this.board = applyMove(this.board, move);
       const nowKing = at(this.board, move.to)?.king ?? false;
@@ -1025,22 +1043,26 @@ export class Game {
       this.selected = keepJumping ? move.to : null;
       this.renderAll();
       await this.settle(move.to, !wasKing && nowKing, keepJumping);
+      if (this.stale(gen)) return;
       if (!wasKing && nowKing) {
         this.audio.crown();
         this.audio.fanfare();
         this.cheer("King!");
         this.pushLog("King! It hops every way.");
         await this.animateCrown(move.to);
+        if (this.stale(gen)) return;
       }
       if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
         this.audio.crown();
         this.cheer("Party King!");
         this.pushLog("Hop Party made a King.");
         await this.animateCrown(partyPos);
+        if (this.stale(gen)) return;
       }
     } finally {
-      this.animating = false;
+      if (!this.stale(gen)) this.animating = false;
     }
+    if (this.stale(gen)) return;
     if (keepJumping) {
       const still = this.youLegal().some((m) => m.capture);
       if (still) {
@@ -1074,6 +1096,7 @@ export class Game {
 
   private async aiStep(): Promise<void> {
     if (this.screen !== "playing") return;
+    const gen = this.actionGen;
     const skill = this.mode === "daily" ? 0.86 : (CLIMB_SKILL[this.boardIndex] ?? 0.95);
     const move = think(this.board, this.laws, this.rng, skill, this.mods);
     if (!move) {
@@ -1084,20 +1107,24 @@ export class Game {
     try {
       const wasKing = at(this.board, move.from)?.king ?? false;
       await this.animateHop(move, "them");
+      if (this.stale(gen)) return;
       this.board = applyMove(this.board, move);
       const nowKing = at(this.board, move.to)?.king ?? false;
       if (move.capture) this.audio.capture(1);
       const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
       this.renderAll();
       await this.settle(move.to, !wasKing && nowKing, keepJumping);
+      if (this.stale(gen)) return;
       if (!wasKing && nowKing) {
         this.audio.crown();
         this.cheer("Enemy King!");
         await this.animateCrown(move.to);
+        if (this.stale(gen)) return;
       }
       this.animating = false;
 
       if (keepJumping) {
+        this.renderAll();
         this.scheduleAi(220);
         return;
       }
@@ -1105,6 +1132,7 @@ export class Game {
       this.animating = false;
     }
 
+    if (this.stale(gen)) return;
     const over = outcome(this.board, "you", this.laws, this.mods);
     if (over === "them") {
       this.tryRites();
@@ -1686,6 +1714,9 @@ export class Game {
       oops.classList.remove("hidden");
       oops.disabled = !this.canOops();
       oops.textContent = this.oopsLeft > 0 ? `Oops ×${this.oopsLeft}` : "Oops used";
+      oops.title = this.canOops()
+        ? "Take back your last hop, even after the Enemy replies"
+        : "Hop first, then Oops after you see the Enemy's reply";
     }
     const skip = document.getElementById("btn-skip");
     if (skip instanceof HTMLButtonElement) {
