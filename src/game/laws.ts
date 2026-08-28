@@ -47,7 +47,7 @@ export const LAW_DEFS: LawDef[] = [
   {
     id: "freeJump",
     name: "Skip the Jump",
-    desc: "You don't have to jump. The Enemy still does.",
+    desc: "When a star is up, tap Skip jump to walk instead. You can stop a combo too. The Enemy still must jump.",
     icon: "🎈",
   },
   {

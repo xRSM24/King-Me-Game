@@ -119,6 +119,7 @@ export function legalMoves(
   laws: Laws,
   lock?: Pos | null,
   mods: BoardMods = emptyMods(),
+  allowQuiet = false,
 ): Move[] {
   const owned = piecesOf(board, side);
   const all: Move[] = [];
@@ -128,7 +129,7 @@ export function legalMoves(
   }
   const jumps = all.filter((m) => m.capture);
   if (lock) return jumps.length ? jumps : [];
-  if (jumps.length && !(laws.freeJump && side === "you")) return jumps;
+  if (jumps.length && !allowQuiet) return jumps;
   return all;
 }
 

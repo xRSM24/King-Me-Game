@@ -25,6 +25,7 @@ export interface ClimbSave {
   snapshotHops: number;
   snapshotMoves: number;
   snapshotLastRites: boolean;
+  skippedJump: boolean;
   idSeq: number;
   log: string[];
   offers: (keyof Laws)[];
@@ -74,6 +75,7 @@ export function loadClimb(): ClimbSave | null {
       snapshotHops: Number(p.snapshotHops) || 0,
       snapshotMoves: Number(p.snapshotMoves) || 0,
       snapshotLastRites: !!p.snapshotLastRites,
+      skippedJump: !!p.skippedJump,
       idSeq: Number(p.idSeq) || 1,
       log: Array.isArray(p.log) ? p.log.map(String).slice(0, 3) : [],
       offers: Array.isArray(p.offers) ? (p.offers as (keyof Laws)[]) : [],

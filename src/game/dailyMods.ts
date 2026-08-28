@@ -25,7 +25,7 @@ const PLAYER: DailyMod[] = [
   { id: "ivoryKing", side: "you", name: "Start as King", desc: "One player piece starts as a King." },
   { id: "extraIvory", side: "you", name: "Plus One", desc: "You sit one extra player piece." },
   { id: "jumpBack", side: "you", name: "Player Boing", desc: "Player pieces may jump backward." },
-  { id: "skipJump", side: "you", name: "Skip the Jump", desc: "You don't have to jump. The Enemy still does." },
+  { id: "skipJump", side: "you", name: "Skip the Jump", desc: "Tap Skip jump to walk instead of capturing. You can stop a combo too. The Enemy still must jump." },
   { id: "thirdOops", side: "you", name: "Third Oops", desc: "Three take-backs instead of two." },
 ];
 

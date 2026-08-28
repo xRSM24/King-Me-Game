@@ -59,6 +59,7 @@ export class Game {
   snapshotHops = 0;
   snapshotMoves = 0;
   snapshotLastRites = false;
+  skippedJump = false;
   drag: {
     from: Pos;
     startX: number;
@@ -160,7 +161,7 @@ export class Game {
 
   command(cmd: string): void {
     this.unlock();
-    if (cmd !== "oops") this.audio.ui();
+    if (cmd !== "oops" && cmd !== "skip-jump") this.audio.ui();
     if (cmd === "new") {
       if (hasClimb()) this.continueClimb();
       else this.newRun();
@@ -240,6 +241,10 @@ export class Game {
     }
     if (cmd === "oops") {
       this.oops();
+      return;
+    }
+    if (cmd === "skip-jump") {
+      this.skipJump();
       return;
     }
     if (cmd === "mute") {
@@ -362,6 +367,7 @@ export class Game {
     this.snapshotHops = saved.snapshotHops;
     this.snapshotMoves = saved.snapshotMoves;
     this.snapshotLastRites = saved.snapshotLastRites ?? saved.lastRitesUsed;
+    this.skippedJump = !!saved.skippedJump && saved.laws.freeJump;
     this.idSeq = Math.max(saved.idSeq, this.maxPieceId() + 1);
     this.log = saved.log;
     this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
@@ -414,6 +420,7 @@ export class Game {
       snapshotHops: this.snapshotHops,
       snapshotMoves: this.snapshotMoves,
       snapshotLastRites: this.snapshotLastRites,
+      skippedJump: this.skippedJump,
       idSeq: this.idSeq,
       log: this.log,
       offers: this.offers.map((o) => o.id),
@@ -465,6 +472,7 @@ export class Game {
     this.animating = false;
     this.oopsLeft = applied.oops;
     this.snapshot = null;
+    this.skippedJump = false;
     this.coachOn = false;
     this.hideCoach();
     this.clearAi();
@@ -540,6 +548,7 @@ export class Game {
     this.animating = false;
     this.oopsLeft = this.mode === "daily" ? 2 : 1;
     this.snapshot = null;
+    this.skippedJump = false;
     this.combo = 0;
     this.clearAi();
     const name = this.pathNames[this.boardIndex] ?? "Next board";
@@ -623,6 +632,13 @@ export class Game {
       }
       return;
     }
+    if (e.key === "s" || e.key === "S") {
+      if (this.canSkipJump()) {
+        e.preventDefault();
+        this.skipJump();
+      }
+      return;
+    }
     if (e.key === "Enter" || e.key === " ") {
       const t = e.target;
       if (!(t instanceof HTMLElement)) return;
@@ -692,6 +708,47 @@ export class Game {
     }, combo >= 3 ? 980 : 720);
   }
 
+  private youLegal(): Move[] {
+    return legalMoves(
+      this.board,
+      "you",
+      this.laws,
+      this.lock,
+      this.mods,
+      this.laws.freeJump && this.skippedJump,
+    );
+  }
+
+  private canSkipJump(): boolean {
+    if (!this.laws.freeJump) return false;
+    if (this.screen !== "playing" || this.animating || this.thinking) return false;
+    if (this.turn !== "you") return false;
+    if (this.lock) return moreJumps(this.board, this.lock, this.laws, this.mods);
+    if (this.skippedJump) return false;
+    return legalMoves(this.board, "you", this.laws, null, this.mods).some((m) => m.capture);
+  }
+
+  private skipJump(): void {
+    if (!this.canSkipJump()) return;
+    this.cancelDrag();
+    if (this.lock) {
+      this.lock = null;
+      this.selected = null;
+      this.skippedJump = false;
+      this.pushLog("Stopped the combo. Your hop is done.");
+      this.cheer("Skip!");
+      this.afterYou();
+      this.persistClimb();
+      return;
+    }
+    this.skippedJump = true;
+    this.selected = null;
+    this.pushLog("Jump skipped. Slide a gold ring.");
+    this.cheer("Skip!");
+    this.renderAll();
+    this.persistClimb();
+  }
+
   private canOops(): boolean {
     if (this.screen !== "playing" || this.animating || !this.snapshot || this.oopsLeft <= 0) return false;
     if (this.turn === "you" && !this.thinking) return true;
@@ -713,6 +770,7 @@ export class Game {
     this.selected = null;
     this.combo = 0;
     this.snapshot = null;
+    this.skippedJump = false;
     this.turn = "you";
     this.thinking = false;
     this.pushLog("Oops! That hop didn't count.");
@@ -727,7 +785,7 @@ export class Game {
     if (this.turn !== "you" || this.screen !== "playing" || this.thinking || this.animating) return;
     const at = this.posFromPoint(e.clientX, e.clientY);
     if (!at) return;
-    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const legal = this.youLegal();
     const canFrom = legal.some((m) => m.from.r === at.r && m.from.c === at.c);
     if (!canFrom) return;
     const origin = this.squareEl(at)?.querySelector(".man");
@@ -749,7 +807,7 @@ export class Game {
   /** Highlight without wiping the board — a full render would cancel the pointer. */
   private markSelection(from: Pos): void {
     this.selected = from;
-    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const legal = this.youLegal();
     const shown = legal.filter((m) => m.from.r === from.r && m.from.c === from.c);
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(shown.filter((m) => m.capture).map((m) => `${m.to.r},${m.to.c}`));
@@ -818,7 +876,7 @@ export class Game {
     if (!d.sliding) return;
     const at = this.posFromPoint(e.clientX, e.clientY);
     if (!at) return;
-    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const legal = this.youLegal();
     const ok = legal.some((m) => m.from.r === d.from.r && m.from.c === d.from.c && m.to.r === at.r && m.to.c === at.c);
     if (!ok) return;
     d.dropAt = at;
@@ -837,7 +895,7 @@ export class Game {
     if (!sliding) return;
     this.skipClick = true;
     if (drop) {
-      const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+      const legal = this.youLegal();
       const move = legal.find((m) => m.from.r === from.r && m.from.c === from.c && m.to.r === drop.r && m.to.c === drop.c);
       if (move) {
         void this.play(move, true);
@@ -888,7 +946,7 @@ export class Game {
     if (this.turn !== "you" || this.screen !== "playing" || this.thinking || this.animating) return;
     const pos = { r, c };
     const piece = at(this.board, pos);
-    const legal = legalMoves(this.board, "you", this.laws, this.lock, this.mods);
+    const legal = this.youLegal();
     const hit = legal.find(
       (m) => m.to.r === r && m.to.c === c && (!this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c)),
     );
@@ -984,7 +1042,7 @@ export class Game {
       this.animating = false;
     }
     if (keepJumping) {
-      const still = legalMoves(this.board, "you", this.laws, this.lock, this.mods).some((m) => m.capture);
+      const still = this.youLegal().some((m) => m.capture);
       if (still) {
         this.renderAll();
         return;
@@ -997,6 +1055,7 @@ export class Game {
   }
 
   private afterYou(): void {
+    this.skippedJump = false;
     this.moves += 1;
     const over = outcome(this.board, "them", this.laws, this.mods);
     if (over === "you") {
@@ -1245,6 +1304,7 @@ export class Game {
     this.animating = false;
     this.lock = null;
     this.selected = null;
+    this.skippedJump = false;
     if (this.snapshot && this.oopsLeft > 0) {
       this.pushLog("Oops that hop if you want it back.");
       this.renderAll();
@@ -1558,7 +1618,7 @@ export class Game {
           `<li class="${i < this.boardIndex ? "done" : i === this.boardIndex ? "now" : ""}" title="${n}">${i + 1}</li>`,
       ).join("");
     }
-    const legal = this.turn === "you" && !this.thinking ? legalMoves(this.board, "you", this.laws, this.lock, this.mods) : [];
+    const legal = this.turn === "you" && !this.thinking ? this.youLegal() : [];
     const jumps = legal.filter((m) => m.capture);
     const status = document.getElementById("status");
     if (status) {
@@ -1574,18 +1634,28 @@ export class Game {
         : lostHold
           ? "Oops that hop, or Menu to give up."
           : this.lock
-            ? "Keep jumping!"
-            : jumps.length
+            ? this.canSkipJump()
+              ? "Keep jumping, or Skip jump to stop."
+              : "Keep jumping!"
+            : this.skippedJump && this.turn === "you"
               ? this.selected
-                ? "Jump the star."
-                : "Jump ready — gold ring, then the star."
-              : this.selected
-                ? "Slide onto a pip."
-                : this.turn === "you"
-                  ? this.canOops()
-                    ? "Slide a gold ring — or Oops that hop."
-                    : "Slide a gold ring, or tap then tap."
-                  : "Wait.";
+                ? "Slide a pip, or still jump a star."
+                : "Jump skipped. Slide a gold ring."
+              : jumps.length
+                ? this.selected
+                  ? this.canSkipJump()
+                    ? "Jump the star, or Skip jump to walk."
+                    : "Jump the star."
+                  : this.canSkipJump()
+                    ? "Jump ready — or tap Skip jump."
+                    : "Jump ready — gold ring, then the star."
+                : this.selected
+                  ? "Slide onto a pip."
+                  : this.turn === "you"
+                    ? this.canOops()
+                      ? "Slide a gold ring — or Oops that hop."
+                      : "Slide a gold ring, or tap then tap."
+                    : "Wait.";
     }
     const counts = document.getElementById("counts");
     if (counts) {
@@ -1605,6 +1675,13 @@ export class Game {
       oops.classList.remove("hidden");
       oops.disabled = !this.canOops();
       oops.textContent = this.oopsLeft > 0 ? `Oops ×${this.oopsLeft}` : "Oops used";
+    }
+    const skip = document.getElementById("btn-skip");
+    if (skip instanceof HTMLButtonElement) {
+      skip.classList.toggle("hidden", !this.laws.freeJump);
+      skip.disabled = !this.canSkipJump();
+      skip.textContent = this.skippedJump ? "Skipped" : "Skip jump";
+      skip.title = this.lock ? "Stop this combo here" : "Walk instead of capturing";
     }
     const laws = document.getElementById("laws");
     if (laws) {
@@ -1633,7 +1710,7 @@ export class Game {
     const el = document.getElementById("board");
     if (!el) return;
     const legal = this.turn === "you" && !this.thinking && !this.animating
-      ? legalMoves(this.board, "you", this.laws, this.lock, this.mods)
+      ? this.youLegal()
       : [];
     const shown = legal.filter((m) => !this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c));
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));

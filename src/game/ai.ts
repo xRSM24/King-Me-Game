@@ -4,7 +4,7 @@ import type { BoardMods, Laws, Move, Pos } from "./types.ts";
 import { SIZE, emptyMods } from "./types.ts";
 
 function threatened(board: Board, laws: Laws, mods: BoardMods, pos: Pos): boolean {
-  const opp = legalMoves(board, "you", { ...laws, freeJump: false }, null, mods);
+  const opp = legalMoves(board, "you", laws, null, mods);
   return opp.some((m) => m.capture && m.capture.r === pos.r && m.capture.c === pos.c);
 }
 

@@ -53,7 +53,7 @@ After each win you pick one that lasts the rest of the run:
 - **Second Chance** — once, losing everyone saves a King
 - **Start as King** — one player piece starts as a King
 - **Extra Piece** — +1 starting player piece
-- **Skip the Jump** — jumps are optional for you; the Enemy still must
+- **Skip the Jump** — tap **Skip jump** to walk instead of capturing, or to stop a combo; the Enemy still must jump
 - **Hop Party** — every 4 captures, a random player piece becomes a King
 
 ## Run locally
@@ -79,6 +79,7 @@ Progress lives in the browser (`localStorage`).
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
 | Capture | Drop on a gold star |
+| Skip a jump | Skip jump (only with that power) — walk instead, or stop a combo |
 | Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
 | Keyboard | Arrows, Enter, Escape |

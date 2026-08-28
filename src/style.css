@@ -309,10 +309,10 @@ button:disabled {
   cursor: default;
 }
 
-button.ghost,
-.hud-btn {
-  background: transparent;
-  color: var(--ivory);
+#btn-skip:not(.hidden):not(:disabled) {
+  background: var(--sakura);
+  color: #3a1030;
+  box-shadow: 0 3px 0 #c44d86;
 }
 
 button small {
