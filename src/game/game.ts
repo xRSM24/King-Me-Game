@@ -1,4 +1,4 @@
-import { think } from "./ai.ts";
+import { emptyMemory, remember, think, type AiMemory } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
 import { comboName, comboTier } from "./combo.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
@@ -54,6 +54,7 @@ export class Game {
   animating = false;
   aiTimer: number | null = null;
   actionGen = 0;
+  aiMem: AiMemory = emptyMemory();
   lastRitesUsed = false;
   oopsLeft = 1;
   snapshot: Board | null = null;
@@ -374,6 +375,7 @@ export class Game {
     this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
     this.thinking = saved.turn === "them";
     this.animating = false;
+    this.aiMem = emptyMemory();
     this.clearAi();
     this.coachOn = false;
     this.hideCoach();
@@ -474,6 +476,7 @@ export class Game {
     this.oopsLeft = applied.oops;
     this.snapshot = null;
     this.skippedJump = false;
+    this.aiMem = emptyMemory();
     this.coachOn = false;
     this.hideCoach();
     this.clearAi();
@@ -551,6 +554,7 @@ export class Game {
     this.snapshot = null;
     this.skippedJump = false;
     this.combo = 0;
+    this.aiMem = emptyMemory();
     this.clearAi();
     const name = this.pathNames[this.boardIndex] ?? "Next board";
     this.pushLog(`${name}. ${spec.blurb}`);
@@ -788,6 +792,7 @@ export class Game {
     this.turn = "you";
     this.thinking = false;
     this.animating = false;
+    this.aiMem = emptyMemory();
     this.pushLog("Oops! That hop didn't count.");
     this.cheer("Oops!");
     this.renderAll();
@@ -1098,7 +1103,7 @@ export class Game {
     if (this.screen !== "playing") return;
     const gen = this.actionGen;
     const skill = this.mode === "daily" ? 0.86 : (CLIMB_SKILL[this.boardIndex] ?? 0.95);
-    const move = think(this.board, this.laws, this.rng, skill, this.mods);
+    const move = think(this.board, this.laws, this.rng, skill, this.mods, this.aiMem);
     if (!move) {
       this.boardCleared();
       return;
@@ -1145,6 +1150,7 @@ export class Game {
     }
     this.turn = "you";
     this.thinking = false;
+    if (at(this.board, move.to)?.side === "them") remember(this.aiMem, this.board, move);
     this.renderAll();
     this.persistClimb();
   }
