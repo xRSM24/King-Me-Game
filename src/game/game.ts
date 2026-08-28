@@ -1495,12 +1495,13 @@ export class Game {
     const mini = document.getElementById("title-leaders");
     if (mini) mini.innerHTML = this.scoreList(5);
     const main = document.getElementById("play-main");
+    const label = document.getElementById("play-main-label");
+    const sub = document.getElementById("play-main-sub");
     const fresh = document.getElementById("play-fresh");
     const saved = hasClimb();
-    if (main) {
-      main.textContent = saved ? "Continue" : "Play";
-      main.setAttribute("data-cmd", saved ? "continue" : "new");
-    }
+    if (main) main.setAttribute("data-cmd", saved ? "continue" : "new");
+    if (label) label.textContent = saved ? "Continue" : "Play";
+    if (sub) sub.textContent = saved ? "This climb" : "New climb";
     if (fresh) fresh.classList.toggle("hidden", !saved);
     const dailyName = document.getElementById("play-daily-name");
     if (dailyName) dailyName.textContent = dailyTitle();
