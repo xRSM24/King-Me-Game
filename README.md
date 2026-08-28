@@ -25,7 +25,7 @@ Open the URL Vite prints (this project pins **http://127.0.0.1:43181**).
 
 ## The goal
 
-Every game: win six **new** boards in a row. Each climb rolls a fresh path. Later felts bring more Enemy pieces, nastier rules, and a sharper Enemy.
+Every game: win six boards in a row. **New climb** rolls a fresh path (new files, new felt color, new names). **Continue** is the same climb you paused. Later felts bring more Enemy pieces, nastier rules, and a sharper Enemy.
 
 You will lose sometimes. That is OK. Captures become **Stars**, a little permanent boost with a ceiling, so the next First Hop is kinder but you never skip the climb.
 
@@ -41,7 +41,9 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## Today's board
 
-One hard felt per UTC day. Same pieces **and the same modifiers** for everybody. Some modifiers help you, some help the Enemy. **Oops count follows the modifier.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
+One hard felt per UTC day, **the same for you and your friends**, so the fewest-moves board is fair. Same pieces **and the same modifiers** for everybody. Some modifiers help you, some help the Enemy. **Oops count follows the modifier.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
+
+A climb is not shared. Tap **New climb** for a path nobody else has.
 
 ## Powers
 

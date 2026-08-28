@@ -19,6 +19,12 @@ const ADJ = [
   "Zesty",
   "Cherry",
   "Thunder",
+  "Copper",
+  "Plum",
+  "Neon",
+  "Foggy",
+  "Jolly",
+  "Crisp",
 ];
 const NOUN = [
   "Meadow",
@@ -37,7 +43,54 @@ const NOUN = [
   "Well",
   "March",
   "Corner",
+  "Harbor",
+  "Attic",
+  "Dune",
+  "Forge",
+  "Orchard",
+  "Kettle",
 ];
+
+export type Lane = "any" | "left" | "right" | "center";
+
+export interface FeltTheme {
+  rim: string;
+  outer: string;
+  back: string;
+  dark: string;
+  darkOdd: string;
+  light: string;
+}
+
+const FELTS: FeltTheme[] = [
+  { rim: "#ff8ec8", outer: "#3d2466", back: "#2a1848", dark: "#4a2d78", darkOdd: "#3d2466", light: "#ffe9f4" },
+  { rim: "#5ad7c4", outer: "#143d3a", back: "#0f2a28", dark: "#1f5c56", darkOdd: "#164740", light: "#e5fff8" },
+  { rim: "#ffb347", outer: "#4a2410", back: "#2a1408", dark: "#6b3a1c", darkOdd: "#542c14", light: "#fff0dd" },
+  { rim: "#7eb6ff", outer: "#1a2a55", back: "#101830", dark: "#2a4580", darkOdd: "#1e3466", light: "#e8f1ff" },
+  { rim: "#ff6b8a", outer: "#4a1028", back: "#2a0814", dark: "#6b2040", darkOdd: "#541830", light: "#ffe8ee" },
+  { rim: "#c5a3ff", outer: "#2a1855", back: "#160c30", dark: "#4a3080", darkOdd: "#3a2466", light: "#f3e9ff" },
+  { rim: "#9dffb0", outer: "#14331c", back: "#0c1e10", dark: "#2a5c38", darkOdd: "#1e472c", light: "#e9ffee" },
+  { rim: "#ffd45a", outer: "#3d2a10", back: "#221808", dark: "#6b5020", darkOdd: "#544018", light: "#fff8e0" },
+];
+
+export function feltTheme(seed: number, index: number): FeltTheme {
+  const rng = new Rng(hashSeed(seed * 13 + (index + 3) * 7919));
+  return rng.pick(FELTS);
+}
+
+function inLane(p: Pos, lane: Lane): boolean {
+  if (lane === "left") return p.c <= 3;
+  if (lane === "right") return p.c >= 4;
+  if (lane === "center") return p.c >= 2 && p.c <= 5;
+  return true;
+}
+
+function laneTitle(lane: Lane): string | null {
+  if (lane === "left") return "Left File";
+  if (lane === "right") return "Right File";
+  if (lane === "center") return "Center Crowd";
+  return null;
+}
 
 function key(p: Pos): string {
   return `${p.r},${p.c}`;
@@ -59,8 +112,17 @@ export function darkPlayable(rows: number[], holes: Pos[] = []): Pos[] {
   return out;
 }
 
-export function pickSpots(rng: Rng, rows: number[], n: number, holes: Pos[], used: Set<string>): Pos[] {
-  const spots = darkPlayable(rows, holes).filter((p) => !used.has(key(p)));
+export function pickSpots(
+  rng: Rng,
+  rows: number[],
+  n: number,
+  holes: Pos[],
+  used: Set<string>,
+  lane: Lane = "any",
+): Pos[] {
+  const open = darkPlayable(rows, holes).filter((p) => !used.has(key(p)));
+  const narrowed = lane === "any" ? open : open.filter((p) => inLane(p, lane));
+  const spots = narrowed.length >= n ? narrowed : open;
   rng.shuffle(spots);
   const out = spots.slice(0, Math.max(0, n));
   for (const p of out) used.add(key(p));
@@ -76,7 +138,7 @@ export function pickHoles(rng: Rng, n: number, used: Set<string>): Pos[] {
 }
 
 /** Ivory (higher row) jumps a charcoal toward the crown. */
-export function openingJump(rng: Rng, holes: Pos[] = []): { you: Pos; them: Pos; land: Pos } {
+export function openingJump(rng: Rng, holes: Pos[] = [], lane: Lane = "any"): { you: Pos; them: Pos; land: Pos } {
   const options: { you: Pos; them: Pos; land: Pos }[] = [];
   for (let r = 2; r <= 4; r++) {
     for (let c = 0; c < 8; c++) {
@@ -94,8 +156,10 @@ export function openingJump(rng: Rng, holes: Pos[] = []): { you: Pos; them: Pos;
       }
     }
   }
-  rng.shuffle(options);
-  return options[0] ?? { you: { r: 5, c: 2 }, them: { r: 4, c: 3 }, land: { r: 3, c: 4 } };
+  const preferred = lane === "any" ? options : options.filter((o) => inLane(o.land, lane));
+  const pool = preferred.length ? preferred : options;
+  rng.shuffle(pool);
+  return pool[0] ?? { you: { r: 5, c: 2 }, them: { r: 4, c: 3 }, land: { r: 3, c: 4 } };
 }
 
 export const CLIMB_SKILL = [0.1, 0.3, 0.48, 0.66, 0.82, 0.95];
@@ -149,14 +213,14 @@ const TIERS: Tier[] = [
   },
   {
     you: 4,
-    them: [4, 5],
+    them: [4, 6],
     themKings: [0, 0],
-    holes: [0, 1],
+    holes: [0, 2],
     bounce: 0,
     themFly: false,
     youRows: [7, 6],
     themRows: [0, 1],
-    race: 0.55,
+    race: 0.42,
   },
   {
     you: 4,
@@ -210,12 +274,21 @@ function between(rng: Rng, span: [number, number]): number {
 
 function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
   const used = new Set<string>();
-  const jump = openingJump(rng);
+  const lane: Lane = rng.pick(["left", "right", "center"]);
+  const jump = openingJump(rng, [], lane);
   used.add(key(jump.you));
   used.add(key(jump.them));
   const you = 3 + extraYou;
-  const youPos = [jump.you, ...pickSpots(rng, [7, 6], you - 1, [], used)];
-  const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used)];
+  const youPos = [jump.you, ...pickSpots(rng, [7, 6, 5], you - 1, [], used, lane)];
+  const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used, lane)];
+  const file = laneTitle(lane);
+  const feltMods: FeltMod[] = [{ title: "First Jump", desc: "Jump the star first. Captures are the fun part!" }];
+  if (file) {
+    feltMods.push({
+      title: file,
+      desc: "This climb parked the opening star on this file. A New climb puts it somewhere else.",
+    });
+  }
   return {
     you,
     them: 2,
@@ -229,20 +302,55 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
     youPos,
     themPos,
     blurb: "Jump the star first. Captures are the fun part!",
-    feltMods: [
-      { title: "First Jump", desc: "Jump the star first. Captures are the fun part!" },
-    ],
+    feltMods,
   };
 }
 
-/** Each climb rolls a new path. Later indexes outscale Stars. */
+/** Each New climb rolls a new path. Daily boards ignore this and use dailySeed(). */
 export function boardSpec(index: number, extraYou: number, openKing: boolean, rng: Rng): BoardSetup {
   const i = Math.min(Math.max(index, 0), PATH_END - 1);
   if (i === 0) return firstHop(rng, extraYou, openKing);
   const tier = TIERS[i]!;
-  const race = rng.chance(tier.race);
-  const youRows = race ? [3, 2] : tier.youRows;
-  const themRows = race ? [6, 5, 7] : tier.themRows;
+  let youRows = tier.youRows;
+  let themRows = tier.themRows;
+  let youLane: Lane = "any";
+  let themLane: Lane = "any";
+  const feltMods: FeltMod[] = [];
+  const shape = rng.next();
+  if (rng.chance(tier.race)) {
+    youRows = [3, 2];
+    themRows = [6, 5, 7];
+    feltMods.push({ title: "Race to the Far Row", desc: "Make a King before the Enemy does." });
+  } else if (shape < 0.2) {
+    youLane = rng.pick(["left", "right"]);
+    themLane = youLane;
+    feltMods.push({
+      title: youLane === "left" ? "Left File" : "Right File",
+      desc: "Both sides packed onto one file. A New climb can flip the lane.",
+    });
+  } else if (shape < 0.38) {
+    youLane = rng.pick(["left", "right"]);
+    themLane = youLane === "left" ? "right" : "left";
+    feltMods.push({
+      title: "Opposite Wings",
+      desc: "You start on one wing, the Enemy on the other.",
+    });
+  } else if (shape < 0.52 && i >= 2) {
+    youRows = [6, 5];
+    themRows = [1, 2];
+    feltMods.push({ title: "Close Quarters", desc: "Everyone starts a row closer. Less room to hide." });
+  } else if (shape < 0.66) {
+    youRows = [7, 6, 5];
+    themRows = [0, 1, 2];
+    youLane = "center";
+    themLane = "center";
+    feltMods.push({ title: "Center Crowd", desc: "The fight bunches in the middle files." });
+  } else if (shape < 0.8) {
+    youRows = [7, 6, 5];
+    themRows = [0, 1, 2];
+    feltMods.push({ title: "Staggered Line", desc: "Pieces sit on three rows, not a flat back rank." });
+  }
+
   const them = between(rng, tier.them);
   const themKings = between(rng, tier.themKings);
   const holeN = between(rng, tier.holes);
@@ -251,10 +359,8 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   const used = new Set<string>();
   const holes = pickHoles(rng, holeN, used);
   const you = tier.you + extraYou;
-  const youPos = pickSpots(rng, youRows, you, holes, used);
-  const themPos = pickSpots(rng, themRows, them, holes, used);
-  const feltMods: FeltMod[] = [];
-  if (race) feltMods.push({ title: "Race to the Far Row", desc: "Make a King before the Enemy does." });
+  const youPos = pickSpots(rng, youRows, you, holes, used, youLane);
+  const themPos = pickSpots(rng, themRows, them, holes, used, themLane);
   if (holes.length) {
     feltMods.push({
       title: holes.length === 1 ? "A Hole in the Felt" : "Holes in the Felt",

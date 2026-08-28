@@ -51,3 +51,14 @@ export function hashSeed(n: number): number {
   x = Math.imul(x ^ (x >>> 15), 0x846ca68b);
   return (x ^ (x >>> 16)) >>> 0;
 }
+
+/** A fresh climb seed. Daily boards use dailySeed() instead, so friends share today. */
+export function freshSeed(): number {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    const n = buf[0] ?? 0;
+    if (n) return n >>> 0;
+  }
+  return ((Math.random() * 0xffffffff) ^ Date.now()) >>> 0;
+}

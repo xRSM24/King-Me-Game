@@ -27,6 +27,9 @@
           <p class="kicker">Anime checkers</p>
           <h1>Jumpgrave</h1>
           <p class="tagline">Six boards. Beat the Crown.</p>
+          <p id="climb-hint" class="quiet climb-hint">
+            Each New climb rolls a new path for you. Today's board is the same for everyone until midnight UTC.
+          </p>
           <form id="name-form" class="name-form">
             <label for="hopper-name">I'm</label>
             <input
@@ -76,8 +79,8 @@
               <b>Skip jump</b> button so you can walk instead — or stop a combo.
             </li>
             <li>
-              <b>Six boards to the Crown.</b> Every climb lays a new path. Later felts
-              get meaner — more Enemy pieces, sharper AI, nastier rules.
+              <b>Six boards to the Crown.</b> Each New climb rolls a new path — different files,
+              different felt, different names. Continue is the same climb you paused.
             </li>
             <li>
               <b>Oops is OK.</b> One take-back per climb board. Wait for the Enemy to hop,
@@ -85,7 +88,7 @@
               two unless a modifier says otherwise. If you lose your last piece on the climb, you still get Stars.
             </li>
             <li>
-              <b>Today's board is a toughie.</b> Everyone gets the same hard felt until midnight
+              <b>Today's board is shared.</b> You and your friends hop the same hard felt until midnight
               UTC. Two Oops unless a daily twist says otherwise. Each day rolls a few modifiers —
               some help you, some help the Enemy. Win it, pin your move count. Lowest moves sits on top.
             </li>
@@ -136,8 +139,9 @@
           <p class="kicker">Daily leaderboard · <span id="daily-date"></span></p>
           <h2 id="daily-heading">Today's board</h2>
           <p class="lead" id="daily-lead">
-            Same hard felt for everybody until midnight UTC. Beat it, pin your move count.
-            Lowest moves sits on top. Today's modifiers help you and the Enemy.
+            Same hard felt for everybody until midnight UTC — that's the point, so the
+            leaderboard is fair. Beat it, pin your move count. Lowest moves sits on top.
+            Today's modifiers help you and the Enemy. A climb is different: New climb is yours alone.
           </p>
           <ul id="daily-mods" class="mod-list"></ul>
           <div class="row">

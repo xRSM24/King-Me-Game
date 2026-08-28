@@ -6,7 +6,7 @@ import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
 import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
-import { dailySeed, hashSeed, Rng } from "./rng.ts";
+import { dailySeed, hashSeed, Rng, freshSeed } from "./rng.ts";
 import {
   applyMove,
   at,
@@ -22,7 +22,7 @@ import {
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
-import { boardSpec, climbNames, CLIMB_SKILL } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL, feltTheme } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
@@ -311,7 +311,7 @@ export class Game {
     this.unlock();
     this.mode = "run";
     clearClimb();
-    const seed = (Math.random() * 0xffffffff) | 0;
+    const seed = freshSeed();
     this.runSeed = seed;
     this.rng = new Rng(seed);
     this.pathNames = climbNames(seed);
@@ -1471,6 +1471,17 @@ export class Game {
       main.setAttribute("data-cmd", saved ? "continue" : "new");
     }
     if (fresh) fresh.classList.toggle("hidden", !saved);
+    const hint = document.getElementById("climb-hint");
+    if (hint) {
+      const climb = saved ? loadClimb() : null;
+      if (climb) {
+        const here = climb.pathNames[climb.boardIndex] ?? "your climb";
+        hint.textContent = `Continue is the same climb (${here}). New climb rolls a new path. Today's board is shared with friends.`;
+      } else {
+        hint.textContent =
+          "Each New climb rolls a new path for you. Today's board is the same for everyone until midnight UTC.";
+      }
+    }
     this.paintName();
     void this.warmTitleScores();
   }
@@ -1510,7 +1521,7 @@ export class Game {
     if (lead) {
       const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
       lead.textContent =
-        `Same hard felt for everybody until midnight UTC. Beat it, pin your move count. Lowest moves sits on top. Today's modifiers help you and the Enemy.${who}`;
+        `You and your friends hop this same board until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}`;
     }
   }
 
@@ -1709,6 +1720,7 @@ export class Game {
   private renderBoard(): void {
     const el = document.getElementById("board");
     if (!el) return;
+    this.paintFelt();
     const legal = this.turn === "you" && !this.thinking && !this.animating
       ? this.youLegal()
       : [];
@@ -1738,5 +1750,19 @@ export class Game {
     el.classList.toggle("coaching", this.coachOn);
     const keep = this.keyFocus ?? this.selected;
     if (keep) this.squareEl(keep)?.focus();
+  }
+
+  private paintFelt(): void {
+    const el = document.getElementById("board");
+    if (!el) return;
+    const seed = this.mode === "daily" ? dailySeed() : this.runSeed;
+    const index = this.mode === "daily" ? 8 : this.boardIndex;
+    const t = feltTheme(seed, index);
+    el.style.setProperty("--board-rim", t.rim);
+    el.style.setProperty("--board-outer", t.outer);
+    el.style.setProperty("--board-back", t.back);
+    el.style.setProperty("--sq-dark", t.dark);
+    el.style.setProperty("--sq-dark-odd", t.darkOdd);
+    el.style.setProperty("--sq-light", t.light);
   }
 }

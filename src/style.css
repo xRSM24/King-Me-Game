@@ -110,11 +110,18 @@ h2 {
 }
 
 .tagline {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
   color: var(--muted);
   font-size: clamp(1rem, 3.4vw, 1.15rem);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.climb-hint {
+  max-width: 28em;
+  margin: 0 auto 16px;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .screen {
@@ -442,15 +449,15 @@ button small {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  border: 10px solid #ff8ec8;
+  border: 10px solid var(--board-rim, #ff8ec8);
   border-radius: 18px;
   user-select: none;
   touch-action: none;
   box-shadow:
     0 0 0 4px #ffd45a,
-    0 0 0 8px #3d2466,
+    0 0 0 8px var(--board-outer, #3d2466),
     0 18px 40px rgba(80, 20, 90, 0.45);
-  background: #2a1848;
+  background: var(--board-back, #2a1848);
 }
 
 .sq {
@@ -467,18 +474,18 @@ button small {
 }
 
 .sq.light {
-  background: #ffe9f4;
+  background: var(--sq-light, #ffe9f4);
   pointer-events: none;
 }
 
 .sq.dark {
-  background: #4a2d78;
+  background: var(--sq-dark, #4a2d78);
   cursor: pointer;
   touch-action: none;
 }
 
 .sq.dark:nth-child(odd) {
-  background: #3d2466;
+  background: var(--sq-dark-odd, #3d2466);
 }
 
 .sq.hole,
