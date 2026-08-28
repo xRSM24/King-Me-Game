@@ -1,6 +1,7 @@
 import type { Board } from "./rules.ts";
+import { campsFromRows } from "./rules.ts";
 import type { BoardMods, FeltMod, Laws, Pos, Side } from "./types.ts";
-import { emptyLaws, emptyMods } from "./types.ts";
+import { SIZE, emptyLaws, emptyMods } from "./types.ts";
 
 const KEY = "jumpgrave-climb-v1";
 
@@ -34,6 +35,30 @@ export interface ClimbSave {
 
 type SavedCell = { id: number; side: Side; king: boolean } | null;
 
+function asRows(v: unknown, fallback: number[]): number[] {
+  if (!Array.isArray(v)) return fallback;
+  const rows = v.filter((n): n is number => typeof n === "number" && n >= 0 && n < SIZE);
+  return rows.length ? rows : fallback;
+}
+
+function campsForSave(
+  raw: Partial<BoardMods> | undefined,
+  feltMods: FeltMod[],
+): Pick<BoardMods, "youKingRow" | "themKingRow" | "youHome" | "themHome"> {
+  if (raw && typeof raw.youKingRow === "number" && typeof raw.themKingRow === "number") {
+    return {
+      youKingRow: raw.youKingRow === SIZE - 1 ? SIZE - 1 : 0,
+      themKingRow: raw.themKingRow === 0 ? 0 : SIZE - 1,
+      youHome: asRows(raw.youHome, emptyMods().youHome),
+      themHome: asRows(raw.themHome, emptyMods().themHome),
+    };
+  }
+  if (feltMods.some((m) => m.title === "Race to the Far Row")) {
+    return campsFromRows([3, 2], [6, 5, 7]);
+  }
+  return campsFromRows([7, 6], [0, 1]);
+}
+
 export function packBoard(board: Board): SavedCell[][] {
   return board.map((row) => row.map((c) => (c ? { id: c.id, side: c.side, king: c.king } : null)));
 }
@@ -48,6 +73,9 @@ export function loadClimb(): ClimbSave | null {
     if (!raw) return null;
     const p = JSON.parse(raw) as Partial<ClimbSave>;
     if (p.v !== 1 || !Array.isArray(p.board) || typeof p.runSeed !== "number") return null;
+    const feltMods = Array.isArray(p.feltMods)
+      ? p.feltMods.filter((m): m is FeltMod => !!m && typeof m.title === "string" && typeof m.desc === "string")
+      : [];
     return {
       v: 1,
       runSeed: p.runSeed,
@@ -58,11 +86,10 @@ export function loadClimb(): ClimbSave | null {
         ...emptyMods(),
         ...(p.mods ?? {}),
         holes: Array.isArray(p.mods?.holes) ? p.mods.holes : [],
+        ...campsForSave(p.mods, feltMods),
       },
       blurb: typeof p.blurb === "string" ? p.blurb : "",
-      feltMods: Array.isArray(p.feltMods)
-        ? p.feltMods.filter((m): m is { title: string; desc: string } => !!m && typeof m.title === "string")
-        : [],
+      feltMods,
       hops: Number(p.hops) || 0,
       moves: Number(p.moves) || 0,
       combo: Number(p.combo) || 0,

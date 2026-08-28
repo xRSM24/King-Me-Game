@@ -324,10 +324,20 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
   };
 }
 
+function debugFelt(): string | null {
+  try {
+    if (typeof location === "undefined") return null;
+    return new URLSearchParams(location.search).get("felt");
+  } catch {
+    return null;
+  }
+}
+
 /** Each New climb rolls a new path. Daily boards ignore this and use dailySeed(). */
 export function boardSpec(index: number, extraYou: number, openKing: boolean, rng: Rng): BoardSetup {
   const i = Math.min(Math.max(index, 0), PATH_END - 1);
-  if (i === 0) return firstHop(rng, extraYou, openKing);
+  const forceRace = debugFelt() === "race";
+  if (i === 0 && !forceRace) return firstHop(rng, extraYou, openKing);
   const tier = TIERS[i]!;
   let youRows = tier.youRows;
   let themRows = tier.themRows;
@@ -335,7 +345,7 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   let themLane: Lane = "any";
   const feltMods: FeltMod[] = [];
   const shape = rng.next();
-  if (rng.chance(tier.race)) {
+  if (forceRace || rng.chance(tier.race)) {
     youRows = [3, 2];
     themRows = [6, 5, 7];
     feltMods.push({ title: "Race to the Far Row", desc: RACE_DESC });

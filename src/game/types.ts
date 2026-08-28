@@ -43,6 +43,13 @@ export interface BoardMods {
   bounce: boolean;
   themFly: boolean;
   themBack: boolean;
+  /** Row a non-King of yours becomes King on. 0 = top of the felt. */
+  youKingRow: number;
+  /** Row a non-King of theirs becomes King on. SIZE-1 = bottom of the felt. */
+  themKingRow: number;
+  /** Ranks this side sat on at setup. Landing here never crowns. */
+  youHome: number[];
+  themHome: number[];
 }
 
 export interface Meta {
@@ -106,7 +113,16 @@ export function emptyLaws(): Laws {
 }
 
 export function emptyMods(): BoardMods {
-  return { holes: [], bounce: false, themFly: false, themBack: false };
+  return {
+    holes: [],
+    bounce: false,
+    themFly: false,
+    themBack: false,
+    youKingRow: 0,
+    themKingRow: SIZE - 1,
+    youHome: [6, 7],
+    themHome: [0, 1],
+  };
 }
 
 export const BOARD_NAMES = [

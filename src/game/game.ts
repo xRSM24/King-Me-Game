@@ -14,6 +14,7 @@ import {
   crownRandom,
   isHole,
   legalMoves,
+  modsFromSpec,
   moreJumps,
   outcome,
   piecesOf,
@@ -460,12 +461,7 @@ export class Game {
     this.idSeq = 1;
     const spec = applied.spec;
     this.dailyLabel = dailyTitle();
-    this.mods = {
-      holes: spec.holes,
-      bounce: spec.bounce,
-      themFly: applied.themFly,
-      themBack: applied.themBack,
-    };
+    this.mods = modsFromSpec(spec, { themFly: applied.themFly, themBack: applied.themBack });
     this.blurb = spec.blurb;
     this.board = setupBoard(spec, this.pid);
     this.turn = "you";
@@ -541,7 +537,7 @@ export class Game {
     const openKing = this.laws.openKing || this.rng.chance(notchBonus(this.meta.notches).kingChance);
     const boardRng = new Rng(hashSeed(this.runSeed + (this.boardIndex + 1) * 104729));
     const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng);
-    this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly, themBack: false };
+    this.mods = modsFromSpec(spec);
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
     this.board = setupBoard(spec, this.pid);
@@ -577,7 +573,8 @@ export class Game {
   }
 
   private maybeCoach(): void {
-    if (this.meta.sawTutorial || this.mode !== "run" || this.boardIndex !== 0) {
+    const debugRace = new URLSearchParams(location.search).get("felt") === "race";
+    if (debugRace || this.meta.sawTutorial || this.mode !== "run" || this.boardIndex !== 0) {
       this.coachOn = false;
       this.hideCoach();
       return;
@@ -1021,7 +1018,7 @@ export class Game {
         await this.animateHop(move, "you");
         if (this.stale(gen)) return;
       }
-      this.board = applyMove(this.board, move);
+      this.board = applyMove(this.board, move, this.mods);
       const nowKing = at(this.board, move.to)?.king ?? false;
       let partyPos: Pos | null = null;
       if (move.capture) {
@@ -1113,7 +1110,7 @@ export class Game {
       const wasKing = at(this.board, move.from)?.king ?? false;
       await this.animateHop(move, "them");
       if (this.stale(gen)) return;
-      this.board = applyMove(this.board, move);
+      this.board = applyMove(this.board, move, this.mods);
       const nowKing = at(this.board, move.to)?.king ?? false;
       if (move.capture) this.audio.capture(1);
       const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));

@@ -1,5 +1,5 @@
 import { Rng } from "./rng.ts";
-import { applyMove, at, legalMoves, moreJumps, piecesOf, type Board } from "./rules.ts";
+import { applyMove, at, legalMoves, manStep, moreJumps, piecesOf, type Board } from "./rules.ts";
 import type { BoardMods, Laws, Move, Pos } from "./types.ts";
 import { SIZE, emptyMods, samePos } from "./types.ts";
 
@@ -56,7 +56,7 @@ function chainValue(
   rng: Rng,
   skill: number,
 ): { board: Board; pos: Pos; score: number } {
-  let b = applyMove(board, start);
+  let b = applyMove(board, start, mods);
   let pos = start.to;
   let captures = start.capture ? 1 : 0;
   if (start.capture) {
@@ -67,15 +67,18 @@ function chainValue(
   while (start.capture && moreJumps(b, pos, laws, mods) && guard++ < 8) {
     const jumps = legalMoves(b, "them", laws, pos, mods);
     if (!jumps.length) break;
-    const nxt = skill > 0.5 ? jumps.reduce((a, m) => (m.to.r > a.to.r ? m : a)) : rng.pick(jumps);
-    b = applyMove(b, nxt);
+    const nxt =
+      skill > 0.5
+        ? jumps.reduce((a, m) => (Math.abs(mods.themKingRow - m.to.r) < Math.abs(mods.themKingRow - a.to.r) ? m : a))
+        : rng.pick(jumps);
+    b = applyMove(b, nxt, mods);
     pos = nxt.to;
     captures += 1;
   }
   let score = captures * 14;
   const piece = b[pos.r]![pos.c];
   if (piece?.king) score += 3;
-  if (pos.r === SIZE - 1) score += 5;
+  if (pos.r === mods.themKingRow && !mods.themHome.includes(pos.r)) score += 5;
   if (skill > 0.22 && threatened(b, laws, mods, pos)) score -= 6 + skill * 5;
   const youLeft = piecesOf(b, "you").length;
   const themLeft = piecesOf(b, "them").length;
@@ -83,10 +86,11 @@ function chainValue(
   return { board: b, pos, score };
 }
 
-function pickCasual(pool: Move[], mem: AiMemory, rng: Rng): Move {
+function pickCasual(pool: Move[], mem: AiMemory, rng: Rng, mods: BoardMods): Move {
   const fresh = pool.filter((m) => !reverses(m, mem));
   const base = fresh.length ? fresh : pool;
-  const downfield = base.filter((m) => m.to.r >= m.from.r);
+  const dr = manStep("them", mods);
+  const downfield = base.filter((m) => (m.to.r - m.from.r) * dr >= 0);
   return rng.pick(downfield.length ? downfield : base);
 }
 
@@ -102,21 +106,22 @@ export function think(
   if (!moves.length) return null;
   const jumps = moves.filter((m) => m.capture);
   const pool = jumps.length ? jumps : moves;
-  if (skill < 0.18 && rng.chance(0.4)) return pickCasual(pool, mem, rng);
-  if (skill < 0.35 && rng.chance(0.16)) return pickCasual(pool, mem, rng);
+  if (skill < 0.18 && rng.chance(0.4)) return pickCasual(pool, mem, rng, mods);
+  if (skill < 0.35 && rng.chance(0.16)) return pickCasual(pool, mem, rng, mods);
 
   let best = pool[0]!;
   let bestS = -1e9;
+  const themBack = manStep("them", mods) < 0 ? SIZE - 1 : 0;
   for (const m of pool) {
     const next = chainValue(board, m, laws, mods, rng, skill);
     let s = next.score;
     if (!m.capture) {
       const piece = at(board, m.from);
-      s += (m.to.r - m.from.r) * (1.15 + skill * 0.8);
+      s += (m.to.r - m.from.r) * manStep("them", mods) * (1.15 + skill * 0.8);
       const closer = nearestYou(board, m.from) - nearestYou(next.board, m.to);
       s += closer * (0.9 + skill * 0.7);
       s += pressure(next.board, laws, mods) * (1.6 + skill);
-      if (piece?.king && m.to.r < 2) s -= 1.4;
+      if (piece?.king && Math.abs(m.to.r - themBack) <= 1) s -= 1.4;
       if (reverses(m, mem)) s -= 8.5;
       if (mem.lastPieceId != null && piece?.id === mem.lastPieceId) s -= 1.4 + skill * 0.6;
     }

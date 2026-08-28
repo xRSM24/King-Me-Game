@@ -3,20 +3,69 @@ import { SIZE, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export type Board = Cell[][];
 
-const YOU_FWD: Pos[] = [
-  { r: -1, c: -1 },
-  { r: -1, c: 1 },
-];
-const THEM_FWD: Pos[] = [
-  { r: 1, c: -1 },
-  { r: 1, c: 1 },
-];
 const ALL: Pos[] = [
   { r: -1, c: -1 },
   { r: -1, c: 1 },
   { r: 1, c: -1 },
   { r: 1, c: 1 },
 ];
+
+function avgRow(rows: number[]): number {
+  if (!rows.length) return (SIZE - 1) / 2;
+  return rows.reduce((s, r) => s + r, 0) / rows.length;
+}
+
+/** Far-edge king rows from where each side sat at setup. Never the same edge. */
+export function campsFromRows(
+  youRows: number[],
+  themRows: number[],
+): Pick<BoardMods, "youKingRow" | "themKingRow" | "youHome" | "themHome"> {
+  const uniq = (rows: number[]) => [...new Set(rows)].sort((a, b) => a - b);
+  const mid = (SIZE - 1) / 2;
+  let youKingRow = avgRow(youRows) < mid ? SIZE - 1 : 0;
+  let themKingRow = avgRow(themRows) < mid ? SIZE - 1 : 0;
+  if (youKingRow === themKingRow) {
+    youKingRow = 0;
+    themKingRow = SIZE - 1;
+  }
+  return {
+    youKingRow,
+    themKingRow,
+    youHome: uniq(youRows),
+    themHome: uniq(themRows),
+  };
+}
+
+export function modsFromSpec(
+  spec: Pick<BoardSetup, "youRows" | "themRows" | "holes" | "bounce" | "themFly">,
+  extra: Partial<BoardMods> = {},
+): BoardMods {
+  return {
+    ...emptyMods(),
+    holes: spec.holes,
+    bounce: spec.bounce,
+    themFly: spec.themFly,
+    ...campsFromRows(spec.youRows, spec.themRows),
+    ...extra,
+  };
+}
+
+/** +1 walks down the felt (toward row 7), -1 walks up (toward row 0). */
+export function manStep(side: Side, mods: BoardMods): number {
+  const goal = side === "you" ? mods.youKingRow : mods.themKingRow;
+  return goal < SIZE / 2 ? -1 : 1;
+}
+
+export function wouldCrown(side: Side, toRow: number, mods: BoardMods): boolean {
+  const home = side === "you" ? mods.youHome : mods.themHome;
+  const kingRow = side === "you" ? mods.youKingRow : mods.themKingRow;
+  if (home.includes(toRow)) return false;
+  return toRow === kingRow;
+}
+
+function backRow(side: Side, mods: BoardMods): number {
+  return manStep(side, mods) < 0 ? SIZE - 1 : 0;
+}
 
 export function cloneBoard(board: Board): Board {
   return board.map((row) => row.map((c) => (c ? { ...c } : null)));
@@ -45,12 +94,16 @@ export function piecesOf(board: Board, side: Side): { piece: Piece; pos: Pos }[]
   return out;
 }
 
-function fwd(side: Side): Pos[] {
-  return side === "you" ? YOU_FWD : THEM_FWD;
+function fwd(side: Side, mods: BoardMods): Pos[] {
+  const dr = manStep(side, mods);
+  return [
+    { r: dr, c: -1 },
+    { r: dr, c: 1 },
+  ];
 }
 
-function moveDirs(piece: Piece): Pos[] {
-  return piece.king ? ALL : fwd(piece.side);
+function moveDirs(piece: Piece, mods: BoardMods): Pos[] {
+  return piece.king ? ALL : fwd(piece.side, mods);
 }
 
 function jumpDirs(piece: Piece, laws: Laws, mods: BoardMods): Pos[] {
@@ -58,7 +111,7 @@ function jumpDirs(piece: Piece, laws: Laws, mods: BoardMods): Pos[] {
   if (mods.bounce) return ALL;
   if (piece.side === "you" && laws.backJump) return ALL;
   if (piece.side === "them" && mods.themBack) return ALL;
-  return fwd(piece.side);
+  return fwd(piece.side, mods);
 }
 
 function canFly(piece: Piece, laws: Laws, mods: BoardMods): boolean {
@@ -81,7 +134,7 @@ function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
     }
     return;
   }
-  for (const d of moveDirs(piece)) {
+  for (const d of moveDirs(piece, mods)) {
     const r = from.r + d.r;
     const c = from.c + d.c;
     if (!playable(r, c, mods)) continue;
@@ -133,15 +186,14 @@ export function legalMoves(
   return all;
 }
 
-export function applyMove(board: Board, move: Move): Board {
+export function applyMove(board: Board, move: Move, mods: BoardMods = emptyMods()): Board {
   const next = cloneBoard(board);
   const piece = next[move.from.r]![move.from.c];
   if (!piece) return next;
   next[move.from.r]![move.from.c] = null;
   if (move.capture) next[move.capture.r]![move.capture.c] = null;
   const placed: Piece = { ...piece };
-  if (placed.side === "you" && move.to.r === 0) placed.king = true;
-  if (placed.side === "them" && move.to.r === SIZE - 1) placed.king = true;
+  if (wouldCrown(placed.side, move.to.r, mods)) placed.king = true;
   next[move.to.r]![move.to.c] = placed;
   return next;
 }
@@ -156,7 +208,7 @@ export function moreJumps(board: Board, pos: Pos, laws: Laws, mods: BoardMods = 
 
 export function recruitMan(board: Board, side: Side, nextId: () => number, mods: BoardMods = emptyMods()): Board {
   const next = cloneBoard(board);
-  const row = side === "you" ? SIZE - 1 : 0;
+  const row = backRow(side, mods);
   for (let c = 0; c < SIZE; c++) {
     if (!playable(row, c, mods)) continue;
     if (next[row]![c]) continue;
@@ -193,7 +245,7 @@ export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
     board.push(row);
   }
 
-  const mods: BoardMods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly, themBack: false };
+  const mods: BoardMods = modsFromSpec(spec);
 
   const stamp = (side: Side, pos: Pos, king: boolean) => {
     if (!playable(pos.r, pos.c, mods)) return false;

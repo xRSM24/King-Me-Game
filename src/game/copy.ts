@@ -37,7 +37,7 @@ export const THIRD_OOPS_DESC = "You get 3 Oops take-backs today instead of 2.";
 export const ONE_OOPS_DESC = "You get 1 Oops take-back today instead of 2.";
 
 export const BUDDY_UP_DESC =
-  "After each of your captures, if your bottom row has an empty dark square, a new player piece sits there.";
+  "After each of your captures, if your back row (the edge you started from) has an empty dark square, a new player piece sits there.";
 
 export const SECOND_CHANCE_DESC =
   "Once this climb, if you lose every piece, one King comes back on an empty square.";
@@ -48,7 +48,7 @@ export const HOP_PARTY_DESC =
 export const FIRST_JUMP_DESC = "A gold star is already set up. Jump it first — that capture is 2 squares over the Enemy.";
 
 export const RACE_DESC =
-  "You start on rows 3–4 (near the middle). First piece to the far row becomes a King.";
+  "You sit near the Enemy's back ranks; they sit near yours. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";
 
 export const CLOSE_QUARTERS_DESC =
   "Everyone starts 1 row closer to the middle than a normal setup. Less room to hide.";
