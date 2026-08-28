@@ -19,28 +19,21 @@
         <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
       </div>
       <section class="screen" data-screen="title">
-        <div class="veil">
-          <p class="kicker">Anime checkers · shonen hops</p>
+        <div class="veil title-veil">
+          <div class="mascots" aria-hidden="true">
+            <span class="man you"><span class="face"></span></span>
+            <span class="man them"><span class="face"></span></span>
+          </div>
+          <p class="kicker">Anime checkers</p>
           <h1>Jumpgrave</h1>
-          <p class="tag">
-            <b>Your job:</b> hop six boards and beat the Crown. Ivory is your squad. Charcoal
-            is the rival club. Jump over a checker to capture it. Win a board, pick a power,
-            go again. Stars you earn make the next opening a tiny bit kinder.
-          </p>
-          <div class="row">
-            <button data-cmd="new" type="button">Play</button>
-            <button class="ghost" data-cmd="how" type="button">How to Play</button>
-          </div>
-          <div class="row">
-            <button class="ghost" data-cmd="daily" type="button">Today's board</button>
-            <button class="ghost" data-cmd="mute" type="button">Sound is on</button>
-          </div>
-          <p class="meta-line">Stars <strong id="notch-count">0</strong></p>
-          <p id="meta-stats" class="quiet"></p>
-          <div class="title-board">
-            <p class="kicker">Fewest moves today · <span id="daily-chip">Daily</span></p>
-            <ol id="title-leaders" class="leaderboard"></ol>
-          </div>
+          <p class="tagline">Six boards. Beat the Crown.</p>
+          <button class="play-btn" data-cmd="new" type="button">Play</button>
+          <nav class="title-nav">
+            <button class="texty" data-cmd="daily" type="button">Today</button>
+            <button class="texty" data-cmd="how" type="button">How</button>
+            <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
+          </nav>
+          <p class="stars-chip">★ <strong id="notch-count">0</strong> stars</p>
         </div>
       </section>
 

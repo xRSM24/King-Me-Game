@@ -196,6 +196,7 @@ export class Game {
       this.audio.setMuted(this.meta.mute);
       saveMeta(this.meta);
       this.renderChrome();
+      if (!this.meta.mute) this.audio.ui();
       return;
     }
     if (cmd.startsWith("law:")) {
@@ -329,6 +330,7 @@ export class Game {
     el.classList.remove("popin");
     void el.offsetWidth;
     el.classList.add("popin");
+    this.audio.chirp();
     if (this.cheerTimer != null) window.clearTimeout(this.cheerTimer);
     this.cheerTimer = window.setTimeout(() => {
       el.classList.add("hidden");
@@ -385,6 +387,7 @@ export class Game {
       /* geometry hit-test still works without capture */
     }
     this.startFlyer(at, origin, e);
+    this.audio.pickup();
   }
 
   /** Highlight without wiping the board — a full render would cancel the pointer. */
@@ -485,7 +488,10 @@ export class Game {
         return;
       }
     }
-    this.renderBoard();
+    if (sliding) {
+      this.audio.plop();
+      this.renderBoard();
+    }
   }
 
   /** Map a pointer to a square using the board grid, not DOM hit-testing. */
@@ -539,6 +545,7 @@ export class Game {
     const canSelect = legal.some((m) => m.from.r === r && m.from.c === c);
     if (piece && piece.side === "you" && canSelect) {
       this.selected = pos;
+      this.audio.select();
       this.renderBoard();
       this.renderHud();
       return;
@@ -565,6 +572,7 @@ export class Game {
         const capMan = capEl?.querySelector(".man") as HTMLElement | null;
         if (capEl && capMan) {
           capMan.classList.add("pop");
+          this.audio.pop();
           this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
           this.puffAt(capEl);
           await this.wait(160);
@@ -590,7 +598,7 @@ export class Game {
       }
     } else {
       this.combo = 0;
-      this.audio.hop();
+      if (fromDrag) this.audio.hop();
     }
 
     const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
@@ -652,7 +660,6 @@ export class Game {
     this.board = applyMove(this.board, move);
     const nowKing = at(this.board, move.to)?.king ?? false;
     if (move.capture) this.audio.capture(1);
-    else this.audio.hop();
     const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
     this.renderAll();
     await this.settle(move.to, !wasKing && nowKing, keepJumping);
@@ -698,6 +705,7 @@ export class Game {
   }
 
   private sparkAt(target: HTMLElement, count: number, colors: string[], dist = 36): void {
+    this.audio.sparkle();
     const box = target.getBoundingClientRect();
     const cx = box.left + box.width / 2;
     const cy = box.top + box.height / 2;
@@ -716,6 +724,7 @@ export class Game {
   }
 
   private puffAt(target: HTMLElement): void {
+    this.audio.puff();
     const box = target.getBoundingClientRect();
     const p = document.createElement("span");
     p.className = "puff";
@@ -740,6 +749,7 @@ export class Game {
     fly.style.top = `${start.top}px`;
     man.style.opacity = "0";
     document.body.appendChild(fly);
+    this.audio.whoosh();
     this.puffAt(fromEl);
 
     const dx = destBox.left + (destBox.width - start.width) / 2 - start.left;
@@ -777,6 +787,7 @@ export class Game {
         document.body.appendChild(taken);
         this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
         this.puffAt(capEl);
+        this.audio.pop();
         const kick = dx >= 0 ? 28 : -28;
         const pop = taken.animate(
           [
@@ -800,6 +811,7 @@ export class Game {
     const man = this.squareEl(pos)?.querySelector(".man") as HTMLElement | null;
     if (!man) return;
     man.classList.add(willCrown ? "just-crowned" : "just-landed");
+    if (!willCrown) this.audio.land();
     const sq = this.squareEl(pos);
     if (sq) this.puffAt(sq);
     if (!willCrown) this.sparkAt(man, quick ? 3 : 5, ["#fff3d4", "#ffd45a"], 22);
@@ -943,7 +955,13 @@ export class Game {
     if (name !== "playing") this.cancelDrag();
     this.screen = name;
     document.querySelectorAll("[data-screen]").forEach((el) => {
-      el.classList.toggle("hidden", el.getAttribute("data-screen") !== name);
+      const on = el.getAttribute("data-screen") === name;
+      el.classList.toggle("hidden", !on);
+      if (on && el instanceof HTMLElement) {
+        el.classList.remove("enter");
+        void el.offsetWidth;
+        el.classList.add("enter");
+      }
     });
     document.getElementById("table")?.classList.toggle("hidden", name !== "playing");
     if (name === "title") this.renderTitle();
@@ -952,11 +970,12 @@ export class Game {
     if (name === "daily") this.renderDaily();
     if (name === "playing") this.renderAll();
     this.renderChrome();
+    if (name !== "playing") this.audio.screen();
   }
 
   private renderChrome(): void {
-    const mute = document.querySelector("[data-cmd='mute']");
-    if (mute) mute.textContent = this.meta.mute ? "Sound is off" : "Sound is on";
+    const titleMute = document.getElementById("title-mute");
+    if (titleMute) titleMute.textContent = this.meta.mute ? "Muted" : "Sound";
     const hudMute = document.getElementById("btn-mute");
     if (hudMute) hudMute.textContent = this.meta.mute ? "Sound off" : "Sound on";
   }
@@ -964,33 +983,6 @@ export class Game {
   private renderTitle(): void {
     const rem = document.getElementById("notch-count");
     if (rem) rem.textContent = String(this.meta.notches);
-    const stats = document.getElementById("meta-stats");
-    const b = notchBonus(this.meta.notches);
-    if (stats) {
-      const extra = b.extra ? ` · extra man +${b.extra}` : "";
-      stats.textContent = `${this.meta.runs} plays · farthest ${this.meta.bestBoard} / ${PATH_END} · ${this.meta.wins} Crowns beaten${extra}`;
-    }
-    const mini = document.getElementById("title-leaders");
-    if (mini) {
-      mini.innerHTML = this.scores.length
-        ? this.scoreList(5)
-        : `<li class="quiet">Today's fewest-moves board is empty.</li>`;
-    }
-    const dlabel = document.getElementById("daily-chip");
-    if (dlabel) dlabel.textContent = dailyTitle();
-    void this.warmTitleScores();
-  }
-
-  private titleWarmed = false;
-  private async warmTitleScores(): Promise<void> {
-    if (this.titleWarmed && this.scores.length) return;
-    this.titleWarmed = true;
-    const board = await fetchBoard(utcDayKey());
-    this.scores = board.scores;
-    if (this.screen === "title") {
-      const mini = document.getElementById("title-leaders");
-      if (mini) mini.innerHTML = this.scores.length ? this.scoreList(5) : `<li class="quiet">Today's fewest-moves board is empty.</li>`;
-    }
   }
 
   private renderDaily(): void {
