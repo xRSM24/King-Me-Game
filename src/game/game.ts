@@ -2,7 +2,7 @@ import { think } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
 import { comboName, comboTier } from "./combo.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
-import { applyDailyMods, dailyMods, type DailyMod } from "./dailyMods.ts";
+import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
 import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
@@ -23,7 +23,7 @@ import {
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL } from "./setup.ts";
-import type { BoardMods, Laws, Meta, Move, Pos, Screen } from "./types.ts";
+import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export class Game {
@@ -37,6 +37,7 @@ export class Game {
   laws: Laws = emptyLaws();
   mods: BoardMods = emptyMods();
   blurb = "";
+  feltMods: FeltMod[] = [];
   hops = 0;
   moves = 0;
   combo = 0;
@@ -346,6 +347,7 @@ export class Game {
     this.laws = saved.laws;
     this.mods = { ...emptyMods(), ...saved.mods };
     this.blurb = saved.blurb;
+    this.feltMods = saved.feltMods ?? [];
     this.hops = saved.hops;
     this.moves = saved.moves;
     this.combo = saved.combo;
@@ -397,6 +399,7 @@ export class Game {
       laws: this.laws,
       mods: this.mods,
       blurb: this.blurb,
+      feltMods: this.feltMods,
       hops: this.hops,
       moves: this.moves,
       combo: this.combo,
@@ -419,6 +422,8 @@ export class Game {
     this.unlock();
     this.dailyLabel = dailyTitle();
     this.twists = dailyMods();
+    const spec = dailySpec();
+    this.feltMods = this.uniqueFelt([...(spec.feltMods ?? []), ...this.twists.map(asFelt)]);
     this.show("daily");
     const board = await fetchBoard(utcDayKey());
     this.scores = board.scores;
@@ -460,6 +465,7 @@ export class Game {
     this.coachOn = false;
     this.hideCoach();
     this.clearAi();
+    this.feltMods = this.uniqueFelt([...(spec.feltMods ?? []), ...this.twists.map(asFelt)]);
     const twistLine = this.twists.map((t) => t.name).join(" · ");
     this.pushLog(`${this.dailyLabel}. ${twistLine}. Fewest moves wins today.`);
     this.show("playing");
@@ -494,6 +500,23 @@ export class Game {
     }
   }
 
+  private uniqueFelt(list: FeltMod[]): FeltMod[] {
+    const seen = new Set<string>();
+    const out: FeltMod[] = [];
+    for (const m of list) {
+      const key = m.title.toUpperCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(m);
+    }
+    return out;
+  }
+
+  private modifierCard(title: string, desc: string, side?: "you" | "them"): string {
+    const cls = side === "you" ? "help-you" : side === "them" ? "help-them" : "";
+    return `<li class="mod-card ${cls}"><p class="mod-head">Modifier: ${escapeHtml(title.toUpperCase())}</p><p class="mod-desc">${escapeHtml(desc)}</p></li>`;
+  }
+
   private extraMen(): number {
     const n = notchBonus(this.meta.notches);
     return (this.laws.extraMan ? 1 : 0) + n.extra;
@@ -505,6 +528,7 @@ export class Game {
     const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng);
     this.mods = { holes: spec.holes, bounce: spec.bounce, themFly: spec.themFly, themBack: false };
     this.blurb = spec.blurb;
+    this.feltMods = spec.feltMods ?? [];
     this.board = setupBoard(spec, this.pid);
     this.turn = "you";
     this.selected = null;
@@ -941,14 +965,14 @@ export class Game {
       if (!wasKing && nowKing) {
         this.audio.crown();
         this.audio.fanfare();
-        this.cheer("Crowned!");
-        this.pushLog("Crowned! Kings hop every way.");
+        this.cheer("King!");
+        this.pushLog("King! It hops every way.");
         await this.animateCrown(move.to);
       }
       if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
         this.audio.crown();
-        this.cheer("Party crown!");
-        this.pushLog("Hop Party crowned a friend.");
+        this.cheer("Party King!");
+        this.pushLog("Hop Party made a King.");
         await this.animateCrown(partyPos);
       }
     } finally {
@@ -1004,7 +1028,7 @@ export class Game {
       await this.settle(move.to, !wasKing && nowKing, keepJumping);
       if (!wasKing && nowKing) {
         this.audio.crown();
-        this.cheer("They crowned!");
+        this.cheer("Enemy King!");
         await this.animateCrown(move.to);
       }
       this.animating = false;
@@ -1193,7 +1217,7 @@ export class Game {
         const p = this.board[target.pos.r]![target.pos.c];
         if (p) p.king = true;
       }
-      this.pushLog("Second Chance! A king hops back on.");
+      this.pushLog("Second Chance! A King hops back on.");
       this.cheer("Saved!");
       this.audio.crown();
       this.turn = "you";
@@ -1397,19 +1421,14 @@ export class Game {
     }
     const mods = document.getElementById("daily-mods");
     if (mods) {
-      const list = this.twists.length ? this.twists : dailyMods();
-      mods.innerHTML = list
-        .map(
-          (m) =>
-            `<li class="${m.side === "you" ? "help-you" : "help-them"}"><b>${m.name}</b> ${m.desc}</li>`,
-        )
-        .join("");
+      const list = this.feltMods.length ? this.feltMods : this.twists.map(asFelt);
+      mods.innerHTML = list.map((m) => this.modifierCard(m.title, m.desc, m.side)).join("");
     }
     const lead = document.getElementById("daily-lead");
     if (lead) {
       const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
       lead.textContent =
-        `Same hard felt for everybody until midnight UTC. Beat it, pin your move count. Lowest moves sits on top. Today's twists help ivory and the house.${who}`;
+        `Same hard felt for everybody until midnight UTC. Beat it, pin your move count. Lowest moves sits on top. Today's modifiers help you and the Enemy.${who}`;
     }
   }
 
@@ -1425,8 +1444,8 @@ export class Game {
         ${this.offers
           .map(
             (o) => `<button type="button" data-cmd="law:${o.id}">
-              <b>${o.icon} ${o.name}</b>
-              <small>${o.desc}</small>
+              <b class="mod-head">${o.icon} ${o.name}</b>
+              <small class="mod-desc">${o.desc}</small>
             </button>`,
           )
           .join("")}
@@ -1445,7 +1464,7 @@ export class Game {
         ? `
       <p class="kicker">${this.dailyLabel} · ${utcDayKey()}</p>
       <h2>${this.moves} moves</h2>
-      <p class="lead">The house is off the felt. Lowest moves sits on top. ${rankBit}</p>
+      <p class="lead">The Enemy is off the felt. Lowest moves sits on top. ${rankBit}</p>
       ${
         this.posted
           ? `<p class="quiet">Pinned as ${escapeHtml(loadName())}. Come back tomorrow for a new board.</p>`
@@ -1479,15 +1498,15 @@ export class Game {
       <h2>${s.win ? "The Crown is yours!" : "Want to hop again?"}</h2>
       <p class="lead">${
         s.win
-          ? "Every charcoal checker is in the box. Sit down tomorrow for a new path."
-          : "Your ivory hopped off the board. Stars from this try make the next First Hop a little kinder."
+          ? "Every Enemy piece is in the box. Sit down tomorrow for a new path."
+          : "Your last player piece hopped off the board. Stars from this try make the next First Hop a little kinder."
       }</p>
       <ul class="stats">
         <li>Reached ${this.pathNames[s.board - 1] ?? BOARD_NAMES[s.board - 1] ?? ""} (${s.board} / ${PATH_END})</li>
         <li>${s.hops} captures</li>
         <li class="star-line">Stars +${s.gained} <span>(now ${s.notches})</span></li>
         <li>Next game: ${b.extra ? `+${b.extra} extra man` : "same crew"}${
-          b.kingChance > 0.05 ? ` · ${Math.round(b.kingChance * 100)}% start crowned` : ""
+          b.kingChance > 0.05 ? ` · ${Math.round(b.kingChance * 100)}% a player piece starts as a King` : ""
         }</li>
       </ul>
     `;
@@ -1523,8 +1542,8 @@ export class Game {
     if (status) {
       status.textContent = this.thinking
         ? this.canOops()
-          ? "Charcoal… Oops still works."
-          : "Charcoal is hopping…"
+          ? "Enemy… Oops still works."
+          : "The Enemy is hopping…"
         : this.lock
           ? "Keep jumping!"
           : jumps.length
@@ -1542,11 +1561,14 @@ export class Game {
       const who = hasName() ? `${loadName()} · ` : "";
       counts.textContent =
         this.mode === "daily"
-          ? `${who}Moves ${this.moves} · you ${you} · them ${them}`
-          : `${who}You ${you} · them ${them} · hops ${this.hops}`;
+          ? `${who}Moves ${this.moves} · you ${you} · Enemy ${them}`
+          : `${who}You ${you} · Enemy ${them} · hops ${this.hops}`;
     }
     const tip = document.getElementById("blurb");
-    if (tip) tip.textContent = this.blurb;
+    if (tip) {
+      tip.textContent = "";
+      tip.classList.add("hidden");
+    }
     const oops = document.getElementById("btn-oops");
     if (oops instanceof HTMLButtonElement) {
       oops.classList.remove("hidden");
@@ -1555,16 +1577,21 @@ export class Game {
     }
     const laws = document.getElementById("laws");
     if (laws) {
+      const cards = this.feltMods.map((m) => this.modifierCard(m.title, m.desc, m.side));
       if (this.mode === "daily") {
-        const list = this.twists.length ? this.twists : dailyMods();
-        laws.innerHTML = list
-          .map((d) => `<li class="${d.side === "you" ? "help-you" : "help-them"}"><b>${d.name}</b> ${d.desc}</li>`)
-          .join("");
+        laws.innerHTML = cards.join("") || `<li class="quiet">Today's board. Fewest moves wins.</li>`;
       } else {
         const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
-        laws.innerHTML = owned.length
-          ? owned.map((d) => `<li><b>${d.icon} ${d.name}</b> ${d.desc}</li>`).join("")
-          : `<li class="quiet">Win a board to pick a power.</li>`;
+        const powers = owned.map(
+          (d) =>
+            `<li class="mod-card"><p class="mod-head">${d.icon} ${escapeHtml(d.name)}</p><p class="mod-desc">${escapeHtml(d.desc)}</p></li>`,
+        );
+        laws.innerHTML =
+          cards.join("") +
+          (powers.length ? powers.join("") : cards.length ? "" : `<li class="quiet">Win a board to pick a power.</li>`);
+        if (!cards.length && !powers.length) {
+          laws.innerHTML = `<li class="quiet">Win a board to pick a power.</li>`;
+        }
       }
     }
     const log = document.getElementById("log");
@@ -1592,7 +1619,7 @@ export class Game {
         const can = p && p.side === "you" && froms.has(`${r},${c}`) && !this.lock;
         html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${dark && !hole ? 'tabindex="0"' : 'tabindex="-1"'}>`;
         if (p) {
-          html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "ivory" : "charcoal"} ${p.king ? "king" : "man"}"><span class="face" aria-hidden="true"></span></span>`;
+          html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "player" : "enemy"} ${p.king ? "King" : "piece"}"><span class="face" aria-hidden="true"></span></span>`;
         } else if (hint) {
           html += `<span class="land ${jumps.has(`${r},${c}`) ? "jump" : ""}" aria-hidden="true"></span>`;
         }

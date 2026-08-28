@@ -883,13 +883,13 @@ button small {
   margin-right: 6px;
 }
 
-#laws .help-you b,
-.mod-list .help-you b {
+#laws .help-you .mod-head,
+.mod-list .help-you .mod-head {
   color: #ffe4f0;
 }
 
-#laws .help-them b,
-.mod-list .help-them b {
+#laws .help-them .mod-head,
+.mod-list .help-them .mod-head {
   color: #9ad7ff;
 }
 
@@ -901,12 +901,36 @@ button small {
   gap: 8px;
 }
 
-.mod-list li {
+.mod-list li,
+.mod-card {
   border: 2px solid var(--line);
   border-radius: 14px;
   padding: 10px 12px;
   color: var(--muted);
   text-align: left;
+}
+
+.mod-head {
+  margin: 0;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+}
+
+.mod-desc {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+#laws .mod-card {
+  margin: 0 0 8px;
+}
+
+#laws .mod-card:last-child {
+  margin-bottom: 0;
 }
 
 .coach {

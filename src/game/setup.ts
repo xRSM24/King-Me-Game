@@ -1,4 +1,4 @@
-import type { BoardSetup, Pos } from "./types.ts";
+import type { BoardSetup, FeltMod, Pos } from "./types.ts";
 import { PATH_END, isDark } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
 
@@ -229,6 +229,9 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
     youPos,
     themPos,
     blurb: "Jump the star first. Captures are the fun part!",
+    feltMods: [
+      { title: "First Jump", desc: "Jump the star first. Captures are the fun part!" },
+    ],
   };
 }
 
@@ -250,15 +253,30 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   const you = tier.you + extraYou;
   const youPos = pickSpots(rng, youRows, you, holes, used);
   const themPos = pickSpots(rng, themRows, them, holes, used);
-  const bits: string[] = [];
-  if (race) bits.push("Race to the far row");
-  if (holes.length) bits.push(`${holes.length} hole${holes.length === 1 ? "" : "s"} in the felt`);
-  if (themKings) bits.push(themKings === 1 ? "a charcoal king" : `${themKings} charcoal kings`);
-  if (bounce) bits.push("everyone may jump backward");
-  if (themFly) bits.push("their kings slide extra far");
-  bits.push(`${them} charcoal vs ${you} ivory`);
-  const blurb =
-    bits.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(". ") + ".";
+  const feltMods: FeltMod[] = [];
+  if (race) feltMods.push({ title: "Race to the Far Row", desc: "Make a King before the Enemy does." });
+  if (holes.length) {
+    feltMods.push({
+      title: holes.length === 1 ? "A Hole in the Felt" : "Holes in the Felt",
+      desc: "Don't land in a pit.",
+    });
+  }
+  if (themKings === 1) feltMods.push({ title: "An Enemy King", desc: "The Enemy starts with a King.", side: "them" });
+  else if (themKings > 1) {
+    feltMods.push({
+      title: "Enemy Kings",
+      desc: `The Enemy starts with ${themKings} Kings.`,
+      side: "them",
+    });
+  }
+  if (bounce) {
+    feltMods.push({
+      title: "Everyone May Jump Backward",
+      desc: "Player and Enemy pieces may jump backward.",
+    });
+  }
+  if (themFly) feltMods.push({ title: "Long King", desc: "Enemy Kings slide extra far.", side: "them" });
+  const blurb = feltMods.length ? feltMods.map((m) => m.title).join(" · ") : `${them} Enemy vs ${you} player pieces`;
   return {
     you,
     them,
@@ -272,5 +290,6 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
     youPos,
     themPos,
     blurb,
+    feltMods,
   };
 }

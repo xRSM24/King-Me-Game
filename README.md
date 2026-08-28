@@ -1,6 +1,6 @@
 # Jumpgrave
 
-Kid-friendly **anime checkers** with a climb. You sit **ivory**. They sit **charcoal**. Hop, capture, pick a power, and try to beat **the Crown** in six boards.
+Kid-friendly **anime checkers** with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
 ## Play with a friend
 
@@ -25,14 +25,14 @@ Open the URL Vite prints (this project pins **http://127.0.0.1:43181**).
 
 ## The goal
 
-Every game: win six **new** boards in a row. Each climb rolls a fresh path. Later felts bring more charcoal, nastier rules, and a sharper house.
+Every game: win six **new** boards in a row. Each climb rolls a fresh path. Later felts bring more Enemy pieces, nastier rules, and a sharper Enemy.
 
 You will lose sometimes. That is OK. Captures become **Stars**, a little permanent boost with a ceiling, so the next First Hop is kinder but you never skip the climb.
 
 ## How it feels
 
 - The first climb shows a one-time coach: drag the gold ring onto the star.
-- Later boards pile on charcoal, holes, bouncing jumps, and flying kings.
+- Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
 - One **Oops** per climb board if you tap the wrong square (it boings). Today's board usually gives you **two**, unless a daily twist says otherwise.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
@@ -41,20 +41,20 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## Today's board
 
-One hard felt per UTC day. Same pieces **and the same modifiers** for everybody. Some twists help ivory, some help the house. **Oops count follows the twist.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
+One hard felt per UTC day. Same pieces **and the same modifiers** for everybody. Some modifiers help you, some help the Enemy. **Oops count follows the modifier.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
 
 ## Powers
 
 After each win you pick one that lasts the rest of the run:
 
-- **Jump Back** — your men may jump backward
-- **Super King** — kings slide any empty diagonal
-- **Buddy Up** — captures try to seat a new friend
-- **Second Chance** — once, losing everyone saves a king
-- **Start Crowned** — a man starts as a king
-- **Extra Man** — +1 starting checker
-- **Skip the Jump** — jumps are optional for you
-- **Hop Party** — every 4 captures crowns a friend
+- **Jump Back** — player pieces may jump backward
+- **Super King** — player Kings slide any empty diagonal
+- **Buddy Up** — captures try to seat a new player piece
+- **Second Chance** — once, losing everyone saves a King
+- **Start as King** — one player piece starts as a King
+- **Extra Piece** — +1 starting player piece
+- **Skip the Jump** — jumps are optional for you; the Enemy still must
+- **Hop Party** — every 4 captures, a random player piece becomes a King
 
 ## Run locally
 

@@ -32,6 +32,12 @@ export interface Laws {
   hopCrown: boolean;
 }
 
+export interface FeltMod {
+  title: string;
+  desc: string;
+  side?: Side;
+}
+
 export interface BoardMods {
   holes: Pos[];
   bounce: boolean;
@@ -61,6 +67,7 @@ export interface BoardSetup {
   bounce: boolean;
   themFly: boolean;
   blurb: string;
+  feltMods: FeltMod[];
   youPos?: Pos[];
   themPos?: Pos[];
 }

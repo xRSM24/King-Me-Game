@@ -1,5 +1,5 @@
 import type { Board } from "./rules.ts";
-import type { BoardMods, Laws, Pos, Side } from "./types.ts";
+import type { BoardMods, FeltMod, Laws, Pos, Side } from "./types.ts";
 import { emptyLaws, emptyMods } from "./types.ts";
 
 const KEY = "jumpgrave-climb-v1";
@@ -12,6 +12,7 @@ export interface ClimbSave {
   laws: Laws;
   mods: BoardMods;
   blurb: string;
+  feltMods: FeltMod[];
   hops: number;
   moves: number;
   combo: number;
@@ -57,6 +58,9 @@ export function loadClimb(): ClimbSave | null {
         holes: Array.isArray(p.mods?.holes) ? p.mods.holes : [],
       },
       blurb: typeof p.blurb === "string" ? p.blurb : "",
+      feltMods: Array.isArray(p.feltMods)
+        ? p.feltMods.filter((m): m is { title: string; desc: string } => !!m && typeof m.title === "string")
+        : [],
       hops: Number(p.hops) || 0,
       moves: Number(p.moves) || 0,
       combo: Number(p.combo) || 0,
