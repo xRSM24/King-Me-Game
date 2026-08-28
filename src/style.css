@@ -21,6 +21,8 @@ body,
 #frame {
   margin: 0;
   min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
   background:
     radial-gradient(900px 520px at 50% -12%, rgba(255, 142, 200, 0.28), transparent 55%),
     radial-gradient(700px 420px at 100% 100%, rgba(90, 70, 200, 0.35), transparent 50%),
@@ -82,34 +84,60 @@ h2 {
   font-weight: 400;
   letter-spacing: 0.02em;
   margin: 0 0 12px;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  line-height: 1.15;
 }
 
 h1 {
-  font-size: clamp(48px, 8vw, 84px);
+  font-size: clamp(1.75rem, 8.5vw, 4.6rem);
   color: var(--ivory);
+  white-space: nowrap;
 }
 
 h2 {
-  font-size: 34px;
+  font-size: clamp(1.5rem, 6vw, 2.1rem);
 }
 
 .kicker {
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   font-size: 12px;
   font-weight: 700;
   color: var(--gold);
   margin: 0 0 8px;
+  white-space: nowrap;
 }
 
 .tagline {
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   color: var(--muted);
-  font-size: 1.15rem;
+  font-size: clamp(1rem, 3.4vw, 1.15rem);
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.screen {
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.veil {
+  width: min(640px, 100%);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.veil.narrow {
+  width: min(480px, 100%);
 }
 
 .title-veil {
+  width: min(560px, 100%);
   text-align: center;
 }
 
@@ -142,10 +170,11 @@ h2 {
 
 .play-btn {
   display: inline-block;
-  min-width: min(280px, 86vw);
-  padding: 18px 36px;
-  font-size: 1.25rem;
-  margin: 0 auto 16px;
+  width: min(320px, 100%);
+  min-width: 0;
+  padding: 16px 28px;
+  font-size: 1.2rem;
+  margin: 0 auto 14px;
   animation: play-pulse 1.8s ease-in-out infinite;
 }
 
@@ -159,7 +188,7 @@ h2 {
 .title-nav {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 
@@ -168,8 +197,11 @@ h2 {
   color: var(--ivory);
   box-shadow: none;
   border: 2px solid var(--line);
-  padding: 10px 16px;
+  padding: 10px 14px;
   font-size: 0.95rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .title-nav button.texty:hover {
@@ -212,21 +244,6 @@ h2 {
 
 .tag b {
   color: var(--ivory);
-}
-
-.screen {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 32px 20px;
-}
-
-.veil {
-  width: min(640px, 100%);
-}
-
-.veil.narrow {
-  width: min(480px, 100%);
 }
 
 .row {
@@ -910,13 +927,14 @@ button small {
 }
 
 .title-daily {
-  margin: 28px auto 0;
-  width: min(360px, 100%);
+  margin: 20px auto 0;
+  width: 100%;
   text-align: left;
 }
 
 .title-daily .kicker {
   text-align: center;
+  white-space: normal;
 }
 
 .title-daily .ghost {
@@ -949,9 +967,6 @@ button small {
 }
 
 @media (max-width: 640px) {
-  h1 {
-    font-size: 48px;
-  }
   .table-top {
     grid-template-columns: 1fr;
     grid-template-areas:
@@ -967,6 +982,25 @@ button small {
   }
   #status {
     min-height: 2.7em;
+  }
+}
+
+@media (max-height: 740px) {
+  .mascots {
+    margin-bottom: 4px;
+  }
+  .mascots .man {
+    width: 44px;
+    height: 44px;
+  }
+  .screen {
+    padding: 12px;
+  }
+  .stars-chip {
+    margin-top: 12px;
+  }
+  .title-daily {
+    margin-top: 12px;
   }
 }
 

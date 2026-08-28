@@ -280,7 +280,14 @@ export class Game {
     this.clearAi();
     this.aiTimer = window.setTimeout(() => {
       this.aiTimer = null;
-      void this.aiStep();
+      void this.aiStep().catch(() => {
+        this.animating = false;
+        this.thinking = false;
+        this.turn = "you";
+        this.lock = null;
+        this.selected = null;
+        this.renderAll();
+      });
     }, delay);
   }
 
@@ -570,64 +577,70 @@ export class Game {
       this.snapshotMoves = this.moves;
     }
     this.animating = true;
-    const wasKing = at(this.board, move.from)?.king ?? false;
-    if (fromDrag) {
-      if (move.capture) {
-        const capEl = this.squareEl(move.capture);
-        const capMan = capEl?.querySelector(".man") as HTMLElement | null;
-        if (capEl && capMan) {
-          capMan.classList.add("pop");
-          this.audio.pop();
-          this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
-          this.puffAt(capEl);
-          await this.wait(160);
+    let keepJumping = false;
+    try {
+      const wasKing = at(this.board, move.from)?.king ?? false;
+      if (fromDrag) {
+        if (move.capture) {
+          const capEl = this.squareEl(move.capture);
+          const capMan = capEl?.querySelector(".man") as HTMLElement | null;
+          if (capEl && capMan) {
+            capMan.classList.add("pop");
+            this.audio.pop();
+            this.sparkAt(capEl, 8, ["#ffd45a", "#fff3d4", "#ff9a6b"], 42);
+            this.puffAt(capEl);
+            await this.wait(160);
+          }
         }
+      } else {
+        await this.animateHop(move, "you");
       }
-    } else {
-      await this.animateHop(move, "you");
-    }
-    this.board = applyMove(this.board, move);
-    const nowKing = at(this.board, move.to)?.king ?? false;
-    let partyPos: Pos | null = null;
-    if (move.capture) {
-      this.hops += 1;
-      this.combo += 1;
-      this.audio.capture(this.combo);
-      this.cheer(this.combo >= 2 ? "Double hop!" : CHEERS[this.combo % CHEERS.length]!);
-      this.pushLog(this.combo >= 2 ? `Combo x${this.combo}!` : "Got one!");
-      if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
-      if (this.laws.hopCrown && this.hops % 4 === 0) {
-        const c = crownRandom(this.board, "you", (n) => this.rng.int(n));
-        this.board = c.board;
-        if (c.did) partyPos = c.pos;
+      this.board = applyMove(this.board, move);
+      const nowKing = at(this.board, move.to)?.king ?? false;
+      let partyPos: Pos | null = null;
+      if (move.capture) {
+        this.hops += 1;
+        this.combo += 1;
+        this.audio.capture(this.combo);
+        this.cheer(this.combo >= 2 ? "Double hop!" : CHEERS[this.combo % CHEERS.length]!);
+        this.pushLog(this.combo >= 2 ? `Combo x${this.combo}!` : "Got one!");
+        if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
+        if (this.laws.hopCrown && this.hops % 4 === 0) {
+          const c = crownRandom(this.board, "you", (n) => this.rng.int(n));
+          this.board = c.board;
+          if (c.did) partyPos = c.pos;
+        }
+      } else {
+        this.combo = 0;
+        if (fromDrag) this.audio.hop();
       }
-    } else {
-      this.combo = 0;
-      if (fromDrag) this.audio.hop();
-    }
 
-    const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
-    this.lock = keepJumping ? move.to : null;
-    this.selected = keepJumping ? move.to : null;
-    this.renderAll();
-    await this.settle(move.to, !wasKing && nowKing, keepJumping);
-    if (!wasKing && nowKing) {
-      this.audio.crown();
-      this.cheer("Crowned!");
-      this.pushLog("Crowned! Kings hop every way.");
-      await this.animateCrown(move.to);
-    }
-    if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
-      this.audio.crown();
-      this.cheer("Party crown!");
-      this.pushLog("Hop Party crowned a friend.");
-      await this.animateCrown(partyPos);
-    }
-
-    this.animating = false;
-    if (keepJumping) {
+      keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
+      this.lock = keepJumping ? move.to : null;
+      this.selected = keepJumping ? move.to : null;
       this.renderAll();
-      return;
+      await this.settle(move.to, !wasKing && nowKing, keepJumping);
+      if (!wasKing && nowKing) {
+        this.audio.crown();
+        this.cheer("Crowned!");
+        this.pushLog("Crowned! Kings hop every way.");
+        await this.animateCrown(move.to);
+      }
+      if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
+        this.audio.crown();
+        this.cheer("Party crown!");
+        this.pushLog("Hop Party crowned a friend.");
+        await this.animateCrown(partyPos);
+      }
+    } finally {
+      this.animating = false;
+    }
+    if (keepJumping) {
+      const still = legalMoves(this.board, "you", this.laws, this.lock, this.mods).some((m) => m.capture);
+      if (still) {
+        this.renderAll();
+        return;
+      }
     }
     this.lock = null;
     this.selected = null;
@@ -647,7 +660,7 @@ export class Game {
     }
     this.turn = "them";
     this.thinking = true;
-    this.scheduleAi(this.oopsLeft && this.snapshot ? 900 : 380);
+    this.scheduleAi(this.oopsLeft && this.snapshot ? 520 : 280);
     this.renderAll();
   }
 
@@ -660,24 +673,28 @@ export class Game {
       return;
     }
     this.animating = true;
-    const wasKing = at(this.board, move.from)?.king ?? false;
-    await this.animateHop(move, "them");
-    this.board = applyMove(this.board, move);
-    const nowKing = at(this.board, move.to)?.king ?? false;
-    if (move.capture) this.audio.capture(1);
-    const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
-    this.renderAll();
-    await this.settle(move.to, !wasKing && nowKing, keepJumping);
-    if (!wasKing && nowKing) {
-      this.audio.crown();
-      this.cheer("They crowned!");
-      await this.animateCrown(move.to);
-    }
-    this.animating = false;
+    try {
+      const wasKing = at(this.board, move.from)?.king ?? false;
+      await this.animateHop(move, "them");
+      this.board = applyMove(this.board, move);
+      const nowKing = at(this.board, move.to)?.king ?? false;
+      if (move.capture) this.audio.capture(1);
+      const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
+      this.renderAll();
+      await this.settle(move.to, !wasKing && nowKing, keepJumping);
+      if (!wasKing && nowKing) {
+        this.audio.crown();
+        this.cheer("They crowned!");
+        await this.animateCrown(move.to);
+      }
+      this.animating = false;
 
-    if (keepJumping) {
-      this.scheduleAi(280);
-      return;
+      if (keepJumping) {
+        this.scheduleAi(220);
+        return;
+      }
+    } catch {
+      this.animating = false;
     }
 
     const over = outcome(this.board, "you", this.laws, this.mods);
@@ -738,7 +755,7 @@ export class Game {
     this.fx(p, "go", 380);
   }
 
-  private animateHop(move: Move, side: "you" | "them"): Promise<void> {
+  private async animateHop(move: Move, side: "you" | "them"): Promise<void> {
     const fromEl = this.squareEl(move.from);
     const toEl = this.squareEl(move.to);
     const man = fromEl?.querySelector(".man") as HTMLElement | null;
@@ -774,8 +791,7 @@ export class Game {
       ],
       { duration: ms, easing: "cubic-bezier(.2,.85,.25,1)", fill: "forwards" },
     );
-
-    const extras: Promise<void>[] = [hop.finished.then(() => undefined).catch(() => undefined), this.wait(ms)];
+    hop.onfinish = () => undefined;
 
     if (move.capture) {
       const capEl = this.squareEl(move.capture);
@@ -794,7 +810,7 @@ export class Game {
         this.puffAt(capEl);
         this.audio.pop();
         const kick = dx >= 0 ? 28 : -28;
-        const pop = taken.animate(
+        taken.animate(
           [
             { transform: "scale(1) rotate(0deg)", opacity: 1 },
             { transform: `scale(1.25) rotate(${kick > 0 ? -18 : 18}deg)`, opacity: 1, offset: 0.22 },
@@ -802,14 +818,12 @@ export class Game {
           ],
           { duration: 320, easing: "ease-in", fill: "forwards" },
         );
-        extras.push(pop.finished.then(() => undefined).catch(() => undefined));
         window.setTimeout(() => taken.remove(), 340);
       }
     }
 
-    return Promise.all(extras).then(() => {
-      fly.remove();
-    });
+    await this.wait(ms);
+    fly.remove();
   }
 
   private async settle(pos: Pos, willCrown: boolean, quick: boolean): Promise<void> {
