@@ -84,6 +84,7 @@ Progress lives in the browser (`localStorage`).
 | Skip a jump | Skip jump (only with that power) — walk instead, or stop a combo |
 | Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
+| Today's board | Title → Today's board (same felt for everyone today) |
 | Keyboard | Arrows, Enter, Escape |
 
 ## License

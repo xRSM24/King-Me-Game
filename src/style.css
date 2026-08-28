@@ -175,14 +175,17 @@ h2 {
   }
 }
 
-.play-btn {
-  display: inline-block;
-  width: min(320px, 100%);
-  min-width: 0;
-  padding: 16px 28px;
-  font-size: 1.2rem;
-  margin: 0 auto 14px;
-  animation: play-pulse 1.8s ease-in-out infinite;
+.play-btn.daily-play {
+  animation: none;
+  background: #ffd45a;
+  color: #3a1030;
+  box-shadow: 0 4px 0 #c49a2a;
+  margin-bottom: 16px;
+}
+
+.play-btn.daily-play small {
+  color: #6a4a12;
+  font-size: 0.75em;
 }
 
 @keyframes play-pulse {

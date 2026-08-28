@@ -1499,6 +1499,8 @@ export class Game {
       main.setAttribute("data-cmd", saved ? "continue" : "new");
     }
     if (fresh) fresh.classList.toggle("hidden", !saved);
+    const dailyName = document.getElementById("play-daily-name");
+    if (dailyName) dailyName.textContent = dailyTitle();
     const hint = document.getElementById("climb-hint");
     if (hint) {
       const climb = saved ? loadClimb() : null;
