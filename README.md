@@ -2,6 +2,36 @@
 
 Kid-friendly **anime checkers** with a climb. You sit **ivory**. They sit **charcoal**. Hop, capture, pick a power, and try to beat **the Crown** in six boards.
 
+## Play with a friend
+
+This Preview is only on your machine. A friend cannot open `127.0.0.1`. Send them a **public link** or the repo.
+
+### Fastest: a public URL (Netlify Drop)
+
+On your computer:
+
+```bash
+npm install
+npm run build
+```
+
+Open [https://app.netlify.com/drop](https://app.netlify.com/drop), drag the `dist` folder onto the page, and send them the `https://….netlify.app` link. They play in the browser. No install.
+
+The climb, daily board, drag-hops, and anime table all work. Today's fewest-moves list is **per browser** on a static host (no shared server). If you both play on this same `npm run dev` machine, you share one leaderboard.
+
+### They have Node
+
+If they can clone the repo:
+
+```bash
+git clone https://origin.cursor.com/git/khepri-sun/tmp-2bcbb7e9070a385f.git jumpgrave
+cd jumpgrave
+npm install
+npm run dev
+```
+
+Invite them on Origin if the repo is private.
+
 ## The goal
 
 Every game: win six boards in a row.
