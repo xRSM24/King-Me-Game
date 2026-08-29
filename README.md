@@ -35,6 +35,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
 - One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.
+- When only Kings are left, if nobody jumps for 8 hops, whoever has more pieces wins — a lone King cannot run forever.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
 - Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
 - Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard. No email or password yet.

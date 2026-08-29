@@ -1,5 +1,7 @@
 /** Shared modifier copy. Keep numbers in lockstep with rules.ts. */
 
+import { CHASE_HOPS } from "./types.ts";
+
 /** A normal King steps 1 diagonal square. Flying Kings may ride the empty diagonal (k = 1..7 on an 8-board). */
 export const SUPER_KING_DESC =
   "Your Kings may slide any number of empty squares on a diagonal — up to 7. A normal King only steps 1 square.";
@@ -56,7 +58,16 @@ export const TRAPDOOR_DESC =
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
-/** Coach + status on the opening board. */
+export const CHASE_START = `Only Kings left. Jump in ${CHASE_HOPS} hops or whoever has more pieces wins.`;
+export const CHASE_END_MORE = "Too long a chase. Most pieces win.";
+export const CHASE_END_TIE = "Too long a chase. Nobody jumped.";
+
+export function chaseHint(quiet: number): string {
+  const left = Math.max(0, CHASE_HOPS - quiet);
+  if (left <= 0) return CHASE_END_MORE;
+  if (left === 1) return "Last hop with no jump — then most pieces win.";
+  return `Jump in ${left} hops or most pieces win.`;
+}
 export const JUMP_HOW = "Drag your piece over the Enemy onto the star. That is a jump.";
 
 export const FIRST_JUMP_DESC =

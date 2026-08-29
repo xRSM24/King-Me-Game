@@ -1,7 +1,7 @@
 import { emptyMemory, remember, think, type AiMemory } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
 import { comboName, comboTier } from "./combo.ts";
-import { JUMP_HOW } from "./copy.ts";
+import { JUMP_HOW, CHASE_START, CHASE_END_MORE, CHASE_END_TIE, chaseHint } from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
@@ -12,6 +12,8 @@ import {
   applyMove,
   applyStartLaws,
   at,
+  chaseArmed,
+  chaseWinner,
   cloneBoard,
   cloneMods,
   crownRandom,
@@ -31,7 +33,7 @@ import {
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { BOARD_NAMES, CHASE_HOPS, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export class Game {
   meta: Meta = loadMeta();
@@ -69,7 +71,11 @@ export class Game {
   snapshotHops = 0;
   snapshotMoves = 0;
   snapshotLastRites = false;
+  snapshotQuiet = 0;
   skippedJump = false;
+  quiet = 0;
+  turnHadCapture = false;
+  chaseTold = false;
   drag: {
     from: Pos;
     startX: number;
@@ -380,6 +386,9 @@ export class Game {
     this.snapshotHops = saved.snapshotHops;
     this.snapshotMoves = saved.snapshotMoves;
     this.snapshotLastRites = saved.snapshotLastRites ?? saved.lastRitesUsed;
+    this.snapshotQuiet = saved.snapshotQuiet ?? 0;
+    this.quiet = typeof saved.quiet === "number" ? saved.quiet : 0;
+    this.chaseTold = chaseArmed(this.board);
     this.skippedJump = !!saved.skippedJump && saved.laws.freeJump;
     this.idSeq = Math.max(saved.idSeq, this.maxPieceId() + 1);
     this.log = saved.log;
@@ -436,6 +445,8 @@ export class Game {
       snapshotHops: this.snapshotHops,
       snapshotMoves: this.snapshotMoves,
       snapshotLastRites: this.snapshotLastRites,
+      snapshotQuiet: this.snapshotQuiet,
+      quiet: this.quiet,
       skippedJump: this.skippedJump,
       idSeq: this.idSeq,
       log: this.log,
@@ -485,6 +496,8 @@ export class Game {
     this.snapshot = null;
     this.snapshotMods = null;
     this.skippedJump = false;
+    this.quiet = 0;
+    this.chaseTold = false;
     this.aiMem = emptyMemory();
     this.coachOn = false;
     this.hideCoach();
@@ -576,6 +589,8 @@ export class Game {
     this.snapshotMods = null;
     this.skippedJump = false;
     this.combo = 0;
+    this.quiet = 0;
+    this.chaseTold = false;
     this.aiMem = emptyMemory();
     this.clearAi();
     const name = this.pathNames[this.boardIndex] ?? "Next board";
@@ -810,6 +825,7 @@ export class Game {
     this.hops = this.snapshotHops;
     this.moves = this.snapshotMoves;
     this.lastRitesUsed = this.snapshotLastRites;
+    this.quiet = this.snapshotQuiet;
     this.lock = null;
     this.selected = null;
     this.combo = 0;
@@ -1035,6 +1051,8 @@ export class Game {
       this.snapshotHops = this.hops;
       this.snapshotMoves = this.moves;
       this.snapshotLastRites = this.lastRitesUsed;
+      this.snapshotQuiet = this.quiet;
+      this.turnHadCapture = false;
     }
     this.animating = true;
     let keepJumping = false;
@@ -1059,6 +1077,7 @@ export class Game {
       }
       this.board = applyMove(this.board, move, this.mods);
       if (move.far) this.mods.farJumpUsed = true;
+      if (move.capture) this.turnHadCapture = true;
       const nowKing = at(this.board, move.to)?.king ?? false;
       let partyPos: Pos | null = null;
       let extraPos: Pos | null = null;
@@ -1153,6 +1172,7 @@ export class Game {
     this.skippedJump = false;
     this.mods.farJumpUsed = false;
     this.moves += 1;
+    if (this.tickChase(this.turnHadCapture)) return;
     const over = outcome(this.board, "them", this.laws, this.mods);
     if (over === "you") {
       this.boardCleared();
@@ -1166,6 +1186,43 @@ export class Game {
     this.thinking = true;
     this.scheduleAi(280);
     this.renderAll();
+  }
+
+  /** Returns true if the chase clock just ended the board. */
+  private tickChase(hadCapture: boolean): boolean {
+    if (hadCapture) this.quiet = 0;
+    else if (chaseArmed(this.board)) this.quiet += 1;
+    else this.quiet = 0;
+    this.warnChase();
+    if (chaseArmed(this.board) && this.quiet >= CHASE_HOPS) {
+      this.endChase();
+      return true;
+    }
+    return false;
+  }
+
+  private warnChase(): void {
+    if (!chaseArmed(this.board) || this.chaseTold) return;
+    this.chaseTold = true;
+    this.cheer("Only Kings!");
+    this.pushLog(CHASE_START);
+  }
+
+  private endChase(): void {
+    const who = chaseWinner(this.board);
+    this.thinking = false;
+    this.animating = false;
+    this.lock = null;
+    this.selected = null;
+    if (who === "you") {
+      this.pushLog(CHASE_END_MORE);
+      this.cheer("Most pieces!");
+      this.boardCleared();
+      return;
+    }
+    this.pushLog(who === "draw" ? CHASE_END_TIE : CHASE_END_MORE);
+    this.cheer(who === "draw" ? "It's a tie!" : "They had more!");
+    this.loseOrHoldOops();
   }
 
   private async aiStep(): Promise<void> {
@@ -1184,7 +1241,10 @@ export class Game {
       if (this.stale(gen)) return;
       this.board = applyMove(this.board, move, this.mods);
       const nowKing = at(this.board, move.to)?.king ?? false;
-      if (move.capture) this.audio.capture(1);
+      if (move.capture) {
+        this.audio.capture(1);
+        this.quiet = 0;
+      }
       const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
       this.renderAll();
       await this.settle(move.to, !wasKing && nowKing, keepJumping);
@@ -1221,6 +1281,7 @@ export class Game {
     this.turn = "you";
     this.thinking = false;
     if (at(this.board, move.to)?.side === "them") remember(this.aiMem, this.board, move);
+    this.warnChase();
     this.renderAll();
     this.persistClimb();
   }
@@ -1781,6 +1842,9 @@ export class Game {
         this.mode === "daily"
           ? `${who}Moves ${this.moves} · you ${you} · Enemy ${them}`
           : `${who}You ${you} · Enemy ${them} · hops ${this.hops}`;
+      if (chaseArmed(this.board)) {
+        counts.textContent += ` · ${chaseHint(this.quiet)}`;
+      }
     }
     const tip = document.getElementById("blurb");
     if (tip) {

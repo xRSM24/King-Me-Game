@@ -1,5 +1,5 @@
 import type { BoardMods, BoardSetup, Cell, Laws, Move, Piece, Pos, Side } from "./types.ts";
-import { SIZE, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { CHASE_MAX_PIECES, SIZE, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export type Board = Cell[][];
 
@@ -404,6 +404,24 @@ export function outcome(board: Board, sideToMove: Side, laws: Laws, mods: BoardM
   if (them === 0) return "you";
   if (legalMoves(board, sideToMove, laws, null, mods).length === 0) return sideToMove === "you" ? "them" : "you";
   return null;
+}
+
+/** King-only ending: a lone King can otherwise run forever. */
+export function chaseArmed(board: Board): boolean {
+  const you = piecesOf(board, "you");
+  const them = piecesOf(board, "them");
+  const n = you.length + them.length;
+  if (n === 0 || n > CHASE_MAX_PIECES) return false;
+  if (!you.length || !them.length) return false;
+  return you.every((x) => x.piece.king) && them.every((x) => x.piece.king);
+}
+
+export function chaseWinner(board: Board): "you" | "them" | "draw" {
+  const y = piecesOf(board, "you").length;
+  const t = piecesOf(board, "them").length;
+  if (y > t) return "you";
+  if (t > y) return "them";
+  return "draw";
 }
 
 export function setupBoard(spec: BoardSetup, nextId: () => number): Board {

@@ -3,6 +3,8 @@ import {
   applyMove,
   applyStartLaws,
   campsFromRows,
+  chaseArmed,
+  chaseWinner,
   isHole,
   isHoleTrapped,
   legalMoves,
@@ -312,6 +314,20 @@ for (let seed = 1; seed <= 40; seed++) {
     }
   }
 }
+
+board = blank();
+board[1]![2] = { id: 80, side: "you", king: true };
+board[3]![4] = { id: 81, side: "them", king: true };
+board[5]![6] = { id: 82, side: "them", king: true };
+assert(chaseArmed(board), "1 King vs 2 Kings is a chase");
+assert(chaseWinner(board) === "them", "the side with more Kings would win the chase");
+board[5]![6] = null;
+assert(chaseWinner(board) === "draw", "1 King vs 1 King is a tie chase");
+board[4]![3] = { id: 83, side: "you", king: false };
+assert(!chaseArmed(board), "a leftover non-King is not a King chase");
+board = blank();
+for (let c = 0; c < 4; c++) board[7]![c * 2 + 1] = { id: 90 + c, side: "you", king: false };
+assert(!chaseArmed(board), "an opening row of men is not a chase");
 
 console.log("crown checks ok");
 
