@@ -1,5 +1,5 @@
 /** Run with: node --experimental-strip-types src/game/crownCheck.ts */
-import { applyMove, campsFromRows, legalMoves, manStep, reviveKing, wouldCrown, type Board } from "./rules.ts";
+import { applyMove, campsFromRows, legalMoves, manStep, moveHitting, reviveKing, wouldCrown, type Board } from "./rules.ts";
 import { emptyLaws, emptyMods, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 
@@ -84,6 +84,17 @@ const homeward = legalMoves(revived.board, "you", emptyLaws(), null, std);
 assert(
   homeward.some((m) => m.capture && m.to.r > m.from.r),
   "the returned King can capture back toward home",
+);
+
+const take = homeward.find((m) => m.capture)!;
+assert(take.capture, "homeward jump has a capture square");
+assert(
+  moveHitting(homeward, take.from, take.capture!) === take,
+  "dropping onto the Enemy counts as that jump",
+);
+assert(
+  moveHitting(homeward, take.from, take.to) === take,
+  "dropping onto the star past them still counts",
 );
 
 console.log("crown checks ok");

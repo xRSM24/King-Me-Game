@@ -190,6 +190,14 @@ export function legalMoves(
   return all;
 }
 
+export function moveHitting(moves: Move[], from: Pos, at: Pos): Move | undefined {
+  const mine = moves.filter((m) => samePos(m.from, from));
+  const land = mine.find((m) => samePos(m.to, at));
+  if (land) return land;
+  const takes = mine.filter((m) => m.capture && samePos(m.capture, at));
+  return takes[0];
+}
+
 export function applyMove(board: Board, move: Move, mods: BoardMods = emptyMods()): Board {
   const next = cloneBoard(board);
   const piece = next[move.from.r]![move.from.c];

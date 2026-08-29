@@ -565,6 +565,15 @@ button small {
   box-shadow: inset 0 0 0 4px #fff;
 }
 
+#board .sq.prey,
+#board .sq.prey:nth-child(odd) {
+  box-shadow: inset 0 0 0 4px #ffd45a;
+}
+
+#board .sq.prey .man.them {
+  box-shadow: 0 0 0 3px #ffd45a;
+}
+
 .sq.can .man {
   transform: translateY(-3px) scale(1.06);
   animation: bob 0.9s ease-in-out infinite;
