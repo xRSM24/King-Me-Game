@@ -131,7 +131,8 @@ function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
       for (let k = 1; k < SIZE; k++) {
         const r = from.r + d.r * k;
         const c = from.c + d.c * k;
-        if (!playable(r, c, mods)) break;
+        if (!inBoard(r, c) || !isDark(r, c)) break;
+        if (isHole(mods, r, c)) continue;
         if (board[r]![c]) break;
         out.push({ from, to: { r, c } });
       }
@@ -157,6 +158,22 @@ function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
     if (!mid || mid.side === piece.side) continue;
     if (board[tr]![tc]) continue;
     out.push({ from, to: { r: tr, c: tc }, capture: { r: mr, c: mc } });
+  }
+}
+
+/** Leap an empty pit: [you][pit][land]. Not a capture — you do not have to take it. */
+function addHoleJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
+  if (!mods.holes.length) return;
+  for (const d of jumpDirs(piece, laws, mods)) {
+    const mr = from.r + d.r;
+    const mc = from.c + d.c;
+    const tr = from.r + d.r * 2;
+    const tc = from.c + d.c * 2;
+    if (!isHole(mods, mr, mc)) continue;
+    if (board[mr]?.[mc]) continue;
+    if (!playable(tr, tc, mods)) continue;
+    if (board[tr]![tc]) continue;
+    out.push({ from, to: { r: tr, c: tc }, overHole: { r: mr, c: mc } });
   }
 }
 
@@ -198,6 +215,7 @@ export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods =
   const slides: Move[] = [];
   addJumps(board, from, piece, laws, mods, jumps);
   addFarJumps(board, from, piece, laws, mods, jumps);
+  addHoleJumps(board, from, piece, laws, mods, jumps);
   addSlide(board, from, piece, laws, mods, slides);
   return [...jumps, ...slides];
 }
@@ -235,7 +253,9 @@ export function moveHitting(moves: Move[], from: Pos, at: Pos): Move | undefined
   const land = mine.find((m) => samePos(m.to, at));
   if (land) return land;
   const takes = mine.filter((m) => m.capture && samePos(m.capture, at));
-  return takes[0];
+  if (takes[0]) return takes[0];
+  const pits = mine.filter((m) => m.overHole && samePos(m.overHole, at));
+  return pits[0];
 }
 
 export function applyMove(board: Board, move: Move, mods: BoardMods = emptyMods()): Board {

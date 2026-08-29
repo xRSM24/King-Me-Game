@@ -52,7 +52,7 @@ export const DOUBLE_CROWN_DESC =
   "When one of your pieces becomes a King, a regular piece next to it becomes a King too.";
 
 export const TRAPDOOR_DESC =
-  "Once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. You can still jump over it.";
+  "Once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. Jump over it onto the star past it.";
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
@@ -70,10 +70,10 @@ export const CLOSE_QUARTERS_DESC =
 
 export const STAGGER_DESC = "Pieces sit on 3 rows each, not a flat 2-row back rank.";
 
-export const HOLE_ONE_DESC = "1 pit. Nobody may land on it. You can jump over it.";
+export const HOLE_ONE_DESC = "1 pit. Nobody may land on it. Jump over it onto the star past it.";
 
 export function holesDesc(n: number): string {
-  return `${n} pits. Nobody may land on them. You can jump over them.`;
+  return `${n} pits. Nobody may land on them. Jump over a pit onto the star past it.`;
 }
 
 export function enemyKingsDesc(n: number): string {

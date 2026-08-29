@@ -543,7 +543,8 @@ button small {
   pointer-events: none;
 }
 
-#board .sq.hole:has(.man) {
+#board .sq.hole:has(.man),
+#board .sq.hole.prey {
   pointer-events: auto;
   cursor: pointer;
 }

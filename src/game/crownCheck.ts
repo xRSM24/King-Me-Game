@@ -19,7 +19,7 @@ import {
   wouldCrown,
   type Board,
 } from "./rules.ts";
-import { emptyLaws, emptyMods, SIZE } from "./types.ts";
+import { emptyLaws, emptyMods, SIZE, samePos } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { hashSeed, Rng } from "./rng.ts";
 import { boardSpec, unstickHoles } from "./setup.ts";
@@ -215,11 +215,45 @@ assert(!playable(3, 4, trap), "nobody else may land there after");
 assert(moreJumps(afterTake, { r: 3, c: 4 }, emptyLaws(), trap), "you can still jump from a Trapdoor hole");
 
 board = blank();
+board[5]![2] = { id: 55, side: "you", king: false };
+const pitLeap = { ...std, holes: [{ r: 4, c: 3 }] };
+const overPit = legalMoves(board, "you", emptyLaws(), null, pitLeap, true);
+const pitHop = overPit.find((m) => m.overHole && m.to.r === 3 && m.to.c === 4);
+assert(pitHop, "you may jump over a pit onto the next dark square");
+assert(pitHop!.overHole && pitHop!.overHole.r === 4 && pitHop!.overHole.c === 3, "the leap names the pit");
+assert(
+  moveHitting(overPit, pitHop!.from, pitHop!.overHole!) === pitHop,
+  "dropping onto the pit counts as jumping over it",
+);
+assert(!overPit.some((m) => samePos(m.to, { r: 4, c: 3 })), "nobody may land on the pit");
+
+board = blank();
+board[5]![2] = { id: 56, side: "you", king: false };
+board[4]![1] = { id: 57, side: "them", king: false };
+const mustTake = legalMoves(board, "you", emptyLaws(), null, pitLeap);
+assert(mustTake.every((m) => m.capture), "a capture still beats leaping a pit");
+assert(mustTake.every((m) => !m.overHole), "you do not have to jump a pit when an Enemy is up");
+
+board = blank();
+board[7]![0] = { id: 58, side: "you", king: true };
+const flyLaws = { ...emptyLaws(), flyingKings: true };
+const flyMods = { ...std, holes: [{ r: 6, c: 1 }] };
+const flies = legalMoves(board, "you", flyLaws, null, flyMods, true);
+assert(
+  flies.some((m) => m.to.r === 5 && m.to.c === 2),
+  "a Super King slides past a pit",
+);
+assert(
+  flies.every((m) => !(m.to.r === 6 && m.to.c === 1)),
+  "a Super King still may not land on a pit",
+);
+
+board = blank();
 board[6]![1] = { id: 60, side: "you", king: false };
-board[1]![2] = { id: 61, side: "them", king: false };
+board[4]![3] = { id: 61, side: "you", king: false };
 const plugged = { ...std, holes: [{ r: 5, c: 0 }, { r: 5, c: 2 }] };
-assert(isHoleTrapped(board, { r: 6, c: 1 }, emptyLaws(), plugged), "two pits on the side can wall in a piece");
-assert(movesFrom(board, { r: 6, c: 1 }, emptyLaws(), plugged).length === 0, "that piece has nowhere to step");
+assert(isHoleTrapped(board, { r: 6, c: 1 }, emptyLaws(), plugged), "two pits plus a blocked landing can wall in a piece");
+assert(movesFrom(board, { r: 6, c: 1 }, emptyLaws(), plugged).length === 0, "no step and no leap when both landings are gone");
 const freed = unstickHoles(board, emptyLaws(), plugged, new Rng(7));
 assert(!isHoleTrapped(board, { r: 6, c: 1 }, emptyLaws(), freed), "unstick opens a path for the walled-in piece");
 assert(movesFrom(board, { r: 6, c: 1 }, emptyLaws(), freed).length > 0, "the side piece can step after unstick");
@@ -235,20 +269,29 @@ assert(still.holes.length === 1 && still.holes[0]!.r === 3 && still.holes[0]!.c 
 
 board = blank();
 board[6]![7] = { id: 64, side: "you", king: false };
-const edge = { ...std, holes: [{ r: 5, c: 6 }] };
-assert(isHoleTrapped(board, { r: 6, c: 7 }, emptyLaws(), edge), "one pit can seal the right file");
-const edgeFree = unstickHoles(board, emptyLaws(), edge, new Rng(11));
+const edgePit = { ...std, holes: [{ r: 5, c: 6 }] };
+const edgeLeap = movesFrom(board, { r: 6, c: 7 }, emptyLaws(), edgePit);
+assert(
+  edgeLeap.some((m) => m.overHole && m.to.r === 4 && m.to.c === 5),
+  "an edge piece jumps over the pit onto the star past it",
+);
+board[4]![5] = { id: 65, side: "you", king: false };
+assert(isHoleTrapped(board, { r: 6, c: 7 }, emptyLaws(), edgePit), "one pit can seal the right file when the far square is taken");
+const edgeFree = unstickHoles(board, emptyLaws(), edgePit, new Rng(11));
 assert(movesFrom(board, { r: 6, c: 7 }, emptyLaws(), edgeFree).length > 0, "the right-file piece can step after unstick");
 
 board = blank();
 board[1]![6] = { id: 70, side: "them", king: false };
 board[2]![7] = { id: 71, side: "them", king: false };
-const enemyPlug = { ...std, holes: [{ r: 2, c: 5 }, { r: 3, c: 6 }] };
-assert(isHoleTrapped(board, { r: 2, c: 7 }, emptyLaws(), enemyPlug), "an Enemy on the edge is sealed by a pit");
-assert(isHoleTrapped(board, { r: 1, c: 6 }, emptyLaws(), enemyPlug), "the other Enemy is sealed by a pit plus a teammate");
-const enemyFree = unstickHoles(board, emptyLaws(), enemyPlug, new Rng(19));
+const enemyPit = { ...std, holes: [{ r: 2, c: 5 }, { r: 3, c: 6 }] };
+assert(
+  movesFrom(board, { r: 2, c: 7 }, emptyLaws(), enemyPit).some((m) => m.overHole),
+  "an Enemy on the edge may jump over the pit",
+);
+board[4]![5] = { id: 72, side: "them", king: false };
+assert(isHoleTrapped(board, { r: 2, c: 7 }, emptyLaws(), enemyPit), "the edge Enemy is sealed when the far square is taken");
+const enemyFree = unstickHoles(board, emptyLaws(), enemyPit, new Rng(19));
 assert(movesFrom(board, { r: 2, c: 7 }, emptyLaws(), enemyFree).length > 0, "the edge Enemy can step after unstick");
-assert(movesFrom(board, { r: 1, c: 6 }, emptyLaws(), enemyFree).length > 0, "the second Enemy can step after unstick");
 
 for (let seed = 1; seed <= 40; seed++) {
   for (let i = 1; i <= 5; i++) {

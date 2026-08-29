@@ -857,9 +857,13 @@ export class Game {
     const legal = this.youLegal();
     const shown = legal.filter((m) => m.from.r === from.r && m.from.c === from.c);
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
-    const jumps = new Set(shown.filter((m) => m.capture).map((m) => `${m.to.r},${m.to.c}`));
+    const jumps = new Set(
+      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
+    );
     const preys = new Set(
-      shown.filter((m) => m.capture).map((m) => `${m.capture!.r},${m.capture!.c}`),
+      shown
+        .filter((m) => m.capture || m.overHole)
+        .map((m) => `${(m.capture ?? m.overHole)!.r},${(m.capture ?? m.overHole)!.c}`),
     );
     document.querySelectorAll("#board .sq").forEach((node) => {
       if (!(node instanceof HTMLElement)) return;
@@ -1001,7 +1005,9 @@ export class Game {
     const matches = legal.filter(
       (m) =>
         (!this.selected || samePos(m.from, this.selected)) &&
-        (samePos(m.to, pos) || (m.capture && samePos(m.capture, pos))),
+        (samePos(m.to, pos) ||
+          (m.capture && samePos(m.capture, pos)) ||
+          (m.overHole && samePos(m.overHole, pos))),
     );
     if (this.selected && matches[0] && samePos(matches[0].from, this.selected)) {
       void this.play(matches[0]);
@@ -1758,7 +1764,9 @@ export class Game {
                       ? "Jump ready — or tap Skip jump."
                       : "Jump ready — drag over the Enemy onto the star, or onto them."
                   : this.selected
-                    ? "Slide onto a pip."
+                    ? legal.some((m) => m.overHole)
+                      ? "Jump over the pit onto the star — or drop onto the pit."
+                      : "Slide onto a pip."
                     : this.turn === "you"
                       ? this.canOops()
                         ? "Slide a gold ring — or Oops that hop."
@@ -1827,10 +1835,14 @@ export class Game {
       : [];
     const shown = legal.filter((m) => !this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c));
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
-    const jumps = new Set(shown.filter((m) => m.capture).map((m) => `${m.to.r},${m.to.c}`));
+    const jumps = new Set(
+      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
+    );
     const longs = new Set(shown.filter((m) => m.far).map((m) => `${m.to.r},${m.to.c}`));
     const preys = new Set(
-      shown.filter((m) => m.capture).map((m) => `${m.capture!.r},${m.capture!.c}`),
+      shown
+        .filter((m) => m.capture || m.overHole)
+        .map((m) => `${(m.capture ?? m.overHole)!.r},${(m.capture ?? m.overHole)!.c}`),
     );
     const froms = new Set(legal.map((m) => `${m.from.r},${m.from.c}`));
     let html = "";
@@ -1844,7 +1856,7 @@ export class Game {
         const prey = preys.has(`${r},${c}`);
         const far = longs.has(`${r},${c}`);
         const can = p && p.side === "you" && froms.has(`${r},${c}`) && !this.lock;
-        const focusable = dark && (!hole || !!p);
+        const focusable = dark && (!hole || !!p || prey);
         html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${prey ? "prey" : ""} ${far ? "long" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${focusable ? 'tabindex="0"' : 'tabindex="-1"'}>`;
         if (p) {
           html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "player" : "enemy"} ${p.king ? "King" : "piece"}"><span class="face" aria-hidden="true"></span></span>`;

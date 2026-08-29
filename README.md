@@ -59,7 +59,7 @@ After each win you pick one that lasts the rest of the run:
 - **Hop Party** — every 4 captures this climb, one random non-King player piece becomes a King
 - **Far Jump** — once each turn, one regular piece may jump farther: over an Enemy, skip the next empty square, and land on the next dark square
 - **Double Crown** — when one of your pieces becomes a King, a regular piece next to it becomes a King too
-- **Trapdoor** — once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. You can still jump over it
+- **Trapdoor** — once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. Jump over it onto the star past it
 - **Scout** — one of your regular pieces starts closer to the middle
 
 ## Run locally

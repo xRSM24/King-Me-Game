@@ -20,6 +20,8 @@ export interface Move {
   to: Pos;
   capture?: Pos;
   far?: boolean;
+  /** Pit you leap; landing is the next dark square. Not a capture. */
+  overHole?: Pos;
 }
 
 export interface Laws {
