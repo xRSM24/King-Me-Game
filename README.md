@@ -1,6 +1,6 @@
-# Jumpgrave
+# Checkmate!
 
-Kid-friendly **anime checkers** with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
+Kid-friendly checkers with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
 ## Play with a friend
 
@@ -12,7 +12,7 @@ This Cursor Preview is only on this machine. Friends should use that Netlify URL
 
 Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. The publish script also turns off team-login protection so the URL stays public.
 
-The daily fewest-moves board is **shared** for everyone who tests Jumpgrave — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
+The daily fewest-moves board is **shared** for everyone who tests Checkmate! — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
 
 ### Local
 

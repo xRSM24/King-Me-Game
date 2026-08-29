@@ -1,4 +1,4 @@
-name: Publish Jumpgrave
+name: Publish Checkmate
 
 on:
   push:
