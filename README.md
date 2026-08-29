@@ -2,15 +2,30 @@
 
 Kid-friendly checkers with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
-## Play with a friend
+## Play on a phone
 
-Share this live link (anyone can open it, no Netlify login):
+It is a website, not an app. On the phone open Safari or Chrome and go to:
 
 **https://jumpgrave-ajrr1z.netlify.app**
 
-This Cursor Preview is only on this machine. Friends should use that Netlify URL, not `127.0.0.1`.
+If Netlify is **private**, the phone will ask you to sign in before the board loads:
 
-Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. The publish script also turns off team-login protection so the URL stays public.
+- **Site password** (best for family): type the password you set under Site configuration → Access control / Password protection. You can save it in the phone’s password manager. Kids do not need a Netlify account.
+- **Team login / SSO**: log in with the same Netlify account that owns the site. A phone without that account cannot play. If you want family on phones without Netlify accounts, switch from team-only login to a site password.
+
+This Cursor Preview (`127.0.0.1`) only works on the machine running `npm run dev`. A phone cannot open that address unless the phone and that computer share a Wi‑Fi network and you use the computer’s LAN IP Vite prints (not `127.0.0.1`).
+
+Progress is stored in that browser. Safari and Chrome on the same phone do not share it. Add to Home Screen if you want a Checkmate! icon.
+
+## Play with a friend
+
+Share the same live link:
+
+**https://jumpgrave-ajrr1z.netlify.app**
+
+If the site is private, they need the password (or a Netlify team login). This Cursor Preview is only on this machine — friends should use the Netlify URL, not `127.0.0.1`.
+
+Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. Publish no longer changes whether the site is public or private.
 
 The daily fewest-moves board is **shared** for everyone who tests Checkmate! — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
 

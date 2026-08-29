@@ -54,22 +54,6 @@ if (!siteId) {
   console.log(`Created Netlify site ${site.name} → ${site.ssl_url || site.url}`);
 }
 
-async function makePublic() {
-  const res = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sso_login: false }),
-  });
-  if (!res.ok) {
-    console.error("Could not open the site to the public:", await res.text());
-    process.exit(1);
-  }
-}
-
-await makePublic();
 await ensureBlobsEnv();
 
 async function ensureBlobsEnv() {
