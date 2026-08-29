@@ -240,6 +240,16 @@ assert(isHoleTrapped(board, { r: 6, c: 7 }, emptyLaws(), edge), "one pit can sea
 const edgeFree = unstickHoles(board, emptyLaws(), edge, new Rng(11));
 assert(movesFrom(board, { r: 6, c: 7 }, emptyLaws(), edgeFree).length > 0, "the right-file piece can step after unstick");
 
+board = blank();
+board[1]![6] = { id: 70, side: "them", king: false };
+board[2]![7] = { id: 71, side: "them", king: false };
+const enemyPlug = { ...std, holes: [{ r: 2, c: 5 }, { r: 3, c: 6 }] };
+assert(isHoleTrapped(board, { r: 2, c: 7 }, emptyLaws(), enemyPlug), "an Enemy on the edge is sealed by a pit");
+assert(isHoleTrapped(board, { r: 1, c: 6 }, emptyLaws(), enemyPlug), "the other Enemy is sealed by a pit plus a teammate");
+const enemyFree = unstickHoles(board, emptyLaws(), enemyPlug, new Rng(19));
+assert(movesFrom(board, { r: 2, c: 7 }, emptyLaws(), enemyFree).length > 0, "the edge Enemy can step after unstick");
+assert(movesFrom(board, { r: 1, c: 6 }, emptyLaws(), enemyFree).length > 0, "the second Enemy can step after unstick");
+
 for (let seed = 1; seed <= 40; seed++) {
   for (let i = 1; i <= 5; i++) {
     const rng = new Rng(hashSeed(seed * 104729 + i * 17));

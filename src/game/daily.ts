@@ -1,6 +1,8 @@
 import type { BoardSetup, FeltMod } from "./types.ts";
+import { emptyLaws } from "./types.ts";
 import { Rng, dailySeed, hashSeed } from "./rng.ts";
-import { pickHoles, pickSpots } from "./setup.ts";
+import { pickSafeHoles, pickSpots } from "./setup.ts";
+import { modsFromSpec, setupBoard } from "./rules.ts";
 import {
   HOLE_ONE_DESC,
   JUMP_BACK_BOTH_DESC,
@@ -43,9 +45,26 @@ export function dailySpec(day = dailySeed()): BoardSetup {
   const flavor = FLAVORS[rng.int(FLAVORS.length)]!;
   const title = `${rng.pick(ADJ)} ${rng.pick(NOUN)}`;
   const used = new Set<string>();
-  const holes = pickHoles(rng, flavor.holeN, used);
-  const youPos = pickSpots(rng, [7, 6, 5], flavor.you, holes, used);
-  const themPos = pickSpots(rng, [0, 1, 2], flavor.them, holes, used);
+  const youPos = pickSpots(rng, [7, 6, 5], flavor.you, [], used);
+  const themPos = pickSpots(rng, [0, 1, 2], flavor.them, [], used);
+  const draft: BoardSetup = {
+    you: flavor.you,
+    them: flavor.them,
+    youRows: [7, 6, 5],
+    themRows: [0, 1, 2],
+    themKings: flavor.themKings,
+    openKing: false,
+    holes: [],
+    bounce: flavor.bounce,
+    themFly: flavor.themFly,
+    youPos,
+    themPos,
+    blurb: "",
+    feltMods: [],
+  };
+  let hid = 0;
+  const laid = setupBoard(draft, () => ++hid);
+  const holes = pickSafeHoles(rng, flavor.holeN, laid, emptyLaws(), modsFromSpec(draft));
   const feltMods: FeltMod[] = [];
   if (flavor.themKings === 1) feltMods.push({ title: "An Enemy King", desc: enemyKingsDesc(1), side: "them" });
   else if (flavor.themKings > 1) {
@@ -55,10 +74,10 @@ export function dailySpec(day = dailySeed()): BoardSetup {
       side: "them",
     });
   }
-  if (flavor.holeN) {
+  if (holes.length) {
     feltMods.push({
-      title: flavor.holeN === 1 ? "A Hole in the Felt" : "Holes in the Felt",
-      desc: flavor.holeN === 1 ? HOLE_ONE_DESC : holesDesc(flavor.holeN),
+      title: holes.length === 1 ? "A Hole in the Felt" : "Holes in the Felt",
+      desc: holes.length === 1 ? HOLE_ONE_DESC : holesDesc(holes.length),
     });
   }
   if (flavor.bounce) {

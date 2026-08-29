@@ -1,5 +1,5 @@
 import type { BoardMods, BoardSetup, FeltMod, Laws, Pos } from "./types.ts";
-import { PATH_END, isDark, samePos } from "./types.ts";
+import { PATH_END, emptyLaws, isDark, samePos } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
 import {
   CLOSE_QUARTERS_DESC,
@@ -17,7 +17,7 @@ import {
   holesDesc,
   laneDesc,
 } from "./copy.ts";
-import { at, isHoleTrapped, piecesOf, type Board } from "./rules.ts";
+import { at, isHoleTrapped, modsFromSpec, piecesOf, setupBoard, type Board } from "./rules.ts";
 
 const ADJ = [
   "Sunny",
@@ -164,6 +164,26 @@ function trappedByHoles(board: Board, laws: Laws, mods: BoardMods): Pos[] {
   return out;
 }
 
+/** Place pits one at a time. Skip a square if it would wall in you or the Enemy. */
+export function pickSafeHoles(rng: Rng, n: number, board: Board, laws: Laws, mods: BoardMods): Pos[] {
+  if (n <= 0) return [];
+  const spots = darkPlayable([2, 3, 4, 5]).filter((p) => !at(board, p));
+  rng.shuffle(spots);
+  const holes: Pos[] = [];
+  for (const p of spots) {
+    if (holes.length >= n) break;
+    const trial: BoardMods = { ...mods, holes: [...holes, p] };
+    if (trappedByHoles(board, laws, trial).length) continue;
+    holes.push(p);
+  }
+  return holes;
+}
+
+export function holesEqual(a: Pos[], b: Pos[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((h, i) => samePos(h, b[i]!));
+}
+
 export function withHoleMods(felt: FeltMod[], n: number): FeltMod[] {
   const rest = felt.filter((m) => m.title !== "A Hole in the Felt" && m.title !== "Holes in the Felt");
   if (n <= 0) return rest;
@@ -180,6 +200,7 @@ export function withHoleMods(felt: FeltMod[], n: number): FeltMod[] {
  */
 export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng): BoardMods {
   if (!mods.holes.length) return mods;
+  if (!trappedByHoles(board, laws, mods).length) return mods;
   let holes = mods.holes.map((h) => ({ r: h.r, c: h.c }));
   let next: BoardMods = { ...mods, holes };
   for (let guard = 0; guard < 24; guard++) {
@@ -453,10 +474,27 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   const bounce = rng.chance(tier.bounce);
   const themFly = tier.themFly;
   const used = new Set<string>();
-  const holes = pickHoles(rng, holeN, used);
   const you = tier.you + extraYou;
-  const youPos = pickSpots(rng, youRows, you, holes, used, youLane);
-  const themPos = pickSpots(rng, themRows, them, holes, used, themLane);
+  const youPos = pickSpots(rng, youRows, you, [], used, youLane);
+  const themPos = pickSpots(rng, themRows, them, [], used, themLane);
+  const draft: BoardSetup = {
+    you,
+    them,
+    youRows,
+    themRows,
+    themKings,
+    openKing,
+    holes: [],
+    bounce,
+    themFly,
+    youPos,
+    themPos,
+    blurb: "",
+    feltMods: [],
+  };
+  let hid = 0;
+  const laid = setupBoard(draft, () => ++hid);
+  const holes = pickSafeHoles(rng, holeN, laid, emptyLaws(), modsFromSpec(draft, { themFly }));
   if (holes.length) {
     feltMods.push({
       title: holes.length === 1 ? "A Hole in the Felt" : "Holes in the Felt",

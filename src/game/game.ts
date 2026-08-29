@@ -29,7 +29,7 @@ import {
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
-import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, unstickHoles, withHoleMods } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
@@ -390,6 +390,7 @@ export class Game {
     this.clearAi();
     this.coachOn = false;
     this.hideCoach();
+    if (!this.snapshot) this.freeSealedPieces();
     if (saved.screen === "pick" && this.offers.length) {
       this.show("pick");
       return;
@@ -489,8 +490,7 @@ export class Game {
     this.hideCoach();
     this.clearAi();
     this.feltMods = this.uniqueFelt([...(spec.feltMods ?? []), ...this.twists.map(asFelt)]);
-    this.mods = unstickHoles(this.board, this.laws, this.mods, this.rng);
-    this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
+    this.freeSealedPieces(this.rng);
     const twistLine = this.twists.map((t) => t.name).join(" · ");
     this.pushLog(`${this.dailyLabel}. ${twistLine}. Fewest moves wins today.`);
     this.show("playing");
@@ -537,6 +537,16 @@ export class Game {
     return out;
   }
 
+  /** Scoot pits that wall in you or the Enemy so every piece that could walk still can. */
+  private freeSealedPieces(rng: Rng = this.rng): void {
+    if (!this.mods.holes.length) return;
+    const next = unstickHoles(this.board, this.laws, this.mods, rng);
+    if (holesEqual(next.holes, this.mods.holes)) return;
+    this.mods = next;
+    this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
+    this.persistClimb();
+  }
+
   private modifierCard(title: string, desc: string, side?: "you" | "them"): string {
     const cls = side === "you" ? "help-you" : side === "them" ? "help-them" : "";
     return `<li class="mod-card ${cls}"><p class="mod-head">Modifier: ${escapeHtml(title.toUpperCase())}</p><p class="mod-desc">${escapeHtml(desc)}</p></li>`;
@@ -555,8 +565,7 @@ export class Game {
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
-    this.mods = unstickHoles(this.board, this.laws, this.mods, boardRng);
-    this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
+    this.freeSealedPieces(boardRng);
     this.turn = "you";
     this.selected = null;
     this.lock = null;
@@ -1695,6 +1704,7 @@ export class Game {
   }
 
   renderAll(): void {
+    if (this.screen === "playing" && !this.animating) this.freeSealedPieces();
     this.renderBoard();
     this.renderHud();
   }
