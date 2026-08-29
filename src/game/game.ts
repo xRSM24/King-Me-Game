@@ -1439,7 +1439,7 @@ export class Game {
   private scoreList(limit = 12): string {
     const head = `<li class="head"><b>#</b><span>Name</span><em>Moves</em></li>`;
     if (!this.scores.length) {
-      return `${head}<li class="quiet">Nobody on the board yet. Win today's map and pin your moves.</li>`;
+        return `${head}<li class="quiet">Nobody on the shared board yet. Win today's map and pin your moves.</li>`;
     }
     const mine = loadName().toLowerCase();
     const rows = this.scores
@@ -1544,7 +1544,7 @@ export class Game {
       const n = this.scores.length;
       count.textContent = n
         ? `${n} hopper${n === 1 ? "" : "s"} on the board. Lowest moves wins.`
-        : "The board is empty. Win it and pin your move count.";
+        : "The shared board is empty. Win it and pin your move count.";
     }
     const mods = document.getElementById("daily-mods");
     if (mods) {
@@ -1555,7 +1555,7 @@ export class Game {
     if (lead) {
       const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
       lead.textContent =
-        `You and your friends hop this same board until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}`;
+        `Everyone testing Jumpgrave shares this fewest-moves list until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}`;
     }
   }
 

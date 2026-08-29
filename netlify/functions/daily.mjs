@@ -1,3 +1,13 @@
+import { connectLambda, getStore } from "@netlify/blobs";
+
+const SITE_ID = process.env.BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || "be42e0aa-6fe5-4bb3-847f-22bb2d45988a";
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Cache-Control": "no-store",
+};
+
 function todayUtc() {
   const n = new Date();
   const y = n.getUTCFullYear();
@@ -20,17 +30,41 @@ function sortScores(scores) {
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", ...CORS },
+    body: statusCode === 204 ? "" : JSON.stringify(body),
   };
 }
 
+function dayFromEvent(event) {
+  const q = event.queryStringParameters?.day ?? "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+  const blob = `${event.path ?? ""} ${event.rawUrl ?? ""} ${event.rawQuery ?? ""}`;
+  const m = blob.match(/(\d{4}-\d{2}-\d{2})/);
+  return m?.[1] ?? "";
+}
+
+function openStore(event) {
+  try {
+    connectLambda(event);
+  } catch {
+    /* CLI deploys sometimes skip Lambda blobs context. */
+  }
+  try {
+    return getStore("jumpgrave-daily");
+  } catch {
+    const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN || "";
+    if (!token) throw new Error("No blobs token");
+    return getStore({ name: "jumpgrave-daily", siteID: SITE_ID, token });
+  }
+}
+
 export async function handler(event) {
-  const day = event.queryStringParameters?.day ?? "";
+  if (event.httpMethod === "OPTIONS") return json(204, {});
+
+  const day = dayFromEvent(event);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return json(400, { error: "Bad day." });
 
-  const { getStore } = await import("@netlify/blobs");
-  const store = getStore("jumpgrave-daily");
+  const store = openStore(event);
   const raw = await store.get(day, { type: "json" });
   let scores = Array.isArray(raw) ? raw : [];
 

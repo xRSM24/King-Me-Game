@@ -70,6 +70,58 @@ async function makePublic() {
 }
 
 await makePublic();
+await ensureBlobsEnv();
+
+async function ensureBlobsEnv() {
+  const siteRes = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!siteRes.ok) {
+    console.error("Could not read the Netlify site for env setup.");
+    return;
+  }
+  const site = await siteRes.json();
+  const accountId = site.account_id;
+  if (!accountId) {
+    console.error("No Netlify account id on the site; Blobs env not set.");
+    return;
+  }
+  const put = async (key, value) => {
+    const res = await fetch(`https://api.netlify.com/api/v1/accounts/${accountId}/env/${key}?site_id=${siteId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        key,
+        scopes: ["builds", "functions", "post_processing", "runtime"],
+        values: [{ context: "all", value }],
+      }),
+    });
+    if (!res.ok) {
+      const created = await fetch(`https://api.netlify.com/api/v1/accounts/${accountId}/env?site_id=${siteId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          {
+            key,
+            scopes: ["builds", "functions", "post_processing", "runtime"],
+            values: [{ context: "all", value }],
+          },
+        ]),
+      });
+      if (!created.ok) {
+        console.error(`Could not set ${key} on the Netlify site.`);
+      }
+    }
+  };
+  await put("BLOBS_SITE_ID", siteId);
+  await put("NETLIFY_BLOBS_TOKEN", token);
+}
 
 run("npm", ["run", "build"]);
 const deploy = run("npx", ["--yes", "netlify-cli", "deploy", "--prod", "--dir=dist", "--auth", token, "--site", siteId], {

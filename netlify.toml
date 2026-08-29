@@ -10,7 +10,7 @@
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/api/daily/:day"
-  to = "/.netlify/functions/daily?day=:day"
+  from = "/api/daily/*"
+  to = "/.netlify/functions/daily?day=:splat"
   status = 200
   force = true

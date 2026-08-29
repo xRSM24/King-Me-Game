@@ -75,45 +75,68 @@ export function sortScores(scores: Score[]): Score[] {
   return [...scores].sort((a, b) => a.moves - b.moves || a.at - b.at);
 }
 
-export async function fetchBoard(day: string): Promise<DailyBoard> {
+/** One shared board for every tester. Local preview posts here too. */
+export const SHARED_DAILY_ORIGIN = "https://jumpgrave-ajrr1z.netlify.app";
+
+function dailyUrls(day: string): string[] {
+  const live = `${SHARED_DAILY_ORIGIN}/api/daily/${day}`;
+  const same = `/api/daily/${day}`;
   try {
-    const res = await fetch(`/api/daily/${day}`);
-    if (!res.ok) throw new Error("no board");
-    const data = (await res.json()) as DailyBoard;
-    const board = { day, scores: sortScores(data.scores ?? []) };
-    writeLocal(board);
-    return board;
+    if (typeof location !== "undefined" && location.origin === SHARED_DAILY_ORIGIN) return [same];
   } catch {
-    return readLocal(day);
+    /* no window */
   }
+  return [live, same];
+}
+
+async function requestBoard(url: string, init?: RequestInit): Promise<DailyBoard> {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error("no board");
+  const data = (await res.json()) as DailyBoard;
+  if (!Array.isArray(data.scores)) throw new Error("bad board");
+  return { day: data.day, scores: sortScores(data.scores) };
+}
+
+export async function fetchBoard(day: string): Promise<DailyBoard> {
+  for (const url of dailyUrls(day)) {
+    try {
+      const board = await requestBoard(url);
+      writeLocal(board);
+      return board;
+    } catch {
+      /* try the next host */
+    }
+  }
+  return readLocal(day);
 }
 
 export async function postScore(day: string, name: string, moves: number): Promise<DailyBoard> {
   const clean = sanitizeName(name);
-  try {
-    const res = await fetch(`/api/daily/${day}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: clean, moves }),
-    });
-    if (!res.ok) throw new Error("post failed");
-    const data = (await res.json()) as DailyBoard;
-    const board = { day, scores: sortScores(data.scores ?? []) };
-    writeLocal(board);
-    saveName(clean);
-    return board;
-  } catch {
-    const board = readLocal(day);
-    const key = clean.toLowerCase();
-    const rest = board.scores.filter((s) => s.name.toLowerCase() !== key);
-    const prev = board.scores.find((s) => s.name.toLowerCase() === key);
-    if (!prev || moves < prev.moves) rest.push({ name: clean, moves, at: Date.now() });
-    else rest.push(prev);
-    const next = { day, scores: sortScores(rest) };
-    writeLocal(next);
-    saveName(clean);
-    return next;
+  const init: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: clean, moves }),
+  };
+  for (const url of dailyUrls(day)) {
+    try {
+      const board = await requestBoard(url, init);
+      writeLocal(board);
+      saveName(clean);
+      return board;
+    } catch {
+      /* try the next host */
+    }
   }
+  const board = readLocal(day);
+  const key = clean.toLowerCase();
+  const rest = board.scores.filter((s) => s.name.toLowerCase() !== key);
+  const prev = board.scores.find((s) => s.name.toLowerCase() === key);
+  if (!prev || moves < prev.moves) rest.push({ name: clean, moves, at: Date.now() });
+  else rest.push(prev);
+  const next = { day, scores: sortScores(rest) };
+  writeLocal(next);
+  saveName(clean);
+  return next;
 }
 
 export function escapeHtml(s: string): string {

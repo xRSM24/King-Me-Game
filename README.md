@@ -12,7 +12,7 @@ This Cursor Preview is only on this machine. Friends should use that Netlify URL
 
 Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. The publish script also turns off team-login protection so the URL stays public.
 
-The daily fewest-moves board is **shared** on Netlify (everyone on the link sees the same list). On a static Drop without functions, each browser keeps its own list.
+The daily fewest-moves board is **shared** for everyone who tests Jumpgrave — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
 
 ### Local
 
@@ -41,7 +41,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## Today's board
 
-One hard felt per UTC day, **the same for you and your friends**, so the fewest-moves board is fair. Same pieces **and the same modifiers** for everybody. Some modifiers help you, some help the Enemy. **Oops count follows the modifier.** Clear it, pin your **move count** (a multi-jump is one move). On Netlify the leaderboard is shared; locally, scores live at `GET/POST /api/daily/YYYY-MM-DD` (saved under `data/`).
+One hard felt per UTC day, **the same for you and your friends**, so the fewest-moves board is fair. Same pieces **and the same modifiers** for everybody. Some modifiers help you, some help the Enemy. **Oops count follows the modifier.** Clear it, pin your **move count** (a multi-jump is one move). Testers share one list at **https://jumpgrave-ajrr1z.netlify.app** — local `npm run dev` posts there too.
 
 A climb is not shared. Tap **New climb** for a path nobody else has.
 
