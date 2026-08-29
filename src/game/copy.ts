@@ -56,7 +56,11 @@ export const TRAPDOOR_DESC =
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
-export const FIRST_JUMP_DESC = "A gold star is already set up. Jump it first — that capture is 2 squares over the Enemy.";
+/** Coach + status on the opening board. */
+export const JUMP_HOW = "Drag your piece over the Enemy onto the star. That is a jump.";
+
+export const FIRST_JUMP_DESC =
+  "One of your pieces can jump an Enemy right away. Drag that piece over them onto the star.";
 
 export const RACE_DESC =
   "You sit near the Enemy's back ranks; they sit near yours. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";

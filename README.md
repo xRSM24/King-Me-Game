@@ -31,7 +31,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 
 ## How it feels
 
-- The first climb shows a one-time coach: drag the gold ring onto the star.
+- The first climb shows a one-time coach: drag your piece over the Enemy onto the star. That is a jump.
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
 - One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.

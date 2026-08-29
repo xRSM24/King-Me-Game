@@ -1,6 +1,7 @@
 import { emptyMemory, remember, think, type AiMemory } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
 import { comboName, comboTier } from "./combo.ts";
+import { JUMP_HOW } from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
@@ -339,7 +340,7 @@ export class Game {
     this.meta.runs += 1;
     saveMeta(this.meta);
     this.loadBoard();
-    this.pushLog("Tap a gold ring, then a pip. Stars mean jump!");
+    this.pushLog(JUMP_HOW);
     this.show("playing");
     this.cheer("Let's hop!");
     this.maybeCoach();
@@ -595,8 +596,10 @@ export class Game {
     const el = document.getElementById("coach");
     if (el) el.classList.remove("hidden");
     document.getElementById("board")?.classList.add("coaching");
+    const coachText = document.getElementById("coach-text");
+    if (coachText) coachText.textContent = JUMP_HOW;
     const status = document.getElementById("status");
-    if (status) status.textContent = "Drag the gold ring onto the star.";
+    if (status) status.textContent = JUMP_HOW;
   }
 
   private finishCoach(): void {
@@ -1710,40 +1713,44 @@ export class Game {
     const jumps = legal.filter((m) => m.capture);
     const status = document.getElementById("status");
     if (status) {
-      const lostHold =
-        this.turn === "you" &&
-        !this.thinking &&
-        this.canOops() &&
-        legal.length === 0;
-      status.textContent = this.thinking
-        ? this.canOops()
-          ? "Enemy… Oops still works."
-          : "The Enemy is hopping…"
-        : lostHold
-          ? "Oops that hop, or Menu to give up."
-          : this.lock
-            ? this.canSkipJump()
-              ? "Keep jumping, or Skip jump to stop."
-              : "Keep jumping!"
-            : this.skippedJump && this.turn === "you"
-              ? this.selected
-                ? "Slide a pip, or still jump a star."
-                : "Jump skipped. Slide a gold ring."
-              : jumps.length
+      if (this.coachOn) {
+        status.textContent = JUMP_HOW;
+      } else {
+        const lostHold =
+          this.turn === "you" &&
+          !this.thinking &&
+          this.canOops() &&
+          legal.length === 0;
+        status.textContent = this.thinking
+          ? this.canOops()
+            ? "Enemy… Oops still works."
+            : "The Enemy is hopping…"
+          : lostHold
+            ? "Oops that hop, or Menu to give up."
+            : this.lock
+              ? this.canSkipJump()
+                ? "Keep jumping, or Skip jump to stop."
+                : "Keep jumping!"
+              : this.skippedJump && this.turn === "you"
                 ? this.selected
-                  ? this.canSkipJump()
-                    ? "Jump the star past them, drop onto the Enemy, or Skip jump."
-                    : "Jump the star past the Enemy — or drop onto them."
-                  : this.canSkipJump()
-                    ? "Jump ready — or tap Skip jump."
-                    : "Jump ready — gold ring onto the star, or onto the Enemy."
-                : this.selected
-                  ? "Slide onto a pip."
-                  : this.turn === "you"
-                    ? this.canOops()
-                      ? "Slide a gold ring — or Oops that hop."
-                      : "Slide a gold ring, or tap then tap."
-                    : "Wait.";
+                  ? "Slide a pip, or still jump a star."
+                  : "Jump skipped. Slide a gold ring."
+                : jumps.length
+                  ? this.selected
+                    ? this.canSkipJump()
+                      ? "Jump the star past them, drop onto the Enemy, or Skip jump."
+                      : "Jump the star past the Enemy — or drop onto them."
+                    : this.canSkipJump()
+                      ? "Jump ready — or tap Skip jump."
+                      : "Jump ready — drag over the Enemy onto the star, or onto them."
+                  : this.selected
+                    ? "Slide onto a pip."
+                    : this.turn === "you"
+                      ? this.canOops()
+                        ? "Slide a gold ring — or Oops that hop."
+                        : "Slide a gold ring, or tap then tap."
+                      : "Wait.";
+      }
     }
     const counts = document.getElementById("counts");
     if (counts) {
