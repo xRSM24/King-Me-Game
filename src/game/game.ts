@@ -62,6 +62,7 @@ export class Game {
   thinking = false;
   animating = false;
   aiTimer: number | null = null;
+  wipeTimer: number | null = null;
   actionGen = 0;
   aiMem: AiMemory = emptyMemory();
   lastRitesUsed = false;
@@ -532,6 +533,13 @@ export class Game {
     }
   }
 
+  private clearWipe(): void {
+    if (this.wipeTimer != null) {
+      window.clearTimeout(this.wipeTimer);
+      this.wipeTimer = null;
+    }
+  }
+
   private resumeAiIfNeeded(): void {
     if (this.screen === "playing" && this.thinking && this.turn === "them" && !this.animating) {
       this.scheduleAi(220);
@@ -816,6 +824,7 @@ export class Game {
     if (!snap) return;
     this.actionGen += 1;
     this.clearAi();
+    this.clearWipe();
     this.cancelDrag();
     document.querySelectorAll(".flyer").forEach((el) => el.remove());
     this.audio.oops();
@@ -1461,7 +1470,7 @@ export class Game {
     this.loseOrHoldOops();
   }
 
-  /** After a wipe, let Oops undo the hop that led here if one is left. */
+  /** After a wipe, Oops can still undo — then the board ends. Never wait on Give up. */
   private loseOrHoldOops(): void {
     this.turn = "you";
     this.thinking = false;
@@ -1469,13 +1478,24 @@ export class Game {
     this.lock = null;
     this.selected = null;
     this.skippedJump = false;
-    if (this.snapshot && this.oopsLeft > 0) {
-      this.pushLog("Oops that hop if you want it back.");
-      this.renderAll();
-      this.persistClimb();
-      return;
+    this.clearAi();
+    this.clearWipe();
+    const canUndo = !!(this.snapshot && this.oopsLeft > 0);
+    if (canUndo) {
+      this.pushLog("You're out. Oops to take that hop back.");
+      this.cheer("Out!");
+    } else {
+      this.cheer("Out!");
     }
-    this.finish(false);
+    this.renderAll();
+    this.persistClimb();
+    const wait = canUndo ? (this.mode === "daily" ? 900 : 2200) : 700;
+    this.wipeTimer = window.setTimeout(() => {
+      this.wipeTimer = null;
+      if (this.end) return;
+      if (piecesOf(this.board, "you").length > 0) return;
+      this.finish(false);
+    }, wait);
   }
 
   private boardCleared(): void {
@@ -1504,6 +1524,7 @@ export class Game {
 
   private finish(win: boolean): void {
     this.clearAi();
+    this.clearWipe();
     this.thinking = false;
     this.animating = false;
     this.hideCoach();
@@ -1797,17 +1818,18 @@ export class Game {
       if (this.coachOn) {
         status.textContent = JUMP_HOW;
       } else {
-        const lostHold =
+        const wiped =
           this.turn === "you" &&
           !this.thinking &&
-          this.canOops() &&
-          legal.length === 0;
+          piecesOf(this.board, "you").length === 0;
         status.textContent = this.thinking
           ? this.canOops()
             ? "Enemy… Oops still works."
             : "The Enemy is hopping…"
-          : lostHold
-            ? "Oops that hop, or Menu to give up."
+          : wiped
+            ? this.canOops()
+              ? "You're out. Tap Oops to undo — or that's the game."
+              : "You're out."
             : this.lock
               ? this.canSkipJump()
                 ? "Keep jumping, or Skip jump to stop."
