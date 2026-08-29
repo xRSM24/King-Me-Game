@@ -44,17 +44,15 @@ function dayFromEvent(event) {
 }
 
 function openStore(event) {
-  try {
-    connectLambda(event);
-  } catch {
-    /* CLI deploys sometimes skip Lambda blobs context. */
+  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN || "";
+  if (token) {
+    return getStore({ name: "jumpgrave-daily", siteID: SITE_ID, token });
   }
   try {
+    connectLambda(event);
     return getStore("jumpgrave-daily");
   } catch {
-    const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN || "";
-    if (!token) throw new Error("No blobs token");
-    return getStore({ name: "jumpgrave-daily", siteID: SITE_ID, token });
+    throw new Error("No blobs token");
   }
 }
 
