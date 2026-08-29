@@ -25,9 +25,9 @@
             <span class="man them"><span class="face"></span></span>
           </div>
           <h1>Checkmate!</h1>
-          <p class="tagline">Six boards. Beat the Crown.</p>
+          <p class="tagline">Six Boards. Take the Challenge!</p>
           <p id="climb-hint" class="quiet climb-hint">
-            Each New climb rolls a new path for you. Today's board is the same for everyone until midnight UTC.
+            Each new game begins a new challenge. Each challenge is randomly seeded.
           </p>
           <form id="name-form" class="name-form">
             <label for="hopper-name">I'm</label>
@@ -42,7 +42,7 @@
             />
             <button type="submit">That's me</button>
           </form>
-          <p class="name-status" id="name-status"></p>
+          <p class="name-status" id="name-status" hidden></p>
           <div class="title-plays">
             <button class="play-btn" id="play-main" data-cmd="new" type="button">
               <span class="play-face">
@@ -53,14 +53,13 @@
             <button class="ghost hidden" id="play-fresh" data-cmd="fresh" type="button">New climb</button>
             <button class="play-btn daily-play" id="play-daily" data-cmd="daily-play" type="button">
               <span class="play-face">
-                <span>Today's board</span>
+                <span>Daily Challenge</span>
                 <small id="play-daily-name">Daily</small>
               </span>
             </button>
           </div>
           <nav class="title-nav">
-            <button class="texty" data-cmd="daily" type="button">Leaderboard</button>
-            <button class="texty" data-cmd="how" type="button">How</button>
+            <button class="texty" data-cmd="how" type="button">How to Play</button>
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
           </nav>
           <div class="opts">

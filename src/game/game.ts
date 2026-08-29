@@ -286,7 +286,10 @@ export class Game {
     this.paintName();
     if (!result.saved) {
       const status = document.getElementById("name-status");
-      if (status) status.textContent = "A bit longer — two letters at least.";
+      if (status) {
+        status.hidden = false;
+        status.textContent = "A bit longer — two letters at least.";
+      }
       return;
     }
     if (cheer) {
@@ -304,9 +307,8 @@ export class Game {
     }
     const status = document.getElementById("name-status");
     if (status) {
-      status.textContent = hasName()
-        ? `${loadName()} — that's you on today's board.`
-        : "Pick a name so friends know you. It stays on this device.";
+      status.textContent = "";
+      status.hidden = true;
     }
     const hud = document.getElementById("hopper-tag");
     if (hud) hud.textContent = hasName() ? loadName() : "";
@@ -1506,14 +1508,7 @@ export class Game {
     if (dailyName) dailyName.textContent = dailyTitle();
     const hint = document.getElementById("climb-hint");
     if (hint) {
-      const climb = saved ? loadClimb() : null;
-      if (climb) {
-        const here = climb.pathNames[climb.boardIndex] ?? "your climb";
-        hint.textContent = `Continue is the same climb (${here}). New climb rolls a new path. Today's board is shared with friends.`;
-      } else {
-        hint.textContent =
-          "Each New climb rolls a new path for you. Today's board is the same for everyone until midnight UTC.";
-      }
+      hint.textContent = `Each new game begins a new challenge. Each challenge is randomly seeded. The Daily Challenge is ${dailyTitle()}.`;
     }
     this.paintName();
     void this.warmTitleScores();
