@@ -1,5 +1,20 @@
 /** Run with: node --experimental-strip-types src/game/crownCheck.ts */
-import { applyMove, campsFromRows, legalMoves, manStep, moveHitting, reviveKing, wouldCrown, type Board } from "./rules.ts";
+import {
+  applyMove,
+  applyStartLaws,
+  campsFromRows,
+  isHole,
+  legalMoves,
+  manStep,
+  moreJumps,
+  moveHitting,
+  placeScout,
+  playable,
+  reviveKing,
+  spreadCrown,
+  wouldCrown,
+  type Board,
+} from "./rules.ts";
 import { emptyLaws, emptyMods, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 
@@ -96,6 +111,102 @@ assert(
   moveHitting(homeward, take.from, take.to) === take,
   "dropping onto the star past them still counts",
 );
+
+const farLaws = { ...emptyLaws(), farJump: true };
+board = blank();
+board[5]![2] = { id: 30, side: "you", king: false };
+board[4]![3] = { id: 31, side: "them", king: false };
+const farMoves = legalMoves(board, "you", farLaws, null, std);
+const shortHop = farMoves.find((m) => m.capture && !m.far && m.to.r === 3 && m.to.c === 4);
+const longHop = farMoves.find((m) => m.far && m.to.r === 2 && m.to.c === 5);
+assert(shortHop, "Far Jump still allows the normal 2-square capture");
+assert(longHop, "Far Jump offers a 3-square landing past the empty skip");
+assert(longHop!.capture && longHop!.capture.r === 4 && longHop!.capture.c === 3, "Far Jump captures the adjacent Enemy");
+assert(
+  moveHitting(farMoves, shortHop!.from, shortHop!.capture!) === shortHop,
+  "dropping onto the Enemy still takes the short hop when both exist",
+);
+assert(moveHitting(farMoves, longHop!.from, longHop!.to) === longHop, "dropping on the far star takes the Far Jump");
+
+const used = { ...std, farJumpUsed: true };
+const usedMoves = legalMoves(board, "you", farLaws, null, used);
+assert(
+  usedMoves.every((m) => !m.far),
+  "Far Jump is once each turn",
+);
+
+board[5]![2] = { id: 32, side: "you", king: true };
+const kingFar = legalMoves(board, "you", farLaws, null, std);
+assert(
+  kingFar.every((m) => !m.far),
+  "Kings do not Far Jump",
+);
+
+board = blank();
+board[5]![2] = { id: 33, side: "them", king: false };
+board[4]![3] = { id: 34, side: "you", king: false };
+const enemyFar = legalMoves(board, "them", farLaws, null, std);
+assert(
+  enemyFar.every((m) => !m.far),
+  "the Enemy does not Far Jump",
+);
+
+board = blank();
+board[5]![2] = { id: 35, side: "you", king: false };
+board[4]![3] = { id: 36, side: "them", king: false };
+const holeSkip = { ...std, holes: [{ r: 3, c: 4 }] };
+assert(!playable(3, 4, holeSkip), "the skip square is a hole");
+const overHole = legalMoves(board, "you", farLaws, null, holeSkip);
+assert(
+  overHole.some((m) => m.far && m.to.r === 2 && m.to.c === 5),
+  "Far Jump may skip an empty hole and land past it",
+);
+assert(
+  overHole.every((m) => !(m.capture && !m.far && m.to.r === 3)),
+  "a normal jump cannot land on the hole",
+);
+
+board = blank();
+board[1]![2] = { id: 40, side: "you", king: true };
+board[2]![1] = { id: 41, side: "you", king: false };
+const spread = spreadCrown(board, { r: 1, c: 2 }, "you");
+assert(spread.pos && spread.pos.r === 2 && spread.pos.c === 1, "Double Crown kings a neighbor");
+assert(spread.board[2]![1]?.king, "the neighbor is a King");
+assert(spread.board[1]![2]?.king, "the original King stays a King");
+
+board = blank();
+board[6]![1] = { id: 42, side: "you", king: false };
+board[6]![3] = { id: 43, side: "you", king: false };
+const scouted = placeScout(board, "you", std);
+assert(scouted[4]![1] || scouted[4]![3], "Scout walks two rows toward the Enemy");
+assert(!scouted[6]![1] || !scouted[6]![3], "Scout leaves its old square");
+assert(scouted[6]![1] || scouted[6]![3], "the other regular piece stays put");
+
+board = blank();
+board[7]![0] = { id: 44, side: "you", king: true };
+board[6]![1] = { id: 45, side: "you", king: false };
+const dressed = applyStartLaws(board, { ...emptyLaws(), scout: true, doubleCrown: true }, std);
+assert(dressed[4]![1]?.id === 45 && !dressed[6]![1], "Scout moves the regular piece first");
+assert(dressed[7]![0]?.king, "the setup King stays");
+assert(!dressed[4]![1]?.king, "Double Crown needs a neighbor, not a piece two rows away");
+
+board = blank();
+board[7]![0] = { id: 46, side: "you", king: true };
+board[6]![1] = { id: 47, side: "you", king: false };
+const crownedSetup = applyStartLaws(board, { ...emptyLaws(), doubleCrown: true }, std);
+assert(crownedSetup[6]![1]?.king, "Start as King plus Double Crown kings the neighbor");
+
+board = blank();
+board[5]![2] = { id: 50, side: "you", king: false };
+board[4]![3] = { id: 51, side: "them", king: false };
+board[2]![5] = { id: 52, side: "them", king: false };
+const afterTake = applyMove(board, { from: { r: 5, c: 2 }, to: { r: 3, c: 4 }, capture: { r: 4, c: 3 } }, std);
+assert(afterTake[3]![4]?.side === "you", "the capturer sits on the landing");
+const trap = { ...std, holes: [{ r: 3, c: 4 }], trapdoorUsed: true };
+assert(isHole(trap, 3, 4), "Trapdoor marks the landing as a hole");
+assert(afterTake[3]![4], "the piece may keep sitting on the new hole");
+assert(!playable(3, 4, trap), "nobody else may land there after");
+assert(moreJumps(afterTake, { r: 3, c: 4 }, emptyLaws(), trap), "you can still jump from a Trapdoor hole");
 
 console.log("crown checks ok");
 

@@ -19,6 +19,7 @@ export interface Move {
   from: Pos;
   to: Pos;
   capture?: Pos;
+  far?: boolean;
 }
 
 export interface Laws {
@@ -30,6 +31,10 @@ export interface Laws {
   extraMan: boolean;
   freeJump: boolean;
   hopCrown: boolean;
+  farJump: boolean;
+  doubleCrown: boolean;
+  trapdoor: boolean;
+  scout: boolean;
 }
 
 export interface FeltMod {
@@ -50,6 +55,10 @@ export interface BoardMods {
   /** Ranks this side sat on at setup. Landing here never crowns. */
   youHome: number[];
   themHome: number[];
+  /** Far Jump already used this turn. */
+  farJumpUsed: boolean;
+  /** Trapdoor already made a hole this board. */
+  trapdoorUsed: boolean;
 }
 
 export interface Meta {
@@ -109,6 +118,10 @@ export function emptyLaws(): Laws {
     extraMan: false,
     freeJump: false,
     hopCrown: false,
+    farJump: false,
+    doubleCrown: false,
+    trapdoor: false,
+    scout: false,
   };
 }
 
@@ -122,6 +135,8 @@ export function emptyMods(): BoardMods {
     themKingRow: SIZE - 1,
     youHome: [6, 7],
     themHome: [0, 1],
+    farJumpUsed: false,
+    trapdoorUsed: false,
   };
 }
 

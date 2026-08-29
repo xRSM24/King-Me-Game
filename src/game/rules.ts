@@ -160,12 +160,44 @@ function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
   }
 }
 
+/** Far Jump: [you][enemy][empty][land] on one diagonal. Once per your turn, men only. */
+function addFarJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
+  if (piece.side !== "you" || piece.king) return;
+  if (!laws.farJump || mods.farJumpUsed) return;
+  for (const d of jumpDirs(piece, laws, mods)) {
+    const er = from.r + d.r;
+    const ec = from.c + d.c;
+    const sr = from.r + d.r * 2;
+    const sc = from.c + d.c * 2;
+    const tr = from.r + d.r * 3;
+    const tc = from.c + d.c * 3;
+    if (!inBoard(er, ec) || !inBoard(sr, sc)) continue;
+    if (!isDark(sr, sc)) continue;
+    if (!playable(tr, tc, mods)) continue;
+    const mid = board[er]?.[ec];
+    if (!mid || mid.side === piece.side) continue;
+    if (board[sr]![sc]) continue;
+    if (board[tr]![tc]) continue;
+    out.push({ from, to: { r: tr, c: tc }, capture: { r: er, c: ec }, far: true });
+  }
+}
+
+export function cloneMods(mods: BoardMods): BoardMods {
+  return {
+    ...mods,
+    holes: mods.holes.map((h) => ({ r: h.r, c: h.c })),
+    youHome: [...mods.youHome],
+    themHome: [...mods.themHome],
+  };
+}
+
 export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods = emptyMods()): Move[] {
   const piece = at(board, from);
   if (!piece) return [];
   const jumps: Move[] = [];
   const slides: Move[] = [];
   addJumps(board, from, piece, laws, mods, jumps);
+  addFarJumps(board, from, piece, laws, mods, jumps);
   addSlide(board, from, piece, laws, mods, slides);
   return [...jumps, ...slides];
 }
@@ -215,7 +247,58 @@ export function moreJumps(board: Board, pos: Pos, laws: Laws, mods: BoardMods = 
   if (!piece) return false;
   const jumps: Move[] = [];
   addJumps(board, pos, piece, laws, mods, jumps);
+  addFarJumps(board, pos, piece, laws, mods, jumps);
   return jumps.length > 0;
+}
+
+/** A regular piece diagonally next to a new King becomes a King too. */
+export function spreadCrown(board: Board, pos: Pos, side: Side): { board: Board; pos: Pos | null } {
+  const next = cloneBoard(board);
+  for (const d of ALL) {
+    const r = pos.r + d.r;
+    const c = pos.c + d.c;
+    if (!inBoard(r, c)) continue;
+    const p = next[r]![c];
+    if (p && p.side === side && !p.king) {
+      p.king = true;
+      return { board: next, pos: { r, c } };
+    }
+  }
+  return { board, pos: null };
+}
+
+/** One regular piece walks two rows toward the Enemy, same file, if that square is free. */
+export function placeScout(board: Board, side: Side, mods: BoardMods): Board {
+  const step = manStep(side, mods);
+  const home = backRow(side, mods);
+  const men = piecesOf(board, side)
+    .filter((x) => !x.piece.king)
+    .sort((a, b) => Math.abs(a.pos.r - home) - Math.abs(b.pos.r - home));
+  for (const { pos } of men) {
+    const r = pos.r + step * 2;
+    const c = pos.c;
+    if (!playable(r, c, mods)) continue;
+    if (board[r]![c]) continue;
+    const next = cloneBoard(board);
+    next[r]![c] = next[pos.r]![pos.c];
+    next[pos.r]![pos.c] = null;
+    return next;
+  }
+  return board;
+}
+
+/** Scout, then Double Crown any King that already sat down at setup. */
+export function applyStartLaws(board: Board, laws: Laws, mods: BoardMods): Board {
+  let next = board;
+  if (laws.scout) next = placeScout(next, "you", mods);
+  if (!laws.doubleCrown) return next;
+  for (const { pos, piece } of piecesOf(next, "you")) {
+    if (!piece.king) continue;
+    const extra = spreadCrown(next, pos, "you");
+    next = extra.board;
+    if (extra.pos) break;
+  }
+  return next;
 }
 
 export function recruitMan(board: Board, side: Side, nextId: () => number, mods: BoardMods = emptyMods()): Board {

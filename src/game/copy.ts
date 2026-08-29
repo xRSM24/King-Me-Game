@@ -45,6 +45,17 @@ export const SECOND_CHANCE_DESC =
 export const HOP_PARTY_DESC =
   "Every 4 captures this climb, one random non-King player piece becomes a King.";
 
+export const FAR_JUMP_DESC =
+  "Once each turn, one regular piece (not a King) may jump farther: over an Enemy, skip the next square if it is empty, and land on the next dark square.";
+
+export const DOUBLE_CROWN_DESC =
+  "When one of your pieces becomes a King, a regular piece next to it becomes a King too.";
+
+export const TRAPDOOR_DESC =
+  "Once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. You can still jump over it.";
+
+export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
+
 export const FIRST_JUMP_DESC = "A gold star is already set up. Jump it first — that capture is 2 squares over the Enemy.";
 
 export const RACE_DESC =

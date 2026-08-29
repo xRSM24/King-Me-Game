@@ -23,6 +23,7 @@ export interface ClimbSave {
   lastRitesUsed: boolean;
   oopsLeft: number;
   snapshot: SavedCell[][] | null;
+  snapshotMods: BoardMods | null;
   snapshotHops: number;
   snapshotMoves: number;
   snapshotLastRites: boolean;
@@ -99,6 +100,14 @@ export function loadClimb(): ClimbSave | null {
       lastRitesUsed: !!p.lastRitesUsed,
       oopsLeft: typeof p.oopsLeft === "number" ? p.oopsLeft : 1,
       snapshot: Array.isArray(p.snapshot) ? p.snapshot : null,
+      snapshotMods: p.snapshotMods
+        ? {
+            ...emptyMods(),
+            ...p.snapshotMods,
+            holes: Array.isArray(p.snapshotMods.holes) ? p.snapshotMods.holes : [],
+            ...campsForSave(p.snapshotMods, feltMods),
+          }
+        : null,
       snapshotHops: Number(p.snapshotHops) || 0,
       snapshotMoves: Number(p.snapshotMoves) || 0,
       snapshotLastRites: !!p.snapshotLastRites,

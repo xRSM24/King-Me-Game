@@ -9,8 +9,10 @@ import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
 import { dailySeed, hashSeed, Rng, freshSeed } from "./rng.ts";
 import {
   applyMove,
+  applyStartLaws,
   at,
   cloneBoard,
+  cloneMods,
   crownRandom,
   isHole,
   legalMoves,
@@ -22,6 +24,7 @@ import {
   recruitMan,
   reviveKing,
   setupBoard,
+  spreadCrown,
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
@@ -61,6 +64,7 @@ export class Game {
   lastRitesUsed = false;
   oopsLeft = 1;
   snapshot: Board | null = null;
+  snapshotMods: BoardMods | null = null;
   snapshotHops = 0;
   snapshotMoves = 0;
   snapshotLastRites = false;
@@ -371,6 +375,7 @@ export class Game {
     this.lastRitesUsed = saved.lastRitesUsed;
     this.oopsLeft = saved.oopsLeft;
     this.snapshot = saved.snapshot ? unpackBoard(saved.snapshot) : null;
+    this.snapshotMods = saved.snapshotMods ? cloneMods({ ...emptyMods(), ...saved.snapshotMods }) : null;
     this.snapshotHops = saved.snapshotHops;
     this.snapshotMoves = saved.snapshotMoves;
     this.snapshotLastRites = saved.snapshotLastRites ?? saved.lastRitesUsed;
@@ -425,6 +430,7 @@ export class Game {
       lastRitesUsed: this.lastRitesUsed,
       oopsLeft: this.oopsLeft,
       snapshot: this.snapshot ? packBoard(this.snapshot) : null,
+      snapshotMods: this.snapshotMods ? cloneMods(this.snapshotMods) : null,
       snapshotHops: this.snapshotHops,
       snapshotMoves: this.snapshotMoves,
       snapshotLastRites: this.snapshotLastRites,
@@ -467,7 +473,7 @@ export class Game {
     this.dailyLabel = dailyTitle();
     this.mods = modsFromSpec(spec, { themFly: applied.themFly, themBack: applied.themBack });
     this.blurb = spec.blurb;
-    this.board = setupBoard(spec, this.pid);
+    this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
     this.turn = "you";
     this.selected = null;
     this.lock = null;
@@ -475,6 +481,7 @@ export class Game {
     this.animating = false;
     this.oopsLeft = applied.oops;
     this.snapshot = null;
+    this.snapshotMods = null;
     this.skippedJump = false;
     this.aiMem = emptyMemory();
     this.coachOn = false;
@@ -544,7 +551,7 @@ export class Game {
     this.mods = modsFromSpec(spec);
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
-    this.board = setupBoard(spec, this.pid);
+    this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
     this.turn = "you";
     this.selected = null;
     this.lock = null;
@@ -552,6 +559,7 @@ export class Game {
     this.animating = false;
     this.oopsLeft = this.mode === "daily" ? 2 : 1;
     this.snapshot = null;
+    this.snapshotMods = null;
     this.skippedJump = false;
     this.combo = 0;
     this.aiMem = emptyMemory();
@@ -782,6 +790,7 @@ export class Game {
     this.audio.oops();
     this.oopsLeft -= 1;
     this.board = cloneBoard(snap);
+    if (this.snapshotMods) this.mods = cloneMods(this.snapshotMods);
     this.hops = this.snapshotHops;
     this.moves = this.snapshotMoves;
     this.lastRitesUsed = this.snapshotLastRites;
@@ -789,6 +798,7 @@ export class Game {
     this.selected = null;
     this.combo = 0;
     this.snapshot = null;
+    this.snapshotMods = null;
     this.skippedJump = false;
     this.turn = "you";
     this.thinking = false;
@@ -999,6 +1009,7 @@ export class Game {
     const gen = this.actionGen;
     if (!this.lock) {
       this.snapshot = cloneBoard(this.board);
+      this.snapshotMods = cloneMods(this.mods);
       this.snapshotHops = this.hops;
       this.snapshotMoves = this.moves;
       this.snapshotLastRites = this.lastRitesUsed;
@@ -1025,17 +1036,25 @@ export class Game {
         if (this.stale(gen)) return;
       }
       this.board = applyMove(this.board, move, this.mods);
+      if (move.far) this.mods.farJumpUsed = true;
       const nowKing = at(this.board, move.to)?.king ?? false;
       let partyPos: Pos | null = null;
+      let extraPos: Pos | null = null;
+      let partyExtra: Pos | null = null;
       if (move.capture) {
         this.hops += 1;
         this.combo += 1;
         this.audio.capture(this.combo);
         const yell = comboName(this.combo);
-        this.cheer(yell, this.combo);
-        this.pushLog(this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
+        this.cheer(move.far ? "Far jump!" : yell, this.combo);
+        this.pushLog(move.far ? "Far jump!" : this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
         if (this.coachOn) this.finishCoach();
         if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
+        if (this.laws.trapdoor && !this.mods.trapdoorUsed) {
+          this.mods.holes = [...this.mods.holes, { r: move.to.r, c: move.to.c }];
+          this.mods.trapdoorUsed = true;
+          this.pushLog("Trapdoor! That square is a hole now.");
+        }
         if (this.laws.hopCrown && this.hops % 4 === 0) {
           const c = crownRandom(this.board, "you", (n) => this.rng.int(n));
           this.board = c.board;
@@ -1044,6 +1063,16 @@ export class Game {
       } else {
         this.combo = 0;
         if (fromDrag) this.audio.hop();
+      }
+      if (this.laws.doubleCrown && !wasKing && nowKing) {
+        const extra = spreadCrown(this.board, move.to, "you");
+        this.board = extra.board;
+        extraPos = extra.pos;
+      }
+      if (this.laws.doubleCrown && partyPos) {
+        const extra = spreadCrown(this.board, partyPos, "you");
+        this.board = extra.board;
+        partyExtra = extra.pos;
       }
 
       keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
@@ -1060,11 +1089,25 @@ export class Game {
         await this.animateCrown(move.to);
         if (this.stale(gen)) return;
       }
+      if (extraPos) {
+        this.audio.crown();
+        this.cheer("Double Crown!");
+        this.pushLog("Double Crown! A neighbor is a King too.");
+        await this.animateCrown(extraPos);
+        if (this.stale(gen)) return;
+      }
       if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
         this.audio.crown();
         this.cheer("Party King!");
         this.pushLog("Hop Party made a King.");
         await this.animateCrown(partyPos);
+        if (this.stale(gen)) return;
+      }
+      if (partyExtra && (!extraPos || !samePos(partyExtra, extraPos))) {
+        this.audio.crown();
+        this.cheer("Double Crown!");
+        this.pushLog("Double Crown! A neighbor is a King too.");
+        await this.animateCrown(partyExtra);
         if (this.stale(gen)) return;
       }
     } finally {
@@ -1086,6 +1129,7 @@ export class Game {
 
   private afterYou(): void {
     this.skippedJump = false;
+    this.mods.farJumpUsed = false;
     this.moves += 1;
     const over = outcome(this.board, "them", this.laws, this.mods);
     if (over === "you") {
@@ -1148,6 +1192,7 @@ export class Game {
     }
     if (over === "you") {
       this.snapshot = null;
+      this.snapshotMods = null;
       this.boardCleared();
       return;
     }
@@ -1312,6 +1357,10 @@ export class Game {
       this.lastRitesUsed = true;
       const revived = reviveKing(this.board, "you", this.pid, this.laws, this.mods);
       this.board = revived.board;
+      if (this.laws.doubleCrown && revived.pos) {
+        const extra = spreadCrown(this.board, revived.pos, "you");
+        this.board = extra.board;
+      }
       const target = revived.pos ?? piecesOf(this.board, "you")[0]?.pos ?? null;
       this.pushLog("Second Chance! A King hops back on the far row.");
       this.cheer("Saved!");
@@ -1758,6 +1807,7 @@ export class Game {
     const shown = legal.filter((m) => !this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c));
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(shown.filter((m) => m.capture).map((m) => `${m.to.r},${m.to.c}`));
+    const longs = new Set(shown.filter((m) => m.far).map((m) => `${m.to.r},${m.to.c}`));
     const preys = new Set(
       shown.filter((m) => m.capture).map((m) => `${m.capture!.r},${m.capture!.c}`),
     );
@@ -1771,12 +1821,14 @@ export class Game {
         const sel = this.selected && this.selected.r === r && this.selected.c === c;
         const hint = hints.has(`${r},${c}`);
         const prey = preys.has(`${r},${c}`);
+        const far = longs.has(`${r},${c}`);
         const can = p && p.side === "you" && froms.has(`${r},${c}`) && !this.lock;
-        html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${prey ? "prey" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${dark && !hole ? 'tabindex="0"' : 'tabindex="-1"'}>`;
+        const focusable = dark && (!hole || !!p);
+        html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${prey ? "prey" : ""} ${far ? "long" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${focusable ? 'tabindex="0"' : 'tabindex="-1"'}>`;
         if (p) {
           html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "player" : "enemy"} ${p.king ? "King" : "piece"}"><span class="face" aria-hidden="true"></span></span>`;
         } else if (hint) {
-          html += `<span class="land ${jumps.has(`${r},${c}`) ? "jump" : ""}" aria-hidden="true"></span>`;
+          html += `<span class="land ${jumps.has(`${r},${c}`) ? "jump" : ""} ${far ? "far" : ""}" aria-hidden="true"></span>`;
         }
         html += `</div>`;
       }
