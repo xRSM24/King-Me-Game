@@ -1,5 +1,5 @@
-import type { BoardSetup, FeltMod, Pos } from "./types.ts";
-import { PATH_END, isDark } from "./types.ts";
+import type { BoardMods, BoardSetup, FeltMod, Laws, Pos } from "./types.ts";
+import { PATH_END, isDark, samePos } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
 import {
   CLOSE_QUARTERS_DESC,
@@ -17,6 +17,7 @@ import {
   holesDesc,
   laneDesc,
 } from "./copy.ts";
+import { at, isHoleTrapped, piecesOf, type Board } from "./rules.ts";
 
 const ADJ = [
   "Sunny",
@@ -151,6 +152,73 @@ export function pickHoles(rng: Rng, n: number, used: Set<string>): Pos[] {
   const out = spots.slice(0, Math.max(0, n));
   for (const p of out) used.add(key(p));
   return out;
+}
+
+function trappedByHoles(board: Board, laws: Laws, mods: BoardMods): Pos[] {
+  const out: Pos[] = [];
+  for (const side of ["you", "them"] as const) {
+    for (const { pos } of piecesOf(board, side)) {
+      if (isHoleTrapped(board, pos, laws, mods)) out.push(pos);
+    }
+  }
+  return out;
+}
+
+export function withHoleMods(felt: FeltMod[], n: number): FeltMod[] {
+  const rest = felt.filter((m) => m.title !== "A Hole in the Felt" && m.title !== "Holes in the Felt");
+  if (n <= 0) return rest;
+  rest.push({
+    title: n === 1 ? "A Hole in the Felt" : "Holes in the Felt",
+    desc: n === 1 ? HOLE_ONE_DESC : holesDesc(n),
+  });
+  return rest;
+}
+
+/**
+ * If a pit walls in a piece that could otherwise step (the side-file two-hole plug),
+ * scoot that pit to another middle square — or drop it if nowhere is safe.
+ */
+export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng): BoardMods {
+  if (!mods.holes.length) return mods;
+  let holes = mods.holes.map((h) => ({ r: h.r, c: h.c }));
+  let next: BoardMods = { ...mods, holes };
+  for (let guard = 0; guard < 24; guard++) {
+    const trapped = trappedByHoles(board, laws, next);
+    if (!trapped.length) return next;
+    const count = trapped.length;
+    const dests = darkPlayable([2, 3, 4, 5]).filter(
+      (p) => !at(board, p) && !holes.some((h) => samePos(h, p)),
+    );
+    rng.shuffle(dests);
+    let moved = false;
+    for (let i = 0; i < holes.length && !moved; i++) {
+      for (const dest of dests) {
+        const trial = holes.map((h, j) => (j === i ? dest : h));
+        const cand: BoardMods = { ...mods, holes: trial };
+        if (trappedByHoles(board, laws, cand).length < count) {
+          holes = trial;
+          next = cand;
+          moved = true;
+          break;
+        }
+      }
+      if (moved) break;
+      const dropped = holes.filter((_, j) => j !== i);
+      const cand: BoardMods = { ...mods, holes: dropped };
+      if (trappedByHoles(board, laws, cand).length < count) {
+        holes = dropped;
+        next = cand;
+        moved = true;
+      }
+    }
+    if (!moved) {
+      const first = holes[0];
+      if (!first) return next;
+      next = { ...mods, holes: holes.filter((h) => !samePos(h, first)) };
+      holes = next.holes;
+    }
+  }
+  return next;
 }
 
 /** Ivory (higher row) jumps a charcoal toward the crown. */

@@ -29,7 +29,7 @@ import {
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
-import { boardSpec, climbNames, CLIMB_SKILL, feltTheme } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
@@ -489,6 +489,8 @@ export class Game {
     this.hideCoach();
     this.clearAi();
     this.feltMods = this.uniqueFelt([...(spec.feltMods ?? []), ...this.twists.map(asFelt)]);
+    this.mods = unstickHoles(this.board, this.laws, this.mods, this.rng);
+    this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
     const twistLine = this.twists.map((t) => t.name).join(" · ");
     this.pushLog(`${this.dailyLabel}. ${twistLine}. Fewest moves wins today.`);
     this.show("playing");
@@ -553,6 +555,8 @@ export class Game {
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
+    this.mods = unstickHoles(this.board, this.laws, this.mods, boardRng);
+    this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
     this.turn = "you";
     this.selected = null;
     this.lock = null;

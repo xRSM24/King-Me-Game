@@ -4,19 +4,25 @@ import {
   applyStartLaws,
   campsFromRows,
   isHole,
+  isHoleTrapped,
   legalMoves,
   manStep,
+  modsFromSpec,
   moreJumps,
   moveHitting,
+  movesFrom,
   placeScout,
   playable,
   reviveKing,
+  setupBoard,
   spreadCrown,
   wouldCrown,
   type Board,
 } from "./rules.ts";
 import { emptyLaws, emptyMods, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
+import { hashSeed, Rng } from "./rng.ts";
+import { boardSpec, unstickHoles } from "./setup.ts";
 
 function blank(): Board {
   return Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, () => null));
@@ -207,6 +213,52 @@ assert(isHole(trap, 3, 4), "Trapdoor marks the landing as a hole");
 assert(afterTake[3]![4], "the piece may keep sitting on the new hole");
 assert(!playable(3, 4, trap), "nobody else may land there after");
 assert(moreJumps(afterTake, { r: 3, c: 4 }, emptyLaws(), trap), "you can still jump from a Trapdoor hole");
+
+board = blank();
+board[6]![1] = { id: 60, side: "you", king: false };
+board[1]![2] = { id: 61, side: "them", king: false };
+const plugged = { ...std, holes: [{ r: 5, c: 0 }, { r: 5, c: 2 }] };
+assert(isHoleTrapped(board, { r: 6, c: 1 }, emptyLaws(), plugged), "two pits on the side can wall in a piece");
+assert(movesFrom(board, { r: 6, c: 1 }, emptyLaws(), plugged).length === 0, "that piece has nowhere to step");
+const freed = unstickHoles(board, emptyLaws(), plugged, new Rng(7));
+assert(!isHoleTrapped(board, { r: 6, c: 1 }, emptyLaws(), freed), "unstick opens a path for the walled-in piece");
+assert(movesFrom(board, { r: 6, c: 1 }, emptyLaws(), freed).length > 0, "the side piece can step after unstick");
+assert(freed.holes.length === 2, "the two pits move, they do not vanish");
+
+board = blank();
+board[7]![0] = { id: 62, side: "you", king: false };
+board[6]![1] = { id: 63, side: "you", king: false };
+const behind = { ...std, holes: [{ r: 3, c: 4 }] };
+assert(!isHoleTrapped(board, { r: 7, c: 0 }, emptyLaws(), behind), "a piece behind a friend is not a hole trap");
+const still = unstickHoles(board, emptyLaws(), behind, new Rng(3));
+assert(still.holes.length === 1 && still.holes[0]!.r === 3 && still.holes[0]!.c === 4, "harmless pits stay put");
+
+board = blank();
+board[6]![7] = { id: 64, side: "you", king: false };
+const edge = { ...std, holes: [{ r: 5, c: 6 }] };
+assert(isHoleTrapped(board, { r: 6, c: 7 }, emptyLaws(), edge), "one pit can seal the right file");
+const edgeFree = unstickHoles(board, emptyLaws(), edge, new Rng(11));
+assert(movesFrom(board, { r: 6, c: 7 }, emptyLaws(), edgeFree).length > 0, "the right-file piece can step after unstick");
+
+for (let seed = 1; seed <= 40; seed++) {
+  for (let i = 1; i <= 5; i++) {
+    const rng = new Rng(hashSeed(seed * 104729 + i * 17));
+    const spec = boardSpec(i, 0, false, rng);
+    const mods = modsFromSpec(spec);
+    let n = 0;
+    const felt = applyStartLaws(setupBoard(spec, () => ++n), emptyLaws(), mods);
+    const free = unstickHoles(felt, emptyLaws(), mods, new Rng(seed + i));
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (!felt[r]![c]) continue;
+        const pos = { r, c };
+        if (isHoleTrapped(felt, pos, emptyLaws(), free)) {
+          throw new Error(`hole trap left on board ${i} seed ${seed} at ${r},${c}`);
+        }
+      }
+    }
+  }
+}
 
 console.log("crown checks ok");
 

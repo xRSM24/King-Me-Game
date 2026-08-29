@@ -202,6 +202,14 @@ export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods =
   return [...jumps, ...slides];
 }
 
+/** True when holes (not friendly pieces) are the only reason this piece has nowhere to go. */
+export function isHoleTrapped(board: Board, pos: Pos, laws: Laws, mods: BoardMods): boolean {
+  if (!at(board, pos)) return false;
+  if (movesFrom(board, pos, laws, mods).length > 0) return false;
+  if (!mods.holes.length) return false;
+  return movesFrom(board, pos, laws, { ...mods, holes: [] }).length > 0;
+}
+
 export function legalMoves(
   board: Board,
   side: Side,
