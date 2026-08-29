@@ -1,5 +1,5 @@
 /** Run with: node --experimental-strip-types src/game/crownCheck.ts */
-import { applyMove, campsFromRows, legalMoves, manStep, wouldCrown, type Board } from "./rules.ts";
+import { applyMove, campsFromRows, legalMoves, manStep, reviveKing, wouldCrown, type Board } from "./rules.ts";
 import { emptyLaws, emptyMods, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 
@@ -56,4 +56,35 @@ board[6]![1] = { id: 4, side: "you", king: false };
 const ownBack = applyMove(board, { from: { r: 6, c: 1 }, to: { r: 7, c: 0 } }, std);
 assert(!ownBack[7]![0]?.king, "on a normal board, stepping onto your own back row does not king");
 
+board = blank();
+board[3]![2] = { id: 10, side: "you", king: true };
+board[2]![1] = { id: 11, side: "them", king: false };
+board[2]![3] = { id: 12, side: "them", king: false };
+board[4]![1] = { id: 13, side: "them", king: false };
+board[4]![3] = { id: 14, side: "them", king: false };
+const kingJumps = legalMoves(board, "you", emptyLaws(), null, std);
+assert(
+  kingJumps.filter((m) => m.capture).length === 4,
+  "a King in the middle jumps all 4 diagonals, including back",
+);
+assert(
+  kingJumps.some((m) => m.capture && m.to.r > m.from.r),
+  "a King can capture toward home",
+);
+
+board = blank();
+board[1]![2] = { id: 20, side: "them", king: false };
+board[6]![1] = { id: 21, side: "them", king: false };
+let seq = 100;
+const revived = reviveKing(board, "you", () => seq++, emptyLaws(), std);
+assert(revived.pos, "Second Chance places a King");
+assert(revived.board[revived.pos!.r]![revived.pos!.c]?.king, "the returned piece is a King");
+assert(revived.pos!.r !== 7, "Second Chance does not sit the King on your back row");
+const homeward = legalMoves(revived.board, "you", emptyLaws(), null, std);
+assert(
+  homeward.some((m) => m.capture && m.to.r > m.from.r),
+  "the returned King can capture back toward home",
+);
+
 console.log("crown checks ok");
+

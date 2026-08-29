@@ -40,7 +40,7 @@ export const BUDDY_UP_DESC =
   "After each of your captures, if your back row (the edge you started from) has an empty dark square, a new player piece sits there.";
 
 export const SECOND_CHANCE_DESC =
-  "Once this climb, if you lose every piece, one King comes back on an empty square.";
+  "Once this climb, if you lose every piece, one King comes back on an empty square of the far row. It already hops every diagonal, including back toward home.";
 
 export const HOP_PARTY_DESC =
   "Every 4 captures this climb, one random non-King player piece becomes a King.";

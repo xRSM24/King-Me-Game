@@ -67,6 +67,10 @@ function backRow(side: Side, mods: BoardMods): number {
   return manStep(side, mods) < 0 ? SIZE - 1 : 0;
 }
 
+function kingRow(side: Side, mods: BoardMods): number {
+  return side === "you" ? mods.youKingRow : mods.themKingRow;
+}
+
 export function cloneBoard(board: Board): Board {
   return board.map((row) => row.map((c) => (c ? { ...c } : null)));
 }
@@ -216,6 +220,52 @@ export function recruitMan(board: Board, side: Side, nextId: () => number, mods:
     return next;
   }
   return next;
+}
+
+/** Second Chance: a King returns from the far edge, not your back row, so it can hop every diagonal. */
+export function reviveKing(
+  board: Board,
+  side: Side,
+  nextId: () => number,
+  laws: Laws,
+  mods: BoardMods = emptyMods(),
+): { board: Board; pos: Pos | null } {
+  const next = cloneBoard(board);
+  const goal = kingRow(side, mods);
+  const towardHome = -manStep(side, mods);
+  const spots: Pos[] = [];
+  for (let i = 0; i < SIZE; i++) {
+    const r = goal + towardHome * i;
+    if (r < 0 || r >= SIZE) break;
+    for (let c = 0; c < SIZE; c++) {
+      if (!playable(r, c, mods)) continue;
+      if (next[r]![c]) continue;
+      spots.push({ r, c });
+    }
+  }
+  if (!spots.length) return { board, pos: null };
+
+  const scoreSpot = (pos: Pos): number => {
+    next[pos.r]![pos.c] = { id: -1, side, king: true };
+    const moves = movesFrom(next, pos, laws, mods);
+    next[pos.r]![pos.c] = null;
+    if (moves.some((m) => m.capture)) return 2;
+    if (moves.length) return 1;
+    return 0;
+  };
+
+  let best = spots[0]!;
+  let bestScore = -1;
+  for (const pos of spots) {
+    const s = scoreSpot(pos);
+    if (s > bestScore) {
+      best = pos;
+      bestScore = s;
+      if (s === 2) break;
+    }
+  }
+  next[best.r]![best.c] = { id: nextId(), side, king: true };
+  return { board: next, pos: best };
 }
 
 export function crownRandom(board: Board, side: Side, pick: (n: number) => number): { board: Board; did: boolean; pos: Pos | null } {

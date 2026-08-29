@@ -52,7 +52,7 @@ After each win you pick one that lasts the rest of the run:
 - **Jump Back** — your pieces may jump all 4 diagonals (not just toward the Enemy). Quiet slides still go forward 1 square.
 - **Super King** — your Kings slide any empty diagonal, up to 7 squares (a normal King steps 1)
 - **Buddy Up** — after each capture, a new player piece sits on an empty square of your back row (the edge you started from)
-- **Second Chance** — once this climb, if you lose every piece, one King comes back
+- **Second Chance** — once this climb, if you lose every piece, one King comes back on the far row and hops every diagonal
 - **Start as King** — every board, one of your pieces starts already a King
 - **Extra Piece** — +1 player piece at the start of every board
 - **Skip the Jump** — tap **Skip jump** to walk 1 square instead of capturing, or to stop a combo; the Enemy still must jump

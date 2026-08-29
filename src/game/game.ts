@@ -19,6 +19,7 @@ import {
   outcome,
   piecesOf,
   recruitMan,
+  reviveKing,
   setupBoard,
   type Board,
 } from "./rules.ts";
@@ -1304,15 +1305,10 @@ export class Game {
   private tryRites(): void {
     if (this.laws.lastRites && !this.lastRitesUsed) {
       this.lastRitesUsed = true;
-      const before = new Set(piecesOf(this.board, "you").map((x) => x.piece.id));
-      this.board = recruitMan(this.board, "you", this.pid, this.mods);
-      const spawned = piecesOf(this.board, "you").find((x) => !before.has(x.piece.id));
-      const target = spawned ?? piecesOf(this.board, "you")[0];
-      if (target) {
-        const p = this.board[target.pos.r]![target.pos.c];
-        if (p) p.king = true;
-      }
-      this.pushLog("Second Chance! A King hops back on.");
+      const revived = reviveKing(this.board, "you", this.pid, this.laws, this.mods);
+      this.board = revived.board;
+      const target = revived.pos ?? piecesOf(this.board, "you")[0]?.pos ?? null;
+      this.pushLog("Second Chance! A King hops back on the far row.");
       this.cheer("Saved!");
       this.audio.crown();
       this.turn = "you";
@@ -1320,7 +1316,7 @@ export class Game {
       this.lock = null;
       this.selected = null;
       this.renderAll();
-      if (target) void this.animateCrown(target.pos);
+      if (target) void this.animateCrown(target);
       if (outcome(this.board, "you", this.laws, this.mods) === "them") this.loseOrHoldOops();
       else this.persistClimb();
       return;
