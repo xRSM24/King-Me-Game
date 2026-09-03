@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Hop Crown</string>
-    <string name="title_activity_main">Hop Crown</string>
-    <string name="package_name">app.hopcrown.climb</string>
-    <string name="custom_url_scheme">app.hopcrown.climb</string>
+    <string name="app_name">King Me</string>
+    <string name="title_activity_main">King Me</string>
+    <string name="package_name">app.kingme.climb</string>
+    <string name="custom_url_scheme">app.kingme.climb</string>
 </resources>

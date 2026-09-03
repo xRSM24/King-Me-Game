@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "app.hopcrown.climb"
+    namespace "app.kingme.climb"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.hopcrown.climb"
+        applicationId "app.kingme.climb"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

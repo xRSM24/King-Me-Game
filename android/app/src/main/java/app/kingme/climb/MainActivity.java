@@ -1,4 +1,4 @@
-package app.hopcrown.climb;
+package app.kingme.climb;
 
 import com.getcapacitor.BridgeActivity;
 

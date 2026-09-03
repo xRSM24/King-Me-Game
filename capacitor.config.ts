@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "app.hopcrown.climb",
-  appName: "Hop Crown",
+  appId: "app.kingme.climb",
+  appName: "King Me",
   webDir: "dist",
   backgroundColor: "#140c28",
   android: {
@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "automatic",
     preferredContentMode: "mobile",
-    scheme: "HopCrown",
+    scheme: "KingMe",
   },
   plugins: {
     SplashScreen: {
