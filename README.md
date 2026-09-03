@@ -2,20 +2,32 @@
 
 Kid-friendly checkers with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
+There are no ads and nothing to buy. The six-board climb works offline. Daily Challenge scores need a network so everyone shares one list.
+
+## App Store / Play Store
+
+This repo is ready to archive as a native app (Capacitor). On a Mac: `npm install && npm run ios`. Full signing, privacy labels, and review notes live in **STORE.md**.
+
+Privacy (must stay publicly reachable for store review): **https://jumpgrave-ajrr1z.netlify.app/privacy.html**
+
 ## Play on a phone
 
-It is a website, not an app. On the phone open Safari or Chrome and go to:
+The live site:
 
 **https://jumpgrave-ajrr1z.netlify.app**
 
-If Netlify is **private**, the phone will ask you to sign in before the board loads:
+Or wait for the App Store / Play build from **STORE.md**. Add to Home Screen still works.
 
-- **Site password** (best for family): type the password you set under Site configuration → Access control / Password protection. You can save it in the phone’s password manager. Kids do not need a Netlify account.
-- **Team login / SSO**: log in with the same Netlify account that owns the site. A phone without that account cannot play. If you want family on phones without Netlify accounts, switch from team-only login to a site password.
+If Netlify is **private**, the website will ask you to sign in before the board loads. A store binary does **not** need that login to play the climb — only Daily pins talk to the site.
 
-This Cursor Preview (`127.0.0.1`) only works on the machine running `npm run dev`. A phone cannot open that address unless the phone and that computer share a Wi‑Fi network and you use the computer’s LAN IP Vite prints (not `127.0.0.1`).
+- **Site password** (best for family): type the password you set under Site configuration → Access control / Password protection.
+- **Team login / SSO**: log in with the same Netlify account that owns the site.
 
-Progress is stored in that browser. Safari and Chrome on the same phone do not share it. Add to Home Screen if you want a Checkmate! icon.
+The privacy and support pages must be public when you submit the app, even if the game itself stays passworded.
+
+This Cursor Preview (`127.0.0.1`) only works on the machine running `npm run dev`.
+
+Progress is stored on that device. Deleting the app or clearing the site data erases the climb.
 
 ## Play with a friend
 

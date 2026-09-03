@@ -4,8 +4,9 @@ import { comboName, comboTier } from "./combo.ts";
 import { JUMP_HOW, CHASE_START, CHASE_END_MORE, CHASE_END_TIE, chaseHint } from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
+import * as feel from "./feel.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
-import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, tryName, type Score } from "./leaderboard.ts";
+import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, reportName, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
 import { dailySeed, hashSeed, Rng, freshSeed } from "./rng.ts";
 import {
@@ -34,6 +35,7 @@ import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } fr
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { bootNative } from "../native.ts";
 
 export class Game {
   meta: Meta = loadMeta();
@@ -56,6 +58,7 @@ export class Game {
   twists: DailyMod[] = [];
   scores: Score[] = [];
   posted = false;
+  boardLive = true;
   turn: "you" | "them" = "you";
   selected: Pos | null = null;
   lock: Pos | null = null;
@@ -107,6 +110,7 @@ export class Game {
     this.bind();
     this.applyPrefs();
     this.show("title");
+    void bootNative(() => this.nativeBack());
   }
 
   private pid = (): number => {
@@ -128,6 +132,10 @@ export class Game {
         const cmd = cmdBtn.getAttribute("data-cmd");
         if (cmd) {
           e.preventDefault();
+          if (cmd === "report") {
+            void this.hideHopper(cmdBtn.getAttribute("data-name") || "");
+            return;
+          }
           this.command(cmd);
         }
         return;
@@ -203,6 +211,16 @@ export class Game {
     if (cmd === "how") {
       if (this.screen !== "how") this.returnTo = this.screen;
       this.show("how");
+      return;
+    }
+    if (cmd === "privacy") {
+      if (this.screen !== "privacy") this.returnTo = this.screen;
+      this.show("privacy");
+      return;
+    }
+    if (cmd === "support") {
+      if (this.screen !== "support") this.returnTo = this.screen;
+      this.show("support");
       return;
     }
     if (cmd === "back") {
@@ -284,6 +302,44 @@ export class Game {
     }
   }
 
+  private nativeBack(): boolean {
+    if (this.drag) {
+      this.cancelDrag();
+      return true;
+    }
+    if (this.screen === "playing") {
+      this.command("pause");
+      return true;
+    }
+    if (this.screen === "pause") {
+      this.command("resume");
+      return true;
+    }
+    if (this.screen === "pick") return true;
+    if (this.screen === "how" || this.screen === "privacy" || this.screen === "support") {
+      this.command("back");
+      return true;
+    }
+    if (this.screen === "daily" || this.screen === "end") {
+      this.show("title");
+      return true;
+    }
+    return false;
+  }
+
+  private async hideHopper(raw: string): Promise<void> {
+    const name = raw.trim();
+    if (!name) return;
+    this.unlock();
+    this.audio.ui();
+    await reportName(name);
+    this.scores = this.scores.filter((s) => s.name.toLowerCase() !== name.toLowerCase());
+    if (this.screen === "title") this.renderTitle();
+    if (this.screen === "daily") this.renderDaily();
+    if (this.screen === "end") this.renderEnd();
+    this.cheer("Hidden. Thanks.");
+  }
+
   private saveHopperName(source: HTMLElement, cheer = true): void {
     const input =
       source instanceof HTMLInputElement
@@ -296,13 +352,17 @@ export class Game {
     }
     const result = commitName(typed);
     this.paintName();
+    const status = document.getElementById("name-status");
     if (!result.saved) {
-      const status = document.getElementById("name-status");
       if (status) {
         status.hidden = false;
-        status.textContent = "A bit longer — two letters at least.";
+        status.textContent = result.problem;
       }
       return;
+    }
+    if (status) {
+      status.hidden = false;
+      status.textContent = `Hi, ${result.name}. The climb stays on this device.`;
     }
     if (cheer) {
       this.unlock();
@@ -828,6 +888,7 @@ export class Game {
     this.cancelDrag();
     document.querySelectorAll(".flyer").forEach((el) => el.remove());
     this.audio.oops();
+    feel.tap();
     this.oopsLeft -= 1;
     this.board = cloneBoard(snap);
     if (this.snapshotMods) this.mods = cloneMods(this.snapshotMods);
@@ -1095,6 +1156,7 @@ export class Game {
         this.hops += 1;
         this.combo += 1;
         this.audio.capture(this.combo);
+        feel.bump();
         const yell = comboName(this.combo);
         this.cheer(move.far ? "Far jump!" : yell, this.combo);
         this.pushLog(move.far ? "Far jump!" : this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
@@ -1133,6 +1195,7 @@ export class Game {
       if (this.stale(gen)) return;
       if (!wasKing && nowKing) {
         this.audio.crown();
+        feel.heavy();
         this.audio.fanfare();
         this.cheer("King!");
         this.pushLog("King! It hops every way.");
@@ -1141,6 +1204,7 @@ export class Game {
       }
       if (extraPos) {
         this.audio.crown();
+        feel.heavy();
         this.cheer("Double Crown!");
         this.pushLog("Double Crown! A neighbor is a King too.");
         await this.animateCrown(extraPos);
@@ -1148,6 +1212,7 @@ export class Game {
       }
       if (partyPos && !(nowKing && samePos(partyPos, move.to))) {
         this.audio.crown();
+        feel.heavy();
         this.cheer("Party King!");
         this.pushLog("Hop Party made a King.");
         await this.animateCrown(partyPos);
@@ -1155,6 +1220,7 @@ export class Game {
       }
       if (partyExtra && (!extraPos || !samePos(partyExtra, extraPos))) {
         this.audio.crown();
+        feel.heavy();
         this.cheer("Double Crown!");
         this.pushLog("Double Crown! A neighbor is a King too.");
         await this.animateCrown(partyExtra);
@@ -1252,6 +1318,7 @@ export class Game {
       const nowKing = at(this.board, move.to)?.king ?? false;
       if (move.capture) {
         this.audio.capture(1);
+        feel.bump();
         this.quiet = 0;
       }
       const keepJumping = !!(move.capture && moreJumps(this.board, move.to, this.laws, this.mods));
@@ -1260,6 +1327,7 @@ export class Game {
       if (this.stale(gen)) return;
       if (!wasKing && nowKing) {
         this.audio.crown();
+        feel.heavy();
         this.cheer("Enemy King!");
         await this.animateCrown(move.to);
         if (this.stale(gen)) return;
@@ -1457,6 +1525,7 @@ export class Game {
       this.pushLog("Second Chance! A King hops back on the far row.");
       this.cheer("Saved!");
       this.audio.crown();
+      feel.heavy();
       this.turn = "you";
       this.thinking = false;
       this.lock = null;
@@ -1502,6 +1571,7 @@ export class Game {
     this.thinking = false;
     this.animating = false;
     this.audio.win();
+    feel.winBuzz();
     this.cheer("Board clear!");
     if (this.mode === "daily" || this.boardIndex >= PATH_END - 1) {
       window.setTimeout(() => this.finish(true), 700);
@@ -1554,12 +1624,16 @@ export class Game {
     }
     if (win) {
       this.audio.win();
+      feel.winBuzz();
       if (this.mode === "run" && this.boardIndex >= PATH_END - 1) {
         this.audio.fanfare();
         this.petalBurst();
         this.cheer("The Crown falls!", 5);
       }
-    } else this.audio.lose();
+    } else {
+      this.audio.lose();
+      feel.loseBuzz();
+    }
     this.show("end");
     if (this.mode === "daily" && win) void this.refreshScores();
   }
@@ -1567,6 +1641,7 @@ export class Game {
   private async refreshScores(): Promise<void> {
     const board = await fetchBoard(utcDayKey());
     this.scores = board.scores;
+    this.boardLive = !!board.live;
     if (this.screen === "end" || this.screen === "daily" || this.screen === "title") {
       if (this.screen === "end") this.renderEnd();
       if (this.screen === "daily") this.renderDaily();
@@ -1591,9 +1666,13 @@ export class Game {
   }
 
   private scoreList(limit = 12): string {
-    const head = `<li class="head"><b>#</b><span>Name</span><em>Moves</em></li>`;
+    const head = `<li class="head"><b>#</b><span>Name</span><em>Moves</em><i></i></li>`;
     if (!this.scores.length) {
-        return `${head}<li class="quiet">Nobody on the shared board yet. Win today's map and pin your moves.</li>`;
+        return `${head}<li class="quiet">${
+          this.boardLive
+            ? "Nobody on the shared board yet. Win today's map and pin your moves."
+            : "No network for the shared board. You can still hop today's felt; a pin stays on this device until you are back online."
+        }</li>`;
     }
     const mine = loadName().toLowerCase();
     const rows = this.scores
@@ -1601,7 +1680,11 @@ export class Game {
       .map((s, i) => {
         const me = s.name.toLowerCase() === mine ? " me" : "";
         const podium = i < 3 ? ` rank-${i + 1}` : "";
-        return `<li class="score${me}${podium}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em></li>`;
+        const hide =
+          s.name.toLowerCase() === mine
+            ? `<i></i>`
+            : `<i><button type="button" class="flag" data-cmd="report" data-name="${escapeHtml(s.name)}">Hide</button></i>`;
+        return `<li class="score${me}${podium}"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><em>${s.moves}</em>${hide}</li>`;
       })
       .join("");
     return head + rows;
@@ -1673,6 +1756,7 @@ export class Game {
     this.titleWarmed = true;
     const board = await fetchBoard(utcDayKey());
     this.scores = board.scores;
+    this.boardLive = !!board.live;
     if (this.screen === "title") {
       const mini = document.getElementById("title-leaders");
       if (mini) mini.innerHTML = this.scoreList(5);
@@ -1702,7 +1786,9 @@ export class Game {
     if (lead) {
       const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
       lead.textContent =
-        `Everyone testing Checkmate! shares this fewest-moves list until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}`;
+        `Everyone testing Checkmate! shares this fewest-moves list until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}${
+          this.boardLive ? "" : " Shared pins need a network — this list is what this device last saw."
+        }`;
     }
   }
 

@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 data/daily-leaderboard.json
+data/daily-flags.json
 .netlify
 .netlify-site-id
 
@@ -24,3 +25,24 @@ data/daily-leaderboard.json
 *.njsproj
 *.sln
 *.sw?
+
+# Native builds (source projects are committed)
+android/.gradle
+android/app/build
+android/app/release
+android/local.properties
+android/captures
+android/*.iml
+android/.idea
+ios/App/Pods
+ios/App/build
+ios/App/App/public
+ios/DerivedData
+*.jks
+*.keystore
+*.mobileprovision
+
+# Capacitor assets dump
+/icons
+
+

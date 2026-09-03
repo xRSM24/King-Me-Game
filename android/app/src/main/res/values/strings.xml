@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Checkmate!</string>
+    <string name="title_activity_main">Checkmate!</string>
+    <string name="package_name">app.checkmate.climb</string>
+    <string name="custom_url_scheme">app.checkmate.climb</string>
+</resources>

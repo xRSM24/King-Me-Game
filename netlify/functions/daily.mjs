@@ -1,4 +1,5 @@
 import { connectLambda, getStore } from "@netlify/blobs";
+import { isBlockedName, sanitizeName, tryName } from "../../shared/names.mjs";
 
 const SITE_ID = process.env.BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || "be42e0aa-6fe5-4bb3-847f-22bb2d45988a";
 const CORS = {
@@ -14,13 +15,6 @@ function todayUtc() {
   const m = String(n.getUTCMonth() + 1).padStart(2, "0");
   const d = String(n.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
-}
-
-function cleanName(raw) {
-  if (typeof raw !== "string") return "Ivory";
-  const t = raw.replace(/[^\p{L}\p{N} \-']/gu, "").replace(/\s+/g, " ").trim();
-  if (t.length < 2) return "Ivory";
-  return t.slice(0, 16);
 }
 
 function sortScores(scores) {
@@ -56,6 +50,21 @@ function openStore(event) {
   }
 }
 
+function hiddenSet(list) {
+  const names = Array.isArray(list) ? list : [];
+  return new Set(names.map((n) => String(n).toLowerCase()));
+}
+
+function publicScores(scores, hidden) {
+  return sortScores(scores).filter((s) => {
+    const key = String(s.name || "").toLowerCase();
+    if (!key) return false;
+    if (hidden.has(key)) return false;
+    if (isBlockedName(s.name)) return false;
+    return true;
+  });
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") return json(204, {});
 
@@ -64,10 +73,11 @@ export async function handler(event) {
 
   const store = openStore(event);
   const raw = await store.get(day, { type: "json" });
+  const hidden = hiddenSet(await store.get("hidden-names", { type: "json" }));
   let scores = Array.isArray(raw) ? raw : [];
 
   if (event.httpMethod === "GET") {
-    return json(200, { day, scores: sortScores(scores) });
+    return json(200, { day, scores: publicScores(scores, hidden) });
   }
 
   if (event.httpMethod !== "POST") return json(405, { error: "Nope." });
@@ -75,7 +85,13 @@ export async function handler(event) {
 
   try {
     const body = JSON.parse(event.body || "{}");
-    const name = cleanName(body.name);
+    if (!tryName(body.name ?? "")) {
+      return json(400, { error: "Pick a kinder name." });
+    }
+    const name = sanitizeName(body.name);
+    if (hidden.has(name.toLowerCase()) || isBlockedName(name)) {
+      return json(400, { error: "Pick a kinder name." });
+    }
     const moves = Number(body.moves);
     if (!Number.isInteger(moves) || moves < 1 || moves > 999) {
       return json(400, { error: "Moves must be 1–999." });
@@ -87,7 +103,7 @@ export async function handler(event) {
     else rest.push(prev);
     scores = sortScores(rest).slice(0, 80);
     await store.setJSON(day, scores);
-    return json(200, { day, scores });
+    return json(200, { day, scores: publicScores(scores, hidden) });
   } catch {
     return json(400, { error: "Bad score." });
   }

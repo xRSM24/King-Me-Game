@@ -2,9 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Connect, Plugin, PreviewServer, ViteDevServer } from "vite";
+import { isBlockedName, sanitizeName, tidyName, tryName } from "./shared/names.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const file = path.join(root, "data", "daily-leaderboard.json");
+const flagsFile = path.join(root, "data", "daily-flags.json");
 
 interface Score {
   name: string;
@@ -29,11 +31,18 @@ function save(store: Store): void {
   fs.writeFileSync(file, JSON.stringify(store));
 }
 
-function cleanName(raw: unknown): string {
-  if (typeof raw !== "string") return "Ivory";
-  const t = raw.replace(/[^\p{L}\p{N} \-']/gu, "").replace(/\s+/g, " ").trim();
-  if (t.length < 2) return "Ivory";
-  return t.slice(0, 16);
+function loadFlags(): string[] {
+  try {
+    const raw = JSON.parse(fs.readFileSync(flagsFile, "utf8")) as unknown;
+    return Array.isArray(raw) ? raw.map((n) => String(n)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFlags(names: string[]): void {
+  fs.mkdirSync(path.dirname(flagsFile), { recursive: true });
+  fs.writeFileSync(flagsFile, JSON.stringify(names));
 }
 
 function todayUtc(): string {
@@ -48,6 +57,17 @@ function sortScores(scores: Score[]): Score[] {
   return [...scores].sort((a, b) => a.moves - b.moves || a.at - b.at);
 }
 
+function hiddenSet(list: string[]): Set<string> {
+  return new Set(list.map((n) => n.toLowerCase()));
+}
+
+function publicScores(scores: Score[], hidden: Set<string>): Score[] {
+  return sortScores(scores).filter((s) => {
+    const key = s.name.toLowerCase();
+    return key && !hidden.has(key) && !isBlockedName(s.name);
+  });
+}
+
 function readBody(req: Connect.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -57,34 +77,72 @@ function readBody(req: Connect.IncomingMessage): Promise<string> {
   });
 }
 
+function json(res: { setHeader: (k: string, v: string) => void; end: (s: string) => void; statusCode: number }, status: number, body: unknown): void {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(body));
+}
+
 function attach(server: ViteDevServer | PreviewServer): void {
   server.middlewares.use(async (req, res, next) => {
     const url = req.url ?? "";
+    if (url.match(/^\/api\/report\/?$/)) {
+      if (req.method === "OPTIONS") {
+        res.statusCode = 204;
+        res.end("");
+        return;
+      }
+      if (req.method === "POST") {
+        try {
+          const body = JSON.parse(await readBody(req)) as { name?: unknown };
+          const name = tidyName(String(body.name ?? ""));
+          if (name.length < 2) {
+            json(res, 400, { error: "Need a name." });
+            return;
+          }
+          const flags = loadFlags();
+          if (!flags.some((n) => n.toLowerCase() === name.toLowerCase())) {
+            flags.push(name);
+            saveFlags(flags.slice(0, 4000));
+          }
+          json(res, 200, { hidden: true, name });
+        } catch {
+          json(res, 400, { error: "Bad report." });
+        }
+        return;
+      }
+    }
     const hit = url.match(/^\/api\/daily\/(\d{4}-\d{2}-\d{2})\/?$/);
     if (!hit) {
       next();
       return;
     }
     const day = hit[1]!;
-    res.setHeader("Content-Type", "application/json");
     const store = load();
+    const hidden = hiddenSet(loadFlags());
     if (req.method === "GET") {
-      res.end(JSON.stringify({ day, scores: sortScores(store[day] ?? []) }));
+      json(res, 200, { day, scores: publicScores(store[day] ?? [], hidden) });
       return;
     }
     if (req.method === "POST") {
       if (day !== todayUtc()) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: "That day is closed." }));
+        json(res, 400, { error: "That day is closed." });
         return;
       }
       try {
         const body = JSON.parse(await readBody(req)) as { name?: unknown; moves?: unknown };
-        const name = cleanName(body.name);
+        if (!tryName(String(body.name ?? ""))) {
+          json(res, 400, { error: "Pick a kinder name." });
+          return;
+        }
+        const name = sanitizeName(String(body.name ?? ""));
+        if (hidden.has(name.toLowerCase())) {
+          json(res, 400, { error: "Pick a kinder name." });
+          return;
+        }
         const moves = Number(body.moves);
         if (!Number.isInteger(moves) || moves < 1 || moves > 999) {
-          res.statusCode = 400;
-          res.end(JSON.stringify({ error: "Moves must be 1–999." }));
+          json(res, 400, { error: "Moves must be 1–999." });
           return;
         }
         const list = store[day] ?? [];
@@ -95,10 +153,9 @@ function attach(server: ViteDevServer | PreviewServer): void {
         else rest.push(prev);
         store[day] = sortScores(rest).slice(0, 80);
         save(store);
-        res.end(JSON.stringify({ day, scores: store[day] }));
+        json(res, 200, { day, scores: publicScores(store[day], hidden) });
       } catch {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: "Bad score." }));
+        json(res, 400, { error: "Bad score." });
       }
       return;
     }

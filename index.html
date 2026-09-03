@@ -3,14 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Checkmate!</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap"
-      rel="stylesheet"
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#140c28" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Checkmate!" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
+    <title>Checkmate!</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -61,6 +64,8 @@
           <nav class="title-nav">
             <button class="texty" data-cmd="how" type="button">How to Play</button>
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
+            <button class="texty" data-cmd="privacy" type="button">Privacy</button>
+            <button class="texty" data-cmd="support" type="button">Support</button>
           </nav>
           <div class="opts">
             <button class="texty" id="opt-cb" data-cmd="colorblind" type="button">Colorblind off</button>
@@ -116,7 +121,12 @@
             </li>
             <li>
               <b>Your name.</b> Type it on the title and tap That's me. It sits on today's
-              leaderboard. No email yet — just a name on this device.
+              leaderboard. No email — just a nickname on this device. Mean words are blocked.
+              Tap Hide on a name that should not be there.
+            </li>
+            <li>
+              <b>Offline.</b> The climb works with the radio off. Daily pins need a network
+              so everyone shares one list. Nothing to buy. No ads.
             </li>
             <li>
               <b>Keys and comfort.</b> Arrows move the gold outline. Enter hops. Escape opens Menu.
@@ -125,6 +135,51 @@
             </li>
           </ol>
           <button data-cmd="back" type="button">Back</button>
+        </div>
+      </section>
+
+      <section class="screen hidden" data-screen="privacy">
+        <div class="veil narrow legal">
+          <p class="kicker">Privacy</p>
+          <h2>Your hops stay on this device</h2>
+          <p class="lead">
+            No ads, no purchases, no tracking. The climb, Stars, and the nickname you type
+            live on this phone. Deleting the app erases them. We cannot restore a climb.
+          </p>
+          <p>
+            A nickname leaves the device only if you pin a Daily Challenge score. Then we
+            keep that name, the move count, and the time so today’s fewest-moves board can
+            be shared. We never ask for a real name, email, or location.
+          </p>
+          <p>
+            Mean words are blocked. Hide hides a name for you right away and takes it off
+            the shared list. To delete a pin, write
+            <a href="mailto:ravioli2332@gmail.com">ravioli2332@gmail.com</a>
+            with the name and the UTC date.
+          </p>
+          <p class="quiet">Full policy: jumpgrave-ajrr1z.netlify.app/privacy.html</p>
+          <button data-cmd="back" type="button">Back</button>
+        </div>
+      </section>
+
+      <section class="screen hidden" data-screen="support">
+        <div class="veil narrow legal">
+          <p class="kicker">Support · 1.0.0</p>
+          <h2>Need a hand?</h2>
+          <p class="lead">
+            Six boards to the Crown. Continue waits if you close mid-climb. Daily Challenge
+            is a shared puzzle; the climb is yours alone.
+          </p>
+          <p>
+            The climb works offline. Daily pins need a network. Nothing to buy. If a name
+            on the board is mean, tap Hide, or email
+            <a href="mailto:ravioli2332@gmail.com">ravioli2332@gmail.com</a>.
+          </p>
+          <div class="row">
+            <button data-cmd="how" type="button">How to Play</button>
+            <button class="ghost" data-cmd="privacy" type="button">Privacy</button>
+          </div>
+          <button class="ghost" data-cmd="back" type="button">Back</button>
         </div>
       </section>
 
