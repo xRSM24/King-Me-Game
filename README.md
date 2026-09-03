@@ -6,7 +6,7 @@ There are no ads and nothing to buy. The six-board climb works offline. Daily Ch
 
 ## App Store / Play Store
 
-This repo is ready to archive as a native app (Capacitor). On a Mac: `npm install && npm run ios`. Full signing, privacy labels, and review notes live in **STORE.md**.
+This repo is ready to archive as a native app (Capacitor). iPhone: on a Mac, `npm install && npm run ios`. Android / Play: on any computer with Android Studio, `npm run android`. Listing copy, Data safety answers, and the 12-tester closed-test gate are in **STORE.md**.
 
 Privacy (must stay publicly reachable for store review): **https://jumpgrave-ajrr1z.netlify.app/privacy.html**
 

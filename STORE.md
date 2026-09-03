@@ -34,13 +34,86 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 5. Review notes: “The six-board climb works offline. Daily pins need a network. Type a nickname only if you want it on today’s board. Hide reports a name. No account, no ads, no IAP.”
 6. Archive → App Store Connect.
 
-## Android / Play Console
+## Google Play (Android)
 
-1. Play Console account (one-time fee).
-2. `npm run android` then Generate Signed Bundle (AAB).
-3. Content rating questionnaire: everyone / PEGI 3. Declare no ads.
-4. Privacy policy URL same as above.
-5. Data safety: optional nickname for a public scoreboard; other saves on-device.
+The Android project is already in `android/`. Package name **`app.checkmate.climb`**. Target SDK **35**. You do **not** need a Mac. You do need Android Studio (or the SDK) on your computer, a Play Console account, and a **public** privacy URL.
+
+Play still does not require ads or IAP.
+
+### 1. Account
+
+Play Console is a one-time ~$25 fee (not yearly). Sign in with a Google account at [play.google.com/console](https://play.google.com/console).
+
+If this is a **personal** developer account created after 13 Nov 2023, Google will not let you go public until a **closed test** has at least **12 testers opted in for 14 days in a row**. Friends and family with Google accounts are enough. Organization / D-U-N-S accounts skip that gate.
+
+### 2. Build an AAB (not an APK)
+
+Play rejects a raw APK for new apps. You upload an Android App Bundle.
+
+```bash
+npm install
+npm run android
+```
+
+In Android Studio: **Build → Generate Signed App Bundle**. First time, create a keystore (`checkmate.jks`) and keep that file and its passwords somewhere safe — losing it means you cannot update the listing. On the first upload, enroll in **Play App Signing** (default).
+
+High-res icon: `public/icon-512.png` (512×512). Feature graphic: `resources/play-feature.png` (1024×500). Phone screenshots: title screen + a mid-climb board, portrait, no status-bar clutter.
+
+### 3. Store listing (paste)
+
+- **App name:** Checkmate!
+- **Short description (80):** `Kid-friendly checkers. Six boards to the Crown. No ads.`
+- **Full description:**
+
+```
+Hop your pieces. Capture the Enemy. Pick a power. Beat the Crown in six boards.
+
+Checkmate! is a checkers climb for families. Each New climb rolls a fresh path. Continue waits if you close the app. Today’s Daily Challenge is the same hard board for everyone, with a fewest-moves list.
+
+The climb works with the radio off. Daily pins need a network so the shared board stays fair.
+
+No ads. Nothing to buy. No account. Type a nickname only if you want it on today’s list. Hide takes a mean name off the board.
+
+Colorblind and Motion toggles live on the title. One Oops take-back per climb board.
+```
+
+- **Category:** Games → Board
+- **Tags:** checkers, board, puzzle, kids, family
+- **Contact:** ravioli2332@gmail.com
+- **Privacy:** `https://jumpgrave-ajrr1z.netlify.app/privacy.html` (must load **without** a Netlify login)
+- **Support:** `https://jumpgrave-ajrr1z.netlify.app/support.html`
+
+Skip **Designed for Families / Kids** unless you want the extra kids-program forms. A 3+ / Everyone rating is enough.
+
+### 4. Content rating
+
+IARC questionnaire: this is a board game, no violence beyond capturing pieces, no user chat, optional nickname on a scoreboard, no location, no ads. Expect **Everyone / PEGI 3**. Declare **no ads**.
+
+### 5. Data safety (Play’s privacy form)
+
+| Question | Answer |
+| --- | --- |
+| Does the app collect data? | Yes (only if they pin a Daily score) |
+| Name | Collected, **not** linked to identity, **not** for ads, ephemeral-ish public scoreboard |
+| Gameplay / app activity | Collected **on device** (climb, Stars). Not shared off the device |
+| Location, contacts, photos, files, audio, health, financial, device IDs | Not collected |
+| Data sold / used for ads / tracking | No |
+| Encrypted in transit | Yes (HTTPS) |
+| Users can request deletion | Yes — email ravioli2332@gmail.com |
+
+Internet permission is only for the daily board. The climb does not need it.
+
+### 6. Closed test, then production
+
+1. Finish the listing, rating, and Data safety (Play blocks a release until those are done).
+2. **Testing → Closed testing** → upload the AAB → add tester Gmail addresses → send them the opt-in link. They must open it and install from Play, not a sideloaded APK.
+3. Keep **12+ opted in for 14 days**. If someone drops off, the clock can reset.
+4. Dashboard → **Apply for production access**. Say: families play the six-board climb; testers used Hide and Daily; no account; no ads.
+5. Production release: same AAB or a new one with `versionCode` bumped (`android/app/build.gradle`).
+
+### 7. Review notes (paste)
+
+The six-board climb works offline. Daily Challenge pins need a network to `jumpgrave-ajrr1z.netlify.app`. Nicknames are optional and filtered. Hide reports a name. No ads, no IAP, no login. Back key opens Menu, then Home.
 
 ## After you ship a binary
 
