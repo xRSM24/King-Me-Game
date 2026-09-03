@@ -1,6 +1,6 @@
 # App Store and Google Play
 
-Checkmate! is a **native wrapper** around the bundled game (Capacitor), not a window onto the website. The climb, Stars, Oops, and How to Play run with the radio off. Daily Challenge scores still talk to `https://jumpgrave-ajrr1z.netlify.app` so everyone shares one fewest-moves list.
+Hop Crown is a **native wrapper** around the bundled game (Capacitor), not a window onto the website. The climb, Stars, Oops, and How to Play run with the radio off. Daily Challenge scores still talk to `https://jumpgrave-ajrr1z.netlify.app` so everyone shares one fewest-moves list.
 
 This Linux workspace cannot sign an iPhone build. Archive on a Mac with Xcode. Android can be built on any machine with Android Studio.
 
@@ -8,7 +8,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 
 ## What reviewers will look for
 
-- Bundle ID `app.checkmate.climb` (change it in `capacitor.config.ts` if you already used that id).
+- Bundle ID `app.hopcrown.climb`
 - Privacy URL (must be **public**, even if the game site is passworded): `https://jumpgrave-ajrr1z.netlify.app/privacy.html`
 - Support URL: `https://jumpgrave-ajrr1z.netlify.app/support.html`
 - Contact: ravioli2332@gmail.com
@@ -36,7 +36,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 
 ## Google Play (Android)
 
-The Android project is already in `android/`. Package name **`app.checkmate.climb`**. Target SDK **35**. You do **not** need a Mac. You do need Android Studio (or the SDK) on your computer, a Play Console account, and a **public** privacy URL.
+The Android project is already in `android/`. Package name **`app.hopcrown.climb`**. Target SDK **35**. You do **not** need a Mac. You do need Android Studio (or the SDK) on your computer, a Play Console account, and a **public** privacy URL.
 
 Play still does not require ads or IAP.
 
@@ -55,20 +55,20 @@ npm install
 npm run android
 ```
 
-In Android Studio: **Build → Generate Signed App Bundle**. First time, create a keystore (`checkmate.jks`) and keep that file and its passwords somewhere safe — losing it means you cannot update the listing. On the first upload, enroll in **Play App Signing** (default).
+In Android Studio: **Build → Generate Signed App Bundle**. First time, create a keystore (`hopcrown.jks`) and keep that file and its passwords somewhere safe — losing it means you cannot update the listing. On the first upload, enroll in **Play App Signing** (default).
 
 High-res icon: `public/icon-512.png` (512×512). Feature graphic: `resources/play-feature.png` (1024×500). Phone screenshots: title screen + a mid-climb board, portrait, no status-bar clutter.
 
 ### 3. Store listing (paste)
 
-- **App name:** Checkmate!
+- **App name:** Hop Crown
 - **Short description (80):** `Kid-friendly checkers. Six boards to the Crown. No ads.`
 - **Full description:**
 
 ```
 Hop your pieces. Capture the Enemy. Pick a power. Beat the Crown in six boards.
 
-Checkmate! is a checkers climb for families. Each New climb rolls a fresh path. Continue waits if you close the app. Today’s Daily Challenge is the same hard board for everyone, with a fewest-moves list.
+Hop Crown is a checkers climb for families. Each New climb rolls a fresh path. Continue waits if you close the app. Today’s Daily Challenge is the same hard board for everyone, with a fewest-moves list.
 
 The climb works with the radio off. Daily pins need a network so the shared board stays fair.
 

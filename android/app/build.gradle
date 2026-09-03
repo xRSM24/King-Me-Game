@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "app.checkmate.climb"
+    namespace "app.hopcrown.climb"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.checkmate.climb"
+        applicationId "app.hopcrown.climb"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

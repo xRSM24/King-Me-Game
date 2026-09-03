@@ -1,4 +1,4 @@
-# Checkmate!
+# Hop Crown
 
 Kid-friendly checkers with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
@@ -37,7 +37,7 @@ Share the same live link:
 
 If the site is private, they need the password (or a Netlify team login). This Cursor Preview is only on this machine — friends should use the Netlify URL, not `127.0.0.1`.
 
-Each `npm run publish` rebuilds the same link. GitHub Actions no longer deploys on every `main` push (that burned Netlify credits). Run the **Publish Checkmate** workflow by hand, or `npm run publish`, when you actually want the live site updated.
+Each `npm run publish` rebuilds the same link. GitHub Actions no longer deploys on every `main` push (that burned Netlify credits). Run the **Publish Hop Crown** workflow by hand, or `npm run publish`, when you actually want the live site updated.
 
 ## Netlify credits
 
@@ -52,7 +52,7 @@ Playing the climb in the **app** or on `npm run dev` does not use Netlify credit
 
 If you are low: in Netlify → Project configuration → Build & deploy, turn **off** auto-publish on git. One live deploy a week is plenty. Other sites on the same Netlify team share the same 300.
 
-The daily fewest-moves board is **shared** for everyone who tests Checkmate! — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
+The daily fewest-moves board is **shared** for everyone who tests Hop Crown — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
 
 ### Local
 

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "app.checkmate.climb",
-  appName: "Checkmate!",
+  appId: "app.hopcrown.climb",
+  appName: "Hop Crown",
   webDir: "dist",
   backgroundColor: "#140c28",
   android: {
@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "automatic",
     preferredContentMode: "mobile",
-    scheme: "Checkmate",
+    scheme: "HopCrown",
   },
   plugins: {
     SplashScreen: {

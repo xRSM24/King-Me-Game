@@ -1786,7 +1786,7 @@ export class Game {
     if (lead) {
       const who = hasName() ? ` Pinning as ${loadName()}.` : " Pick a name on the title so the board knows you.";
       lead.textContent =
-        `Everyone testing Checkmate! shares this fewest-moves list until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}${
+        `Everyone testing Hop Crown shares this fewest-moves list until midnight UTC. A climb is different — New climb rolls a new path just for you.${who}${
           this.boardLive ? "" : " Shared pins need a network — this list is what this device last saw."
         }`;
     }

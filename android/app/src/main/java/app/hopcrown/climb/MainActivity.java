@@ -1,4 +1,4 @@
-package app.checkmate.climb;
+package app.hopcrown.climb;
 
 import com.getcapacitor.BridgeActivity;
 
