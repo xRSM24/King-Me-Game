@@ -1,8 +1,9 @@
 name: Publish Checkmate
 
+# Production deploys cost 15 Netlify credits each. Do not run this on every
+# push — Free is 300 credits/month, then the site pauses until next cycle.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -22,15 +23,3 @@ jobs:
         run: |
           SITE_ID="${NETLIFY_SITE_ID:-$(node -p "require('./netlify.site.json').id")}"
           npx --yes netlify-cli deploy --prod --dir=dist --auth "$NETLIFY_AUTH_TOKEN" --site "$SITE_ID"
-          echo "SITE_ID=$SITE_ID" >> "$GITHUB_ENV"
-      - name: Make the production URL public
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          SITE_ID="${NETLIFY_SITE_ID:-$SITE_ID}"
-          curl -fsS -X PATCH \
-            -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"sso_login":false}' \
-            "https://api.netlify.com/api/v1/sites/$SITE_ID" >/dev/null

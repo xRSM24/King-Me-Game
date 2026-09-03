@@ -37,7 +37,20 @@ Share the same live link:
 
 If the site is private, they need the password (or a Netlify team login). This Cursor Preview is only on this machine — friends should use the Netlify URL, not `127.0.0.1`.
 
-Each `npm run publish` (and GitHub Actions on `main`, if this repo is on GitHub with `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets) rebuilds the same link. Publish no longer changes whether the site is public or private.
+Each `npm run publish` rebuilds the same link. GitHub Actions no longer deploys on every `main` push (that burned Netlify credits). Run the **Publish Checkmate** workflow by hand, or `npm run publish`, when you actually want the live site updated.
+
+## Netlify credits
+
+Free is **300 credits a month**, then the site pauses until the next cycle. Netlify will not charge you. The low-credits warning is that cap, not a paid plan.
+
+What spends them:
+
+- **15 credits** per production deploy (`npm run publish`, or auto-deploy from Git)
+- A little for Daily Challenge function calls and page bandwidth
+
+Playing the climb in the **app** or on `npm run dev` does not use Netlify credits. Only the live website and the shared daily board do.
+
+If you are low: in Netlify → Project configuration → Build & deploy, turn **off** auto-publish on git. One live deploy a week is plenty. Other sites on the same Netlify team share the same 300.
 
 The daily fewest-moves board is **shared** for everyone who tests Checkmate! — the live site, this preview, and a friend on their phone all sit on the same list. On a Drop with no functions, the game falls back to that same Netlify board; only a total API outage keeps scores in the local browser.
 

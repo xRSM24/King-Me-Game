@@ -117,4 +117,4 @@ The six-board climb works offline. Daily Challenge pins need a network to `jumpg
 
 ## After you ship a binary
 
-Keep `npm run publish` for the website and the daily API. Store builds ship the `dist` folder from `npm run sync`. Bump `version` in `package.json` and the native version codes together.
+Keep `npm run publish` for the website and the daily API, but not on every commit — each production deploy costs Netlify credits. Store builds ship the `dist` folder from `npm run sync`. Bump `version` in `package.json` and the native version codes together.
