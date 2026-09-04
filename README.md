@@ -27,7 +27,7 @@ The privacy and support pages must be public when you submit the app, even if th
 
 This Cursor Preview (`127.0.0.1`) only works on the machine running `npm run dev`.
 
-Progress is stored on that device. Deleting the app or clearing the site data erases the climb.
+Progress is stored on that device. Deleting the app or clearing the site data erases the local climb. An optional account (grown-up email + password) keeps Stars, a paused climb, and hop history so another phone can sign in.
 
 ## Play with a friend
 
@@ -78,7 +78,8 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - When only Kings are left, if nobody jumps for 8 hops, whoever has more pieces wins — a lone King cannot run forever.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
 - Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
-- Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard. No email or password yet.
+- Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard.
+- Optional **account** (Save hops) keeps Stars and hop history if you switch phones. Play still works offline; the hop book waits until you are back online.
 
 ## Today's board
 
@@ -117,7 +118,7 @@ npm run build
 npm run preview
 ```
 
-Progress lives in the browser (`localStorage`).
+Progress lives in the browser (`localStorage`). Sign in and it also lives in the hop book (Netlify Blobs). Local `npm run dev` keeps accounts in `data/accounts.json` (gitignored).
 
 ## Controls
 

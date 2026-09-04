@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "publish": "node scripts/publish.mjs",
     "icons": "node scripts/icons.mjs",
-    "test": "tsc --noEmit && node --experimental-strip-types src/game/crownCheck.ts && node scripts/namesCheck.mjs",
+    "test": "tsc --noEmit && node --experimental-strip-types src/game/crownCheck.ts && node scripts/namesCheck.mjs && node scripts/accountCheck.mjs",
     "sync": "npm run icons && npm run build && npx cap sync && node scripts/patch-native.mjs",
     "ios": "npm run sync && npx cap open ios",
     "android": "npm run sync && npx cap open android"

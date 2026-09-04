@@ -12,6 +12,7 @@ dist
 dist-ssr
 data/daily-leaderboard.json
 data/daily-flags.json
+data/accounts.json
 .netlify
 .netlify-site-id
 

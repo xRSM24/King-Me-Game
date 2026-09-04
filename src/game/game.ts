@@ -35,6 +35,18 @@ import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } fr
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import {
+  createAccount,
+  deleteAccount,
+  fetchInsight,
+  loadSession,
+  pushAccount,
+  recordHop,
+  refreshAccount,
+  signIn,
+  signOut,
+} from "./account.ts";
+import { describeHop, loadHistory, whenHop } from "./history.ts";
 import { bootNative } from "../native.ts";
 
 export class Game {
@@ -105,12 +117,15 @@ export class Game {
   cheerTimer: number | null = null;
   coachOn = false;
   keyFocus: Pos | null = null;
+  cloudTimer: number | null = null;
+  accountBusy = false;
 
   constructor() {
     this.bind();
     this.applyPrefs();
     this.show("title");
     void bootNative(() => this.nativeBack());
+    void this.bootAccount();
   }
 
   private pid = (): number => {
@@ -174,6 +189,16 @@ export class Game {
         e.preventDefault();
         this.saveHopperName(e.target);
       }
+      if (e.target.id === "account-form") {
+        e.preventDefault();
+        const submitter = (e as SubmitEvent).submitter;
+        const intent = submitter instanceof HTMLButtonElement ? submitter.value : "login";
+        void this.submitAccount(intent);
+      }
+      if (e.target.id === "account-delete") {
+        e.preventDefault();
+        void this.submitDeleteAccount();
+      }
     });
     document.addEventListener("focusout", (e) => {
       const t = e.target;
@@ -221,6 +246,26 @@ export class Game {
     if (cmd === "support") {
       if (this.screen !== "support") this.returnTo = this.screen;
       this.show("support");
+      return;
+    }
+    if (cmd === "account") {
+      if (this.screen !== "account") this.returnTo = this.screen === "history" || this.screen === "studio" ? "title" : this.screen;
+      this.show("account");
+      return;
+    }
+    if (cmd === "history") {
+      this.show("history");
+      return;
+    }
+    if (cmd === "studio") {
+      this.show("studio");
+      return;
+    }
+    if (cmd === "sign-out") {
+      signOut();
+      this.paintAccount();
+      this.show("account");
+      this.cheer("Hops stay on this phone.");
       return;
     }
     if (cmd === "back") {
@@ -316,7 +361,7 @@ export class Game {
       return true;
     }
     if (this.screen === "pick") return true;
-    if (this.screen === "how" || this.screen === "privacy" || this.screen === "support") {
+    if (this.screen === "how" || this.screen === "privacy" || this.screen === "support" || this.screen === "account" || this.screen === "history" || this.screen === "studio") {
       this.command("back");
       return true;
     }
@@ -362,7 +407,9 @@ export class Game {
     }
     if (status) {
       status.hidden = false;
-      status.textContent = `Hi, ${result.name}. The climb stays on this device.`;
+        status.textContent = loadSession()
+          ? `Hi, ${result.name}. Your hops can follow this account.`
+          : `Hi, ${result.name}. Save hops with an account if you switch phones.`;
     }
     if (cheer) {
       this.unlock();
@@ -384,6 +431,180 @@ export class Game {
     }
     const hud = document.getElementById("hopper-tag");
     if (hud) hud.textContent = hasName() ? loadName() : "";
+  }
+
+  private queueCloud(): void {
+    if (!loadSession()) return;
+    if (this.cloudTimer) window.clearTimeout(this.cloudTimer);
+    this.cloudTimer = window.setTimeout(() => {
+      this.cloudTimer = null;
+      void pushAccount();
+    }, 900);
+  }
+
+  private async bootAccount(): Promise<void> {
+    await refreshAccount();
+    this.meta = loadMeta();
+    this.applyPrefs();
+    if (this.screen === "title") this.renderTitle();
+    else this.paintAccount();
+  }
+
+  private paintAccount(): void {
+    const session = loadSession();
+    const chip = document.getElementById("account-chip");
+    if (chip) {
+      chip.textContent = session
+        ? `Saving hops for ${session.email}.`
+        : "Hops stay on this phone until you save them.";
+    }
+    const nav = document.querySelector('[data-cmd="account"]');
+    if (nav) nav.textContent = session ? "Account" : "Save hops";
+  }
+
+  private accountNote(text: string, danger = false): void {
+    const note = document.getElementById("account-note");
+    if (!note) return;
+    note.textContent = text;
+    note.classList.toggle("danger", danger);
+  }
+
+  private renderAccount(): void {
+    const root = document.getElementById("account-body");
+    if (!root) return;
+    const session = loadSession();
+    if (!session) {
+      root.innerHTML = `
+        <p class="kicker">Hop book</p>
+        <h2>Keep your hops</h2>
+        <p class="lead">Ask a grown-up. An email and a password save Stars, a paused climb, and your hop history if this phone is cleared. You can still play without one.</p>
+        <form id="account-form" class="account-form">
+          <label for="account-email">Email</label>
+          <input id="account-email" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="80" />
+          <label for="account-password">Password</label>
+          <input id="account-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="64" />
+          <div class="account-actions">
+            <button name="intent" value="signup" type="submit">Create account</button>
+            <button class="ghost" name="intent" value="login" type="submit">Log in</button>
+          </div>
+        </form>
+        <p class="quiet" id="account-note">We store a password hash, not the password. No ads. Nothing to buy.</p>
+        <div class="col">
+          <button class="ghost" data-cmd="history" type="button">Hop history</button>
+          <button class="ghost" data-cmd="back" type="button">Back</button>
+        </div>`;
+      return;
+    }
+    root.innerHTML = `
+      <p class="kicker">Hop book</p>
+      <h2>Signed in</h2>
+      <p class="lead">Hops for <strong>${escapeHtml(session.email)}</strong> can follow you to another phone. This device still keeps a copy so you can play offline.</p>
+      <div class="col">
+        <button data-cmd="history" type="button">Hop history</button>
+        ${session.studio ? `<button class="ghost" data-cmd="studio" type="button">Hop data</button>` : ""}
+        <button class="ghost" data-cmd="sign-out" type="button">Sign out</button>
+      </div>
+      <form id="account-delete" class="account-form">
+        <label for="account-delete-pass">Delete this account</label>
+        <input id="account-delete-pass" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="64" placeholder="Password" />
+        <button class="ghost" type="submit">Delete hops in the book</button>
+      </form>
+      <p class="quiet" id="account-note">Deleting the book does not erase Stars already on this phone.</p>
+      <button class="ghost" data-cmd="back" type="button">Back</button>`;
+  }
+
+  private renderHistory(): void {
+    const root = document.getElementById("history-body");
+    if (!root) return;
+    const hops = loadHistory();
+    const session = loadSession();
+    const rows = hops.length
+      ? hops
+          .slice(0, 40)
+          .map(
+            (e) =>
+              `<li><b>${describeHop(e)}</b><span>${whenHop(e)}</span></li>`,
+          )
+          .join("")
+      : `<li class="quiet">Win a board and it lands here. Sign in so a new phone can see it too.</li>`;
+    root.innerHTML = `
+      <p class="kicker">${session ? session.email : "This phone"}</p>
+      <h2>Hop history</h2>
+      <p class="lead">${session ? "Clears, Crowns, and daily tries follow this account." : "These hops live on this phone until you save them."}</p>
+      <ol class="hop-log">${rows}</ol>
+      <div class="row">
+        <button data-cmd="account" type="button">${session ? "Account" : "Save hops"}</button>
+        <button class="ghost" data-cmd="title" type="button">Home</button>
+      </div>`;
+  }
+
+  private async renderStudio(): Promise<void> {
+    const root = document.getElementById("studio-body");
+    if (!root) return;
+    root.innerHTML = `<p class="kicker">Studio</p><h2>Hop data</h2><p class="lead">Counting the table.</p>`;
+    try {
+      const stats = await fetchInsight();
+      if (!stats) {
+        root.innerHTML = `<p class="kicker">Studio</p><h2>Hop data</h2><p class="lead">This book is for the table.</p><button data-cmd="account" type="button">Back</button>`;
+        return;
+      }
+      root.innerHTML = `
+        <p class="kicker">Studio</p>
+        <h2>Hop data</h2>
+        <p class="lead">No emails here. Just how the table is hopping.</p>
+        <div class="stat-grid">
+          <p><strong>${stats.accounts}</strong> accounts</p>
+          <p><strong>${stats.logins}</strong> sign-ins</p>
+          <p><strong>${stats.boardClears}</strong> boards cleared</p>
+          <p><strong>${stats.climbWins}</strong> Crowns</p>
+          <p><strong>${stats.climbLosses}</strong> climb falls</p>
+          <p><strong>${stats.dailyWins}</strong> dailies</p>
+        </div>
+        <button data-cmd="account" type="button">Back</button>`;
+    } catch (err) {
+      root.innerHTML = `<p class="kicker">Studio</p><h2>Hop data</h2><p class="lead">${err instanceof Error ? err.message : "Hop book hiccup."}</p><button data-cmd="account" type="button">Back</button>`;
+    }
+  }
+
+  private async submitAccount(intent: string): Promise<void> {
+    if (this.accountBusy) return;
+    const emailEl = document.getElementById("account-email");
+    const passEl = document.getElementById("account-password");
+    const email = emailEl instanceof HTMLInputElement ? emailEl.value : "";
+    const password = passEl instanceof HTMLInputElement ? passEl.value : "";
+    this.accountBusy = true;
+    this.accountNote("Opening the hop book…");
+    try {
+      if (intent === "signup") await createAccount(email, password);
+      else await signIn(email, password);
+      this.meta = loadMeta();
+      this.applyPrefs();
+      this.paintAccount();
+      this.renderAccount();
+      this.cheer("Hops can follow you.");
+    } catch (err) {
+      this.accountNote(err instanceof Error ? err.message : "Could not open the hop book.", true);
+    } finally {
+      this.accountBusy = false;
+    }
+  }
+
+  private async submitDeleteAccount(): Promise<void> {
+    if (this.accountBusy) return;
+    const passEl = document.getElementById("account-delete-pass");
+    const password = passEl instanceof HTMLInputElement ? passEl.value : "";
+    this.accountBusy = true;
+    this.accountNote("Closing the book…");
+    try {
+      await deleteAccount(password);
+      this.paintAccount();
+      this.renderAccount();
+      this.cheer("Account gone. Stars on this phone stay.");
+    } catch (err) {
+      this.accountNote(err instanceof Error ? err.message : "Could not delete.", true);
+    } finally {
+      this.accountBusy = false;
+    }
   }
 
   newRun(): void {
@@ -514,6 +735,7 @@ export class Game {
       offers: this.offers.map((o) => o.id),
       screen: this.screen === "pick" ? "pick" : "playing",
     });
+    this.queueCloud();
   }
 
   private async openDaily(): Promise<void> {
@@ -1573,6 +1795,16 @@ export class Game {
     this.audio.win();
     feel.winBuzz();
     this.cheer("Board clear!");
+    if (this.mode !== "daily" && this.boardIndex < PATH_END - 1) {
+      void recordHop({
+        kind: "board-clear",
+        title: this.pathNames[this.boardIndex] ?? "Board",
+        board: this.boardIndex + 1,
+        hops: this.hops,
+        moves: this.moves,
+        stars: this.meta.notches,
+      });
+    }
     if (this.mode === "daily" || this.boardIndex >= PATH_END - 1) {
       window.setTimeout(() => this.finish(true), 700);
       return;
@@ -1613,6 +1845,17 @@ export class Game {
         gained,
         board: this.boardIndex + 1,
       };
+      void recordHop(
+        {
+          kind: win ? "climb-win" : "climb-lose",
+          title: win ? "The Crown" : (this.pathNames[this.boardIndex] ?? "Climb"),
+          board: this.boardIndex + 1,
+          hops: this.hops,
+          moves: this.moves,
+          stars: this.meta.notches,
+        },
+        { clearClimb: true },
+      );
     } else {
       this.end = {
         win,
@@ -1621,6 +1864,14 @@ export class Game {
         gained: this.moves,
         board: 1,
       };
+      void recordHop({
+        kind: win ? "daily-win" : "daily-lose",
+        title: this.dailyLabel || "Daily",
+        board: 1,
+        hops: this.hops,
+        moves: this.moves,
+        stars: this.meta.notches,
+      });
     }
     if (win) {
       this.audio.win();
@@ -1709,6 +1960,9 @@ export class Game {
     if (name === "daily") this.renderDaily();
     if (name === "playing") this.renderAll();
     if (name === "pause") this.paintName();
+    if (name === "account") this.renderAccount();
+    if (name === "history") this.renderHistory();
+    if (name === "studio") void this.renderStudio();
     this.renderChrome();
     if (name !== "playing") this.audio.screen();
   }
@@ -1747,6 +2001,7 @@ export class Game {
       hint.textContent = `Each new game begins a new challenge. Each challenge is randomly seeded. The Daily Challenge is ${dailyTitle()}.`;
     }
     this.paintName();
+    this.paintAccount();
     void this.warmTitleScores();
   }
 

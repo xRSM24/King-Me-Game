@@ -1,0 +1,14 @@
+export const TOKEN_DAYS: number;
+export const PASSWORD_MIN: number;
+export const PASSWORD_MAX: number;
+export const STUDIO_EMAIL: string;
+export function accountSecret(): string;
+export function studioEmail(): string;
+export function normalizeEmail(raw: unknown): string;
+export function emailKey(email: string): string;
+export function hashPassword(password: string, salt?: string): { salt: string; hash: string };
+export function verifyPassword(password: string, salt: string, hash: string): boolean;
+export function checkPassword(raw: unknown): string;
+export function makeToken(id: string, secret?: string): string;
+export function readToken(token: unknown, secret?: string): string;
+export function bearerToken(header: unknown): string;

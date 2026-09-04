@@ -1315,6 +1315,97 @@ html.calm .petals {
   min-height: 1.4em;
 }
 
+.account-chip {
+  margin: -4px auto 16px;
+  max-width: 28em;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.account-form label {
+  font-weight: 800;
+  color: var(--gold);
+  text-align: left;
+}
+
+.account-form input {
+  font: inherit;
+  font-weight: 700;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--sakura);
+  background: rgba(28, 18, 8, 0.85);
+  color: var(--ivory);
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-actions button {
+  flex: 1 1 8rem;
+}
+
+.hop-log {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.hop-log li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.hop-log b {
+  color: var(--ivory);
+}
+
+.hop-log span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.stat-grid p {
+  margin: 0;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: rgba(28, 18, 8, 0.55);
+}
+
+.stat-grid strong {
+  display: block;
+  color: var(--gold);
+  font-size: 1.4rem;
+}
+
+#account-note.danger {
+  color: #f3b4a0;
+}
+
 .title-daily {
   margin: 20px auto 0;
   width: 100%;

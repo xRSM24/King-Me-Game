@@ -46,6 +46,7 @@
             <button type="submit">That's me</button>
           </form>
           <p class="name-status" id="name-status" hidden></p>
+          <p class="account-chip" id="account-chip">Hops stay on this phone until you save them.</p>
           <div class="title-plays">
             <button class="play-btn" id="play-main" data-cmd="new" type="button">
               <span class="play-face">
@@ -63,6 +64,7 @@
           </div>
           <nav class="title-nav">
             <button class="texty" data-cmd="how" type="button">How to Play</button>
+            <button class="texty" data-cmd="account" type="button">Account</button>
             <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
             <button class="texty" data-cmd="privacy" type="button">Privacy</button>
             <button class="texty" data-cmd="support" type="button">Support</button>
@@ -121,12 +123,16 @@
             </li>
             <li>
               <b>Your name.</b> Type it on the title and tap That's me. It sits on today's
-              leaderboard. No email — just a nickname on this device. Mean words are blocked.
-              Tap Hide on a name that should not be there.
+              leaderboard. Mean words are blocked. Tap Hide on a name that should not be there.
             </li>
             <li>
-              <b>Offline.</b> The climb works with the radio off. Daily pins need a network
-              so everyone shares one list. Nothing to buy. No ads.
+              <b>Save your hops.</b> An optional account (a grown-up email and a password)
+              keeps Stars, a paused climb, and your hop history if this phone is cleared.
+              You can still play with the radio off; the hop book waits until you are back online.
+            </li>
+            <li>
+              <b>Offline.</b> The climb works with the radio off. Daily pins and accounts need a network.
+              Nothing to buy. No ads.
             </li>
             <li>
               <b>Keys and comfort.</b> Arrows move the gold outline. Enter hops. Escape opens Menu.
@@ -141,15 +147,17 @@
       <section class="screen hidden" data-screen="privacy">
         <div class="veil narrow legal">
           <p class="kicker">Privacy</p>
-          <h2>Your hops stay on this device</h2>
+          <h2>Hops can follow you</h2>
           <p class="lead">
-            No ads, no purchases, no tracking. The climb, Stars, and the nickname you type
-            live on this phone. Deleting the app erases them. We cannot restore a climb.
+            No ads, no purchases, no ad tracking. Play without an account and the climb
+            stays on this phone. An optional grown-up email keeps Stars and hop history
+            if you switch devices.
           </p>
           <p>
-            A nickname leaves the device only if you pin a Daily Challenge score. Then we
-            keep that name, the move count, and the time so today’s fewest-moves board can
-            be shared. We never ask for a real name, email, or location.
+            A nickname leaves the device if you pin a Daily Challenge score, or if you
+            create an account. Then we keep that name, the email, a password hash, the
+            climb, Stars, and a hop log so you can sign in later. We never ask for a
+            real name, phone, or location.
           </p>
           <p>
             Mean words are blocked. Hide hides a name for you right away and takes it off
@@ -171,7 +179,7 @@
             is a shared puzzle; the climb is yours alone.
           </p>
           <p>
-            The climb works offline. Daily pins need a network. Nothing to buy. If a name
+            The climb works offline. Daily pins and accounts need a network. Nothing to buy. If a name
             on the board is mean, tap Hide, or email
             <a href="mailto:ravioli2332@gmail.com">ravioli2332@gmail.com</a>.
           </p>
@@ -241,7 +249,7 @@
         <div class="veil narrow">
           <p class="kicker">Paused</p>
           <h2>The pieces wait</h2>
-          <p class="lead">Nobody hops until you come back. Go home and this climb waits on this device.</p>
+          <p class="lead">Nobody hops until you come back. Go home and this climb waits on this device. Sign in and it can wait on another phone too.</p>
           <form id="pause-name-form" class="name-form compact">
             <label for="pause-name">I'm</label>
             <input
@@ -258,9 +266,28 @@
           <div class="col">
             <button data-cmd="resume" type="button">Keep playing</button>
             <button class="ghost" data-cmd="how" type="button">How to Play</button>
+            <button class="ghost" data-cmd="account" type="button">Save hops</button>
             <button class="ghost" data-cmd="home" type="button">Go home</button>
             <button class="ghost" data-cmd="abandon" type="button">Give up</button>
           </div>
+        </div>
+      </section>
+
+      <section class="screen hidden" data-screen="account">
+        <div class="veil narrow legal">
+          <div id="account-body"></div>
+        </div>
+      </section>
+
+      <section class="screen hidden" data-screen="history">
+        <div class="veil narrow">
+          <div id="history-body"></div>
+        </div>
+      </section>
+
+      <section class="screen hidden" data-screen="studio">
+        <div class="veil narrow legal">
+          <div id="studio-body"></div>
         </div>
       </section>
 

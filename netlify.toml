@@ -22,6 +22,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/account/*"
+  to = "/.netlify/functions/account?op=:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/privacy"
   to = "/privacy.html"
   status = 200

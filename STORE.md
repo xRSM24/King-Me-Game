@@ -14,15 +14,16 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 - Contact: ravioli2332@gmail.com
 - Age rating **4+**. Not the Kids Category unless you also add the Kids Category extra contracts.
 - User-generated content: nicknames on the daily board. Mean words are blocked. **Hide** removes a name from the shared list.
-- Encryption question: **No** — only HTTPS to the leaderboard (exempt). The iOS target sets `ITSAppUsesNonExemptEncryption` to false.
+- Encryption question: **No** — only HTTPS to the leaderboard and optional hop book (exempt). The iOS target sets `ITSAppUsesNonExemptEncryption` to false.
 - App Tracking Transparency: do **not** add it. We do not track.
 
 ### App Privacy labels (nutrition)
 
 | Type | Linked to identity | Used for tracking | Why |
 | --- | --- | --- | --- |
-| Name (nickname) | No | No | Optional daily leaderboard |
-| Gameplay (climb, Stars) | No | No | Stays on the device |
+| Email | Yes, if they create an account | No | Optional hop book sign-in |
+| Name (nickname) | Only if they also make an account | No | Optional daily leaderboard |
+| Gameplay (climb, Stars, hop log) | Yes, if they create an account | No | Restore hops; anonymous counts for us |
 | Location, contacts, photos, IDFA | — | — | Not collected |
 
 ## Mac: iPhone / iPad
@@ -31,7 +32,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 2. On a Mac: `npm install && npm run icons && npm run sync && npm run ios`
 3. In Xcode: signing team, unique bundle id if needed, iPhone + iPad (portrait).
 4. Screenshots: 6.7" iPhone and 13" iPad, dark felt, title + a mid-climb board. No lorem.
-5. Review notes: “The six-board climb works offline. Daily pins need a network. Type a nickname only if you want it on today’s board. Hide reports a name. No account, no ads, no IAP.”
+5. Review notes: “The six-board climb works offline. Daily pins and optional accounts need a network. Type a nickname only if you want it on today’s board. A grown-up email is optional to keep hops. Hide reports a name. No ads, no IAP.”
 6. Archive → App Store Connect.
 
 ## Google Play (Android)
@@ -72,7 +73,7 @@ King Me is a checkers climb for families. Each New climb rolls a fresh path. Con
 
 The climb works with the radio off. Daily pins need a network so the shared board stays fair.
 
-No ads. Nothing to buy. No account. Type a nickname only if you want it on today’s list. Hide takes a mean name off the board.
+No ads. Nothing to buy. An account is optional — a grown-up email keeps Stars and hop history if you switch phones. Type a nickname only if you want it on today’s list. Hide takes a mean name off the board.
 
 Colorblind and Motion toggles live on the title. One Oops take-back per climb board.
 ```
@@ -93,27 +94,28 @@ IARC questionnaire: this is a board game, no violence beyond capturing pieces, n
 
 | Question | Answer |
 | --- | --- |
-| Does the app collect data? | Yes (only if they pin a Daily score) |
-| Name | Collected, **not** linked to identity, **not** for ads, ephemeral-ish public scoreboard |
-| Gameplay / app activity | Collected **on device** (climb, Stars). Not shared off the device |
+| Does the app collect data? | Yes (Daily pins; optional account) |
+| Email | Collected **only** if they create an account. Linked to that account. Not for ads |
+| Name | Collected for the public daily board; linked to the account if they signed in |
+| Gameplay / app activity | Climb and Stars stay on device. If they have an account, a hop log is saved so they can restore it. Anonymous counts (boards, Crowns) are stored without emails on the public site |
 | Location, contacts, photos, files, audio, health, financial, device IDs | Not collected |
 | Data sold / used for ads / tracking | No |
 | Encrypted in transit | Yes (HTTPS) |
-| Users can request deletion | Yes — email ravioli2332@gmail.com |
+| Users can request deletion | Yes — Delete in Account, or email ravioli2332@gmail.com |
 
-Internet permission is only for the daily board. The climb does not need it.
+Internet permission is for the daily board and optional accounts. The climb does not need it.
 
 ### 6. Closed test, then production
 
 1. Finish the listing, rating, and Data safety (Play blocks a release until those are done).
 2. **Testing → Closed testing** → upload the AAB → add tester Gmail addresses → send them the opt-in link. They must open it and install from Play, not a sideloaded APK.
 3. Keep **12+ opted in for 14 days**. If someone drops off, the clock can reset.
-4. Dashboard → **Apply for production access**. Say: families play the six-board climb; testers used Hide and Daily; no account; no ads.
+4. Dashboard → **Apply for production access**. Say: families play the six-board climb; testers used Hide, Daily, and optional accounts; no ads.
 5. Production release: same AAB or a new one with `versionCode` bumped (`android/app/build.gradle`).
 
 ### 7. Review notes (paste)
 
-The six-board climb works offline. Daily Challenge pins need a network to `jumpgrave-ajrr1z.netlify.app`. Nicknames are optional and filtered. Hide reports a name. No ads, no IAP, no login. Back key opens Menu, then Home.
+The six-board climb works offline. Daily Challenge pins and optional accounts need a network to `jumpgrave-ajrr1z.netlify.app`. Nicknames are optional and filtered. Hide reports a name. Accounts are optional. No ads, no IAP. Back key opens Menu, then Home.
 
 ## After you ship a binary
 
