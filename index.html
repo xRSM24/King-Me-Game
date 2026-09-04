@@ -88,10 +88,10 @@
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Slide, hop two, or capture.</b> Quiet slides land on a pip (1 square). A star two squares away with nothing in the middle is a hop — you do not have to jump the Enemy. Drag over an Enemy onto the star to capture them, or drop onto them. A black pit cannot be sat on — jump over it onto the star past it. Tap the piece, then the spot, if you like.
+              <b>Slide, hop two, or capture.</b> Quiet slides land on a pip (1 square). A star two squares away with nothing in the middle is a hop the other way — you do not have to jump the Enemy. Drag over an Enemy onto the star to capture them, or drop onto them. A black pit cannot be sat on — jump over it onto the star past it. Tap the piece, then the spot, if you like.
             </li>
             <li>
-              <b>Jumps are a choice.</b> If a capture is up, you may still slide or hop empty squares instead. If you do capture and another star appears, you may keep jumping with that same frog, or tap <b>Skip jump</b> to stop. Reach the far row — the edge opposite the ranks you started on — to become a King. Landing in your own starting ranks never makes a King. A King steps
+              <b>Jumps are a choice.</b> If a capture is up, you may still slide or hop a different empty star instead of going over the Enemy. If you do capture and another star appears, you may keep capturing with that same frog, hop somewhere else, slide, or tap <b>Skip jump</b> to stop. Reach the far row — the edge opposite the ranks you started on — to become a King. Landing in your own starting ranks never makes a King. A King steps
               <b>1 square</b> on any diagonal. Super King and Long King ride the empty
               diagonal — <b>up to 7 squares</b>, not 1.
             </li>
@@ -191,7 +191,7 @@
             <ol id="path" class="path" aria-label="Path to the Crown"></ol>
           </div>
           <div class="row tiny">
-            <button class="ghost hud-btn hidden" data-cmd="skip-jump" id="btn-skip" type="button" title="Walk instead of capturing">Skip jump</button>
+            <button class="ghost hud-btn hidden" data-cmd="skip-jump" id="btn-skip" type="button" title="Stop here without hopping again">Skip jump</button>
             <button class="ghost hud-btn" data-cmd="oops" id="btn-oops" type="button">Oops</button>
             <button class="ghost hud-btn" data-cmd="mute" id="btn-mute" type="button">Sound on</button>
             <button class="ghost hud-btn" data-cmd="pause" type="button">Menu</button>
@@ -212,7 +212,7 @@
           <div id="board" role="grid" aria-label="Checkers board"></div>
           <div id="cheer" class="cheer hidden" aria-live="polite"></div>
           <div id="coach" class="coach hidden">
-            <p id="coach-text">Drag your piece over the Enemy onto the star to capture. You can also slide a pip, or hop two empty squares.</p>
+            <p id="coach-text">You do not have to jump the Enemy. Drag onto a star past them to capture, hop a different empty star, or slide a pip.</p>
             <button data-cmd="coach-ok" type="button">Got it</button>
           </div>
         </div>

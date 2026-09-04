@@ -21,6 +21,7 @@ import {
   isHole,
   legalMoves,
   modsFromSpec,
+  hopOver,
   moreJumps,
   moveHitting,
   outcome,
@@ -1301,13 +1302,16 @@ export class Game {
     const pos = { r, c };
     const piece = at(this.board, pos);
     const legal = this.youLegal();
-    const matches = legal.filter(
-      (m) =>
-        (!this.selected || samePos(m.from, this.selected)) &&
-        (samePos(m.to, pos) ||
-          (m.capture && samePos(m.capture, pos)) ||
-          (m.overHole && samePos(m.overHole, pos))),
-    );
+    const lands = legal.filter((m) => {
+      if (this.selected && !samePos(m.from, this.selected)) return false;
+      return samePos(m.to, pos);
+    });
+    const overs = legal.filter((m) => {
+      if (this.selected && !samePos(m.from, this.selected)) return false;
+      const mid = hopOver(m);
+      return mid ? samePos(mid, pos) : false;
+    });
+    const matches = lands.length ? lands : overs;
     if (this.selected && matches[0] && samePos(matches[0].from, this.selected)) {
       void this.play(matches[0]);
       return;
@@ -2163,11 +2167,11 @@ export class Game {
               ? "You're out. Tap Oops to undo — or that's the game."
               : "You're out."
             : this.lock
-              ? "Keep jumping the same frog, or Skip jump to stop."
+              ? "Keep capturing, hop a different star, slide, or Skip jump."
               : jumps.length
                 ? this.selected
-                  ? "Capture on a star, hop two empties, or slide a pip."
-                  : "A jump is ready — you do not have to take it."
+                  ? "Capture on a star, hop a different star, or slide a pip."
+                  : "A jump is ready — hop a different star or slide if you want."
                 : this.selected
                   ? legal.some((m) => m.overHole)
                     ? "Jump over the pit onto the star — or drop onto the pit."
@@ -2211,7 +2215,7 @@ export class Game {
       skip.classList.toggle("hidden", !this.lock);
       skip.disabled = !this.canSkipJump();
       skip.textContent = "Skip jump";
-      skip.title = "Stop this combo here";
+      skip.title = "Stop here without hopping again";
     }
     const laws = document.getElementById("laws");
     if (laws) {

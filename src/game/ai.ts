@@ -65,7 +65,7 @@ function chainValue(
   }
   let guard = 0;
   while (start.capture && moreJumps(b, pos, laws, mods) && guard++ < 8) {
-    const jumps = legalMoves(b, "them", laws, pos, mods);
+    const jumps = legalMoves(b, "them", laws, pos, mods).filter((m) => m.capture);
     if (!jumps.length) break;
     const nxt =
       skill > 0.5

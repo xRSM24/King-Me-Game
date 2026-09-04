@@ -256,18 +256,29 @@ export function legalMoves(
     if (lock && !samePos(pos, lock)) continue;
     all.push(...movesFrom(board, pos, laws, mods));
   }
-  if (lock) return all.filter((m) => m.capture);
   return all;
+}
+
+/** Square you hop over: Enemy, pit, or the empty dark square of a two-step leap. */
+export function hopOver(move: Move): Pos | null {
+  if (move.capture) return move.capture;
+  if (move.overHole) return move.overHole;
+  if (!move.leap) return null;
+  const r = (move.from.r + move.to.r) / 2;
+  const c = (move.from.c + move.to.c) / 2;
+  if (!Number.isInteger(r) || !Number.isInteger(c)) return null;
+  return { r, c };
 }
 
 export function moveHitting(moves: Move[], from: Pos, at: Pos): Move | undefined {
   const mine = moves.filter((m) => samePos(m.from, from));
   const land = mine.find((m) => samePos(m.to, at));
   if (land) return land;
-  const takes = mine.filter((m) => m.capture && samePos(m.capture, at));
-  if (takes[0]) return takes[0];
-  const pits = mine.filter((m) => m.overHole && samePos(m.overHole, at));
-  return pits[0];
+  const over = mine.find((m) => {
+    const mid = hopOver(m);
+    return mid ? samePos(mid, at) : false;
+  });
+  return over;
 }
 
 export function applyMove(board: Board, move: Move, mods: BoardMods = emptyMods()): Board {
