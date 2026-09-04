@@ -14,7 +14,7 @@ export async function bootNative(onBack: () => boolean): Promise<void> {
   document.documentElement.classList.add("native-app");
   try {
     await StatusBar.setStyle({ style: Style.Light });
-    await StatusBar.setBackgroundColor({ color: "#140c28" });
+    await StatusBar.setBackgroundColor({ color: "#1c1208" });
   } catch {
     /* iOS ignores background color */
   }

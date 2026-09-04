@@ -80,14 +80,14 @@ export interface FeltTheme {
 }
 
 const FELTS: FeltTheme[] = [
-  { rim: "#ff8ec8", outer: "#3d2466", back: "#2a1848", dark: "#4a2d78", darkOdd: "#3d2466", light: "#ffe9f4" },
-  { rim: "#5ad7c4", outer: "#143d3a", back: "#0f2a28", dark: "#1f5c56", darkOdd: "#164740", light: "#e5fff8" },
-  { rim: "#ffb347", outer: "#4a2410", back: "#2a1408", dark: "#6b3a1c", darkOdd: "#542c14", light: "#fff0dd" },
-  { rim: "#7eb6ff", outer: "#1a2a55", back: "#101830", dark: "#2a4580", darkOdd: "#1e3466", light: "#e8f1ff" },
-  { rim: "#ff6b8a", outer: "#4a1028", back: "#2a0814", dark: "#6b2040", darkOdd: "#541830", light: "#ffe8ee" },
-  { rim: "#c5a3ff", outer: "#2a1855", back: "#160c30", dark: "#4a3080", darkOdd: "#3a2466", light: "#f3e9ff" },
-  { rim: "#9dffb0", outer: "#14331c", back: "#0c1e10", dark: "#2a5c38", darkOdd: "#1e472c", light: "#e9ffee" },
-  { rim: "#ffd45a", outer: "#3d2a10", back: "#221808", dark: "#6b5020", darkOdd: "#544018", light: "#fff8e0" },
+  { rim: "#c4a35a", outer: "#4a2e18", back: "#2a1a0c", dark: "#8b5a2b", darkOdd: "#7a4e24", light: "#f3e2c4" },
+  { rim: "#b88858", outer: "#3d2414", back: "#22140a", dark: "#6b3a22", darkOdd: "#5c301c", light: "#f6d7c3" },
+  { rim: "#a89060", outer: "#3a2a14", back: "#201808", dark: "#7a5c32", darkOdd: "#6a4e2a", light: "#efe4c8" },
+  { rim: "#c4b070", outer: "#4a3818", back: "#2a200c", dark: "#9a6b3a", darkOdd: "#885c32", light: "#f7eed8" },
+  { rim: "#a87850", outer: "#3a2014", back: "#1e1008", dark: "#5c3d2e", darkOdd: "#4e3428", light: "#eadcc4" },
+  { rim: "#b07050", outer: "#3a1810", back: "#1c0e08", dark: "#6b2e22", darkOdd: "#5a261c", light: "#f0dcc8" },
+  { rim: "#9a9860", outer: "#323214", back: "#1a1a0c", dark: "#6b6a32", darkOdd: "#5a5828", light: "#efe8c9" },
+  { rim: "#c4a060", outer: "#4a3818", back: "#2a200c", dark: "#b08a48", darkOdd: "#9a783c", light: "#f5f0d4" },
 ];
 
 export function feltTheme(seed: number, index: number): FeltTheme {

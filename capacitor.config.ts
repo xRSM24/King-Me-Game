@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "app.kingme.climb",
   appName: "King Me",
   webDir: "dist",
-  backgroundColor: "#140c28",
+  backgroundColor: "#1c1208",
   android: {
     allowMixedContent: false,
   },
@@ -16,13 +16,13 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchAutoHide: false,
-      backgroundColor: "#140c28",
+      backgroundColor: "#1c1208",
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
     },
     StatusBar: {
       style: "LIGHT",
-      backgroundColor: "#140c28",
+      backgroundColor: "#1c1208",
     },
     Keyboard: {
       resize: "body",

@@ -1,14 +1,17 @@
 :root {
-  --felt: #3d2466;
-  --felt-deep: #140c28;
-  --ink: #fff5fb;
-  --muted: #f0cce0;
-  --gold: #ffd45a;
-  --ivory: #ffe4f0;
-  --charcoal: #2a1848;
-  --sakura: #ff8ec8;
-  --night: #1a1033;
-  --line: rgba(255, 142, 200, 0.4);
+  --felt: #6b4424;
+  --felt-deep: #1c1208;
+  --ink: #fff6e8;
+  --muted: #e4d0ae;
+  --gold: #e8c547;
+  --ivory: #fff3d6;
+  --charcoal: #3a2414;
+  --sakura: #d4a24c;
+  --night: #24160c;
+  --line: rgba(212, 162, 76, 0.45);
+  --brass: #c49212;
+  --maple: #f3d7a4;
+  --walnut: #4a2c18;
   color-scheme: dark;
 }
 
@@ -26,9 +29,9 @@ body,
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   background:
-    radial-gradient(900px 520px at 50% -12%, rgba(255, 142, 200, 0.28), transparent 55%),
-    radial-gradient(700px 420px at 100% 100%, rgba(90, 70, 200, 0.35), transparent 50%),
-    radial-gradient(500px 300px at 0% 80%, rgba(255, 212, 90, 0.12), transparent 45%),
+    radial-gradient(900px 520px at 50% -12%, rgba(232, 197, 71, 0.22), transparent 55%),
+    radial-gradient(700px 420px at 100% 100%, rgba(90, 50, 20, 0.45), transparent 50%),
+    radial-gradient(500px 300px at 0% 80%, rgba(212, 162, 76, 0.16), transparent 45%),
     var(--felt-deep);
   color: var(--ink);
   font-family: "Zen Maru Gothic", "Segoe UI", sans-serif;
@@ -65,20 +68,20 @@ a {
 .petals i {
   position: absolute;
   top: -12px;
-  width: 10px;
-  height: 8px;
-  border-radius: 10px 0 10px 0;
+  width: 7px;
+  height: 5px;
+  border-radius: 2px;
   background: var(--sakura);
-  opacity: 0.7;
+  opacity: 0.55;
   animation: fall 14s linear infinite;
 }
 
 .petals i:nth-child(1) { left: 8%; animation-duration: 11s; animation-delay: 0s; }
 .petals i:nth-child(2) { left: 22%; width: 8px; animation-duration: 16s; animation-delay: -3s; }
-.petals i:nth-child(3) { left: 38%; animation-duration: 13s; animation-delay: -6s; background: #ffd0e8; }
+.petals i:nth-child(3) { left: 38%; animation-duration: 13s; animation-delay: -6s; background: #f0d9a0; }
 .petals i:nth-child(4) { left: 52%; width: 12px; animation-duration: 18s; animation-delay: -2s; }
 .petals i:nth-child(5) { left: 66%; animation-duration: 12s; animation-delay: -8s; }
-.petals i:nth-child(6) { left: 78%; width: 7px; animation-duration: 15s; animation-delay: -4s; background: #ffd0e8; }
+.petals i:nth-child(6) { left: 78%; width: 7px; animation-duration: 15s; animation-delay: -4s; background: #f0d9a0; }
 .petals i:nth-child(7) { left: 88%; animation-duration: 17s; animation-delay: -9s; }
 .petals i:nth-child(8) { left: 14%; width: 9px; animation-duration: 14s; animation-delay: -11s; }
 
@@ -180,17 +183,24 @@ h2 {
 .mascots {
   display: flex;
   justify-content: center;
-  gap: 18px;
+  align-items: flex-end;
+  gap: 22px;
   margin: 0 0 10px;
+  overflow: visible;
+  min-height: 72px;
 }
 
-.mascots .man {
+.mascots .man.you {
   width: 58px;
   height: 58px;
   animation: mascot-hop 1.35s ease-in-out infinite;
 }
 
 .mascots .man.them {
+  width: 42px;
+  height: 48px;
+  margin-top: 0;
+  animation: mascot-hop 1.35s ease-in-out infinite;
   animation-delay: 0.65s;
 }
 
@@ -249,9 +259,9 @@ h2 {
 
 .play-btn.daily-play {
   animation: none;
-  background: #ffd45a;
-  color: #3a1030;
-  box-shadow: 0 4px 0 #c49a2a;
+  background: var(--gold);
+  color: #3a2408;
+  box-shadow: 0 4px 0 var(--brass);
 }
 
 .play-btn.daily-play small {
@@ -262,7 +272,7 @@ h2 {
 @keyframes play-pulse {
   50% {
     transform: translateY(-2px);
-    box-shadow: 0 7px 0 #c44d86;
+    box-shadow: 0 7px 0 var(--brass);
   }
 }
 
@@ -286,8 +296,8 @@ h2 {
 }
 
 .title-nav button.texty:hover {
-  border-color: var(--sakura);
-  background: rgba(255, 142, 200, 0.12);
+  border-color: var(--gold);
+  background: rgba(232, 197, 71, 0.12);
 }
 
 #play-fresh {
@@ -377,12 +387,12 @@ button {
   font: inherit;
   font-weight: 700;
   padding: 14px 22px;
-  border-radius: 18px 22px 18px 22px;
-  border: 3px solid #fff;
+  border-radius: 14px;
+  border: 3px solid #fff6e8;
   background: var(--sakura);
-  color: #3a1030;
+  color: #3a2408;
   cursor: pointer;
-  box-shadow: 0 4px 0 #c44d86;
+  box-shadow: 0 4px 0 var(--brass);
 }
 
 button:disabled {
@@ -393,8 +403,8 @@ button:disabled {
 #btn-skip:not(.hidden):not(:disabled),
 #btn-oops:not(:disabled) {
   background: var(--sakura);
-  color: #3a1030;
-  box-shadow: 0 3px 0 #c44d86;
+  color: #3a2408;
+  box-shadow: 0 3px 0 var(--brass);
   opacity: 1;
 }
 
@@ -408,13 +418,13 @@ button small {
 .col button {
   border-radius: 18px;
   text-align: left;
-  background: rgba(26, 16, 51, 0.88);
+  background: rgba(28, 18, 8, 0.88);
   color: var(--ivory);
   box-shadow: none;
 }
 
 .col button:hover {
-  background: rgba(255, 142, 200, 0.18);
+  background: rgba(232, 197, 71, 0.16);
 }
 
 .quiet,
@@ -527,15 +537,15 @@ button small {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  border: 10px solid var(--board-rim, #ff8ec8);
-  border-radius: 18px;
+  border: 10px solid var(--board-rim, #c4a35a);
+  border-radius: 10px;
   user-select: none;
   touch-action: none;
   box-shadow:
-    0 0 0 4px #ffd45a,
-    0 0 0 8px var(--board-outer, #3d2466),
-    0 18px 40px rgba(80, 20, 90, 0.45);
-  background: var(--board-back, #2a1848);
+    0 0 0 4px var(--gold),
+    0 0 0 8px var(--board-outer, #4a2e18),
+    0 18px 40px rgba(40, 20, 8, 0.5);
+  background: var(--board-back, #2a1a0c);
 }
 
 .sq {
@@ -552,24 +562,24 @@ button small {
 }
 
 .sq.light {
-  background: var(--sq-light, #ffe9f4);
+  background: var(--sq-light, #f3e2c4);
   pointer-events: none;
 }
 
 .sq.dark {
-  background: var(--sq-dark, #4a2d78);
+  background: var(--sq-dark, #8b5a2b);
   cursor: pointer;
   touch-action: none;
 }
 
 .sq.dark:nth-child(odd) {
-  background: var(--sq-dark-odd, #3d2466);
+  background: var(--sq-dark-odd, #7a4e24);
 }
 
 .sq.hole,
 .sq.hole:nth-child(odd) {
-  background: #12081f;
-  box-shadow: inset 0 0 0 4px #2a1040;
+  background: #1a1008;
+  box-shadow: inset 0 0 0 4px #3a2410;
   cursor: default;
   pointer-events: none;
 }
@@ -582,13 +592,13 @@ button small {
 
 #board .sq.hint,
 #board .sq.hint:nth-child(odd) {
-  background: #7a4aad;
-  box-shadow: inset 0 0 0 4px #ffe4f0;
+  background: #c4a06a;
+  box-shadow: inset 0 0 0 4px #fff3d6;
 }
 
 #board .sq.can,
 #board .sq.can:nth-child(odd) {
-  box-shadow: inset 0 0 0 3px rgba(255, 142, 200, 0.95);
+  box-shadow: inset 0 0 0 3px rgba(232, 197, 71, 0.95);
 }
 
 #board .sq.sel,
@@ -598,17 +608,13 @@ button small {
 
 #board .sq.drop,
 #board .sq.drop:nth-child(odd) {
-  background: #9a5ec4;
+  background: #d4b07a;
   box-shadow: inset 0 0 0 4px #fff;
 }
 
 #board .sq.prey,
 #board .sq.prey:nth-child(odd) {
-  box-shadow: inset 0 0 0 4px #ffd45a;
-}
-
-#board .sq.prey .man.them {
-  box-shadow: 0 0 0 3px #ffd45a;
+  box-shadow: inset 0 0 0 4px var(--gold);
 }
 
 .sq.can .man {
@@ -649,69 +655,103 @@ button small {
 
 .man {
   position: relative;
-  width: 72%;
-  height: 72%;
-  border-radius: 50%;
   display: block;
   overflow: visible;
-  box-shadow:
-    0 6px 0 rgba(40, 10, 50, 0.35),
-    inset 0 3px 0 rgba(255, 255, 255, 0.45);
-}
-
-.man.you {
-  background: radial-gradient(circle at 32% 28%, #fff, #ffe4f0 46%, #ffb7d5);
-  border: 3px solid #e86aa3;
-}
-
-.man.them {
-  background: radial-gradient(circle at 32% 28%, #6d5bb8, #2a1848 52%, #12081f);
-  border: 3px solid #12081f;
 }
 
 .face {
+  display: none;
+}
+
+/* You: maple checker disc with a carved ring. */
+.man.you {
+  width: 74%;
+  height: 74%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, #fff8e8 0%, #f3d7a4 42%, #d4a24c 78%, #a06e28 100%);
+  border: 3px solid #8a5a22;
+  box-shadow:
+    0 5px 0 rgba(40, 22, 8, 0.4),
+    inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    inset 0 0 0 7px rgba(140, 90, 30, 0.28);
+}
+
+.man.you::before {
+  content: "";
   position: absolute;
-  inset: 0;
+  inset: 22%;
+  border-radius: 50%;
+  border: 2px solid rgba(120, 70, 20, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 230, 0.5);
   pointer-events: none;
 }
 
-.face::before,
-.face::after {
+/* Enemy: walnut pawn — round head, tapered body. */
+.man.them {
+  width: 56%;
+  height: 62%;
+  margin-top: 14%;
+  border-radius: 42% 42% 32% 32% / 30% 30% 48% 48%;
+  background:
+    radial-gradient(circle at 30% 22%, #8b5a32 0%, #5a3218 48%, #2e160c 100%);
+  border: 3px solid #1a0c06;
+  box-shadow:
+    0 5px 0 rgba(20, 10, 4, 0.45),
+    inset 0 3px 0 rgba(255, 210, 150, 0.22);
+}
+
+.man.them::before {
   content: "";
   position: absolute;
-  top: 38%;
-  width: 14%;
-  height: 18%;
+  left: 14%;
+  top: -38%;
+  width: 72%;
+  height: 58%;
   border-radius: 50%;
-  background: #2a1830;
-  box-shadow: 0 10px 0 -2px rgba(255, 120, 160, 0.45);
-}
-
-.face::before {
-  left: 24%;
-}
-
-.face::after {
-  right: 24%;
-}
-
-.man.them .face::before,
-.man.them .face::after {
-  background: #ffd45a;
-  box-shadow: 0 10px 0 -2px rgba(255, 142, 200, 0.35);
+  background:
+    radial-gradient(circle at 32% 28%, #a06a3a 0%, #5a3218 55%, #2e160c 100%);
+  border: 3px solid #1a0c06;
+  box-shadow: inset 0 2px 0 rgba(255, 210, 150, 0.28);
+  pointer-events: none;
 }
 
 .man.king::after {
   content: "";
   position: absolute;
-  left: 29%;
-  top: -10%;
-  width: 42%;
-  height: 38%;
-  margin: 0;
-  background: var(--gold);
-  clip-path: polygon(50% 0, 70% 38%, 100% 38%, 76% 62%, 86% 100%, 50% 78%, 14% 100%, 24% 62%, 0 38%, 30% 38%);
-  filter: drop-shadow(0 2px 0 #c49212);
+  z-index: 2;
+  pointer-events: none;
+  background: none;
+  clip-path: none;
+  filter: none;
+}
+
+/* Gold hoop on a crowned maple disc. */
+.man.you.king::after {
+  left: 10%;
+  right: 10%;
+  top: 4%;
+  height: 26%;
+  width: auto;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  box-shadow: 0 2px 0 var(--brass), inset 0 1px 0 #fff3c4;
+}
+
+/* Gold hoop around a crowned pawn's head. */
+.man.them.king::after {
+  left: 8%;
+  right: 8%;
+  top: -42%;
+  height: 48%;
+  width: auto;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  box-shadow: 0 2px 0 var(--brass);
+}
+
+#board .sq.prey .man.them {
+  box-shadow: 0 0 0 3px var(--gold), 0 5px 0 rgba(20, 10, 4, 0.45);
 }
 
 .flyer {
@@ -720,7 +760,7 @@ button small {
   pointer-events: none;
   margin: 0;
   will-change: transform;
-  filter: drop-shadow(0 10px 6px rgba(80, 20, 90, 0.35));
+  filter: drop-shadow(0 10px 6px rgba(40, 20, 8, 0.4));
 }
 
 .flyer.slide {
@@ -912,8 +952,8 @@ button small {
   font-size: clamp(32px, 8vw, 58px);
   color: #fff;
   text-shadow:
-    0 0 12px var(--sakura),
-    0 4px 0 #c44d86;
+    0 0 12px var(--gold),
+    0 4px 0 var(--brass);
   pointer-events: none;
   z-index: 25;
   white-space: nowrap;
@@ -932,8 +972,8 @@ button small {
   font-size: clamp(40px, 10vw, 70px);
   color: #ffd45a;
   text-shadow:
-    0 0 18px #ffd45a,
-    0 4px 0 #c44d86;
+    0 0 18px #e8c547,
+    0 4px 0 var(--brass);
 }
 
 .cheer.combo-4,
@@ -941,9 +981,9 @@ button small {
   font-size: clamp(44px, 11vw, 76px);
   color: #fff8ea;
   text-shadow:
-    0 0 22px #ff8ec8,
-    0 0 12px #ffd45a,
-    0 5px 0 #c44d86;
+    0 0 22px #e8c547,
+    0 0 12px #fff3d6,
+    0 5px 0 var(--brass);
 }
 
 @keyframes cheer-in {
@@ -991,12 +1031,12 @@ button small {
 
 #laws .help-you .mod-head,
 .mod-list .help-you .mod-head {
-  color: #ffe4f0;
+  color: #fff3d6;
 }
 
 #laws .help-them .mod-head,
 .mod-list .help-them .mod-head {
-  color: #9ad7ff;
+  color: #d4b08a;
 }
 
 .mod-list {
@@ -1045,7 +1085,7 @@ button small {
   right: 8px;
   bottom: 8px;
   z-index: 8;
-  background: rgba(20, 12, 40, 0.94);
+  background: rgba(28, 18, 8, 0.94);
   border: 3px solid var(--gold);
   border-radius: 16px;
   padding: 12px 14px;
@@ -1100,19 +1140,21 @@ button small {
 }
 
 html.cb .man.you {
-  background: #fff8ea;
-  border: 4px solid #e8a00c;
+  background:
+    radial-gradient(circle at 32% 28%, #fff8ea 0%, #ffe08a 50%, #e8a00c 100%);
+  border: 3px solid #8a5a00;
 }
 
 html.cb .man.them {
-  border-radius: 18%;
-  background: radial-gradient(circle at 32% 28%, #3ecfc4, #0a3d3a 58%, #041616);
-  border: 4px solid #041616;
+  background:
+    radial-gradient(circle at 30% 22%, #5ad7c4 0%, #0a5c56 55%, #041616 100%);
+  border: 3px solid #041616;
 }
 
-html.cb .man.them .face::before,
-html.cb .man.them .face::after {
-  background: #fff8ea;
+html.cb .man.them::before {
+  background:
+    radial-gradient(circle at 32% 28%, #7eecdc 0%, #0a5c56 55%, #041616 100%);
+  border-color: #041616;
 }
 
 html.calm .mascots .man,
@@ -1274,7 +1316,7 @@ html.calm .petals {
   padding: 10px 14px;
   border-radius: 12px;
   border: 2px solid var(--sakura);
-  background: rgba(26, 16, 51, 0.85);
+  background: rgba(28, 18, 8, 0.85);
   color: var(--ivory);
   min-width: 12rem;
 }
@@ -1303,7 +1345,7 @@ html.calm .petals {
   padding: 10px 14px;
   border-radius: 14px;
   border: 2px solid var(--sakura);
-  background: rgba(26, 16, 51, 0.85);
+  background: rgba(28, 18, 8, 0.85);
   color: var(--ivory);
   text-align: center;
 }
@@ -1396,9 +1438,13 @@ html.calm .petals {
     width: 48%;
     height: 48%;
   }
-  .man {
+  .man.you {
     width: 80%;
     height: 80%;
+  }
+  .man.them {
+    width: 60%;
+    height: 68%;
   }
   #board {
     border-width: 7px;
@@ -1416,9 +1462,13 @@ html.calm .petals {
   .mascots {
     margin-bottom: 4px;
   }
-  .mascots .man {
+  .mascots .man.you {
     width: 44px;
     height: 44px;
+  }
+  .mascots .man.them {
+    width: 32px;
+    height: 36px;
   }
   .screen {
     padding: 12px;

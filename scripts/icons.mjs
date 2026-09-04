@@ -23,33 +23,35 @@ await png(512, path.join(root, "public", "icon-512.png"));
 await png(180, path.join(root, "public", "apple-touch-icon.png"));
 
 const splash = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732">
-  <rect width="2732" height="2732" fill="#140c28"/>
-  <rect x="966" y="966" width="800" height="800" rx="180" fill="#3d2466"/>
-  <circle cx="1366" cy="1450" r="210" fill="#ffe4f0" stroke="#e86aa3" stroke-width="28"/>
-  <circle cx="1288" cy="1420" r="28" fill="#2a1830"/>
-  <circle cx="1444" cy="1420" r="28" fill="#2a1830"/>
-  <path d="M1366 1080l48 98 108 0-88 68 34 108-102-62-102 62 34-108-88-68 108 0z" fill="#ffd45a"/>
+  <rect width="2732" height="2732" fill="#1c1208"/>
+  <rect x="966" y="966" width="800" height="800" rx="80" fill="#6b4424"/>
+  <circle cx="1220" cy="1450" r="200" fill="#f3d7a4" stroke="#8a5a22" stroke-width="24"/>
+  <circle cx="1220" cy="1450" r="88" fill="none" stroke="#8a5a22" stroke-width="14" opacity="0.4"/>
+  <ellipse cx="1220" cy="1320" rx="150" ry="58" fill="none" stroke="#e8c547" stroke-width="22"/>
+  <ellipse cx="1580" cy="1520" rx="130" ry="150" fill="#5a3218" stroke="#1a0c06" stroke-width="22"/>
+  <circle cx="1580" cy="1310" r="100" fill="#5a3218" stroke="#1a0c06" stroke-width="22"/>
 </svg>`);
 await sharp(splash).resize(2732, 2732).png().toFile(path.join(resources, "splash.png"));
 console.log("wrote", path.join(resources, "splash.png"));
 
 const feature = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">
-  <rect width="1024" height="500" fill="#140c28"/>
+  <rect width="1024" height="500" fill="#1c1208"/>
   <rect x="0" y="0" width="1024" height="500" fill="url(#g)"/>
   <defs>
     <radialGradient id="g" cx="30%" cy="20%" r="80%">
-      <stop offset="0%" stop-color="#ff8ec8" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#140c28" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#e8c547" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#1c1208" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect x="72" y="110" width="280" height="280" rx="64" fill="#3d2466"/>
-  <circle cx="212" cy="278" r="78" fill="#ffe4f0" stroke="#e86aa3" stroke-width="12"/>
-  <circle cx="184" cy="266" r="10" fill="#2a1830"/>
-  <circle cx="240" cy="266" r="10" fill="#2a1830"/>
-  <path d="M212 142l18 38 42 0-34 26 13 40-39-24-39 24 13-40-34-26 42 0z" fill="#ffd45a"/>
-  <text x="400" y="220" fill="#ffe4f0" font-size="72" font-family="sans-serif" font-weight="700">King Me</text>
-  <text x="400" y="280" fill="#f0cce0" font-size="32" font-family="sans-serif" font-weight="700">Six boards. Take the challenge.</text>
-  <text x="400" y="330" fill="#ffd45a" font-size="24" font-family="sans-serif" font-weight="700">No ads · Nothing to buy</text>
+  <rect x="72" y="110" width="280" height="280" rx="28" fill="#6b4424"/>
+  <circle cx="168" cy="270" r="62" fill="#f3d7a4" stroke="#8a5a22" stroke-width="8"/>
+  <circle cx="168" cy="270" r="26" fill="none" stroke="#8a5a22" stroke-width="4" opacity="0.4"/>
+  <ellipse cx="168" cy="228" rx="48" ry="16" fill="none" stroke="#e8c547" stroke-width="7"/>
+  <ellipse cx="268" cy="292" rx="40" ry="48" fill="#5a3218" stroke="#1a0c06" stroke-width="8"/>
+  <circle cx="268" cy="228" r="32" fill="#5a3218" stroke="#1a0c06" stroke-width="8"/>
+  <text x="400" y="220" fill="#fff3d6" font-size="72" font-family="sans-serif" font-weight="700">King Me</text>
+  <text x="400" y="280" fill="#e4d0ae" font-size="32" font-family="sans-serif" font-weight="700">Six boards. Take the challenge.</text>
+  <text x="400" y="330" fill="#e8c547" font-size="24" font-family="sans-serif" font-weight="700">No ads · Nothing to buy</text>
 </svg>`);
 await sharp(feature).png().toFile(path.join(resources, "play-feature.png"));
 console.log("wrote", path.join(resources, "play-feature.png"));
