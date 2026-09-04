@@ -2308,6 +2308,7 @@ export class Game {
     el.style.setProperty("--board-rim", t.rim);
     el.style.setProperty("--board-outer", t.outer);
     el.style.setProperty("--board-back", t.back);
+    el.style.setProperty("--board-inlay", t.light);
     el.style.setProperty("--sq-dark", t.dark);
     el.style.setProperty("--sq-dark-odd", t.darkOdd);
     el.style.setProperty("--sq-light", t.light);
