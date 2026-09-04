@@ -632,24 +632,24 @@ button small {
 }
 
 .sq.light {
-  background: var(--sq-light, #efe4cc);
+  background: var(--sq-light, #e4eef0);
   pointer-events: none;
 }
 
 .sq.dark {
-  background: var(--sq-dark, #5c3a22);
+  background: var(--sq-dark, #4a6570);
   cursor: pointer;
   touch-action: none;
 }
 
 .sq.dark:nth-child(odd) {
-  background: var(--sq-dark-odd, #4e301c);
+  background: var(--sq-dark-odd, #3f5a64);
 }
 
 .sq.hole,
 .sq.hole:nth-child(odd) {
-  background: #1a1008;
-  box-shadow: inset 0 0 0 4px #3a2410;
+  background: #142018;
+  box-shadow: inset 0 0 0 4px #2a4038;
   cursor: default;
   pointer-events: none;
 }
@@ -662,8 +662,14 @@ button small {
 
 #board .sq.hint,
 #board .sq.hint:nth-child(odd) {
-  background: #c4a06a;
-  box-shadow: inset 0 0 0 4px #fff3d6;
+  background: #6f9088;
+  box-shadow: inset 0 0 0 4px #f4fff8;
+}
+
+#board .sq.drop,
+#board .sq.drop:nth-child(odd) {
+  background: #88b0a4;
+  box-shadow: inset 0 0 0 4px #fff;
 }
 
 #board .sq.can,
@@ -674,12 +680,6 @@ button small {
 #board .sq.sel,
 #board .sq.sel:nth-child(odd) {
   box-shadow: inset 0 0 0 4px var(--gold);
-}
-
-#board .sq.drop,
-#board .sq.drop:nth-child(odd) {
-  background: #d4b07a;
-  box-shadow: inset 0 0 0 4px #fff;
 }
 
 #board .sq.prey,
