@@ -32,10 +32,15 @@ const splash = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
   <circle cx="1420" cy="1200" r="110" fill="#f6dfb2" stroke="#6b3a14" stroke-width="22"/>
   <circle cx="1180" cy="1200" r="42" fill="#2a160a"/>
   <circle cx="1420" cy="1200" r="42" fill="#2a160a"/>
-  <ellipse cx="1640" cy="1680" rx="70" ry="55" fill="#3a1c0c"/>
-  <ellipse cx="1880" cy="1480" rx="210" ry="160" fill="#6b3d1e" stroke="#140804" stroke-width="22"/>
-  <ellipse cx="1640" cy="1480" rx="90" ry="70" fill="#4a2812" stroke="#140804" stroke-width="18"/>
-  <circle cx="1600" cy="1460" r="18" fill="#f3d7a4"/>
+  <ellipse cx="1680" cy="1680" rx="130" ry="70" fill="#3a1c0c" stroke="#140804" stroke-width="16"/>
+  <ellipse cx="1920" cy="1680" rx="130" ry="70" fill="#3a1c0c" stroke="#140804" stroke-width="16"/>
+  <ellipse cx="1800" cy="1540" rx="250" ry="170" fill="#5a3218" stroke="#140804" stroke-width="22"/>
+  <ellipse cx="1680" cy="1360" rx="110" ry="100" fill="#4a2812" stroke="#140804" stroke-width="22"/>
+  <ellipse cx="1920" cy="1360" rx="110" ry="100" fill="#4a2812" stroke="#140804" stroke-width="22"/>
+  <ellipse cx="1710" cy="1380" rx="24" ry="48" fill="#e8c547"/>
+  <ellipse cx="1890" cy="1380" rx="24" ry="48" fill="#e8c547"/>
+  <path d="M1570 1260l200 70" fill="none" stroke="#140804" stroke-width="28" stroke-linecap="round"/>
+  <path d="M2030 1260l-200 70" fill="none" stroke="#140804" stroke-width="28" stroke-linecap="round"/>
 </svg>`);
 await sharp(splash).resize(2732, 2732).png().toFile(path.join(resources, "splash.png"));
 console.log("wrote", path.join(resources, "splash.png"));
@@ -57,10 +62,15 @@ const feature = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
   <circle cx="218" cy="222" r="32" fill="#f6dfb2" stroke="#6b3a14" stroke-width="7"/>
   <circle cx="150" cy="222" r="12" fill="#2a160a"/>
   <circle cx="218" cy="222" r="12" fill="#2a160a"/>
-  <ellipse cx="268" cy="330" rx="22" ry="18" fill="#3a1c0c"/>
-  <ellipse cx="292" cy="278" rx="62" ry="48" fill="#6b3d1e" stroke="#140804" stroke-width="7"/>
-  <ellipse cx="236" cy="278" rx="26" ry="20" fill="#4a2812" stroke="#140804" stroke-width="6"/>
-  <circle cx="228" cy="272" r="5" fill="#f3d7a4"/>
+  <ellipse cx="248" cy="330" rx="36" ry="18" fill="#3a1c0c" stroke="#140804" stroke-width="5"/>
+  <ellipse cx="308" cy="330" rx="36" ry="18" fill="#3a1c0c" stroke="#140804" stroke-width="5"/>
+  <ellipse cx="278" cy="292" rx="68" ry="46" fill="#5a3218" stroke="#140804" stroke-width="7"/>
+  <ellipse cx="250" cy="246" rx="28" ry="26" fill="#4a2812" stroke="#140804" stroke-width="6"/>
+  <ellipse cx="306" cy="246" rx="28" ry="26" fill="#4a2812" stroke="#140804" stroke-width="6"/>
+  <ellipse cx="258" cy="250" rx="6" ry="12" fill="#e8c547"/>
+  <ellipse cx="298" cy="250" rx="6" ry="12" fill="#e8c547"/>
+  <path d="M226 224l32 12" fill="none" stroke="#140804" stroke-width="7" stroke-linecap="round"/>
+  <path d="M330 224l-32 12" fill="none" stroke="#140804" stroke-width="7" stroke-linecap="round"/>
   <text x="400" y="220" fill="#fff3d6" font-size="72" font-family="sans-serif" font-weight="700">King Me</text>
   <text x="400" y="280" fill="#e4d0ae" font-size="32" font-family="sans-serif" font-weight="700">Six boards. Take the challenge.</text>
   <text x="400" y="330" fill="#e8c547" font-size="24" font-family="sans-serif" font-weight="700">No ads · Nothing to buy</text>

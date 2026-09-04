@@ -679,7 +679,7 @@ button small {
   filter: drop-shadow(0 4px 0 rgba(40, 22, 8, 0.42));
 }
 
-/* You: maple frog. Enemy: walnut turtle. Two toys, not a checker and not a little man. */
+/* You: maple frog. Enemy: walnut mean frog. Same toy, two moods. */
 .man.you::before {
   background-image: url("./assets/piece-you.svg");
 }

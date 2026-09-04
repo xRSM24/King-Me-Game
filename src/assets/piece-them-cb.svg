@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <ellipse cx="20" cy="50" rx="7.5" ry="6" fill="#0a4a46" stroke="#021414" stroke-width="1.8"/>
-  <ellipse cx="46" cy="50" rx="7.5" ry="6" fill="#0a4a46" stroke="#021414" stroke-width="1.8"/>
-  <ellipse cx="22" cy="26" rx="6.5" ry="5.2" fill="#0a4a46" stroke="#021414" stroke-width="1.8"/>
-  <ellipse cx="48" cy="26" rx="6.5" ry="5.2" fill="#0a4a46" stroke="#021414" stroke-width="1.8"/>
-  <path d="M50 36l12 3-12 5z" fill="#0a4a46" stroke="#021414" stroke-width="1.6" stroke-linejoin="round"/>
-  <ellipse cx="36" cy="36" rx="22" ry="17" fill="#14a394" stroke="#021414" stroke-width="2.6"/>
-  <ellipse cx="36" cy="34" rx="14" ry="11" fill="#5eead4"/>
-  <path d="M36 24l7 12-7 12-7-12z" fill="none" stroke="#043230" stroke-width="1.9"/>
-  <path d="M24 36h24M36 24v24" fill="none" stroke="#043230" stroke-width="1.5"/>
-  <ellipse cx="10" cy="36" rx="9" ry="7.2" fill="#0d7377" stroke="#021414" stroke-width="2.1"/>
-  <circle cx="7" cy="34" r="1.8" fill="#e8fffa"/>
+  <ellipse cx="15" cy="54" rx="12" ry="6.5" fill="#0a4a46" stroke="#021414" stroke-width="2.2"/>
+  <ellipse cx="49" cy="54" rx="12" ry="6.5" fill="#0a4a46" stroke="#021414" stroke-width="2.2"/>
+  <path d="M7 52l-3 4M12 55l-2 4M18 55l2 4" fill="none" stroke="#021414" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M57 52l3 4M52 55l2 4M46 55l-2 4" fill="none" stroke="#021414" stroke-width="1.8" stroke-linecap="round"/>
+  <ellipse cx="32" cy="40" rx="25" ry="18" fill="#0d7377" stroke="#021414" stroke-width="2.6"/>
+  <ellipse cx="32" cy="47" rx="12" ry="8" fill="#043230" opacity="0.55"/>
+  <ellipse cx="20" cy="21" rx="10.2" ry="9.4" fill="#14a394" stroke="#021414" stroke-width="2.6"/>
+  <ellipse cx="44" cy="21" rx="10.2" ry="9.4" fill="#14a394" stroke="#021414" stroke-width="2.6"/>
+  <ellipse cx="23" cy="22.5" rx="2.4" ry="4.6" fill="#ffe566"/>
+  <ellipse cx="41" cy="22.5" rx="2.4" ry="4.6" fill="#ffe566"/>
+  <path d="M9 12l20 7" fill="none" stroke="#021414" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M55 12l-20 7" fill="none" stroke="#021414" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M21 46c4.5-7.5 17.5-7.5 22 0" fill="none" stroke="#021414" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M26 43l2.2 7 2.4-6z" fill="#e8fffa" stroke="#021414" stroke-width="1.1" stroke-linejoin="round"/>
+  <path d="M34 44l2.2 7 2.4-6z" fill="#e8fffa" stroke="#021414" stroke-width="1.1" stroke-linejoin="round"/>
 </svg>
