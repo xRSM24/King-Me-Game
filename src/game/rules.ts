@@ -161,6 +161,19 @@ function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
   }
 }
 
+function addVacantJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
+  for (const d of jumpDirs(piece, laws, mods)) {
+    const mr = from.r + d.r;
+    const mc = from.c + d.c;
+    const tr = from.r + d.r * 2;
+    const tc = from.c + d.c * 2;
+    if (!playable(mr, mc, mods) || !playable(tr, tc, mods)) continue;
+    if (board[mr]![mc]) continue;
+    if (board[tr]![tc]) continue;
+    out.push({ from, to: { r: tr, c: tc }, leap: true });
+  }
+}
+
 /** Leap an empty pit: [you][pit][land]. Not a capture — you do not have to take it. */
 function addHoleJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
   if (!mods.holes.length) return;
@@ -216,6 +229,7 @@ export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods =
   addJumps(board, from, piece, laws, mods, jumps);
   addFarJumps(board, from, piece, laws, mods, jumps);
   addHoleJumps(board, from, piece, laws, mods, jumps);
+  addVacantJumps(board, from, piece, laws, mods, jumps);
   addSlide(board, from, piece, laws, mods, slides);
   return [...jumps, ...slides];
 }
@@ -234,7 +248,7 @@ export function legalMoves(
   laws: Laws,
   lock?: Pos | null,
   mods: BoardMods = emptyMods(),
-  allowQuiet = false,
+  _allowQuiet = true,
 ): Move[] {
   const owned = piecesOf(board, side);
   const all: Move[] = [];
@@ -242,9 +256,7 @@ export function legalMoves(
     if (lock && !samePos(pos, lock)) continue;
     all.push(...movesFrom(board, pos, laws, mods));
   }
-  const jumps = all.filter((m) => m.capture);
-  if (lock) return jumps.length ? jumps : [];
-  if (jumps.length && !allowQuiet) return jumps;
+  if (lock) return all.filter((m) => m.capture);
   return all;
 }
 

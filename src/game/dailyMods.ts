@@ -10,7 +10,6 @@ import {
   LONG_KING_DESC,
   ONE_OOPS_DESC,
   OPEN_KING_YOU_DESC,
-  SKIP_JUMP_DESC,
   THIRD_OOPS_DESC,
 } from "./copy.ts";
 
@@ -18,7 +17,6 @@ export type DailyModId =
   | "ivoryKing"
   | "extraIvory"
   | "jumpBack"
-  | "skipJump"
   | "thirdOops"
   | "houseKing"
   | "extraHouse"
@@ -37,7 +35,6 @@ const PLAYER: DailyMod[] = [
   { id: "ivoryKing", side: "you", name: "Start as King", desc: OPEN_KING_YOU_DESC },
   { id: "extraIvory", side: "you", name: "Plus One", desc: EXTRA_YOU_DAILY_DESC },
   { id: "jumpBack", side: "you", name: "Player Boing", desc: JUMP_BACK_YOU_DESC },
-  { id: "skipJump", side: "you", name: "Skip the Jump", desc: SKIP_JUMP_DESC },
   { id: "thirdOops", side: "you", name: "Third Oops", desc: THIRD_OOPS_DESC },
 ];
 
@@ -90,8 +87,6 @@ export function applyDailyMods(
       laws.extraMan = true;
     } else if (m.id === "jumpBack") {
       laws.backJump = true;
-    } else if (m.id === "skipJump") {
-      laws.freeJump = true;
     } else if (m.id === "thirdOops") {
       oops = 3;
     } else if (m.id === "houseKing") {

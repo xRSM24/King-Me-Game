@@ -74,6 +74,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - The first climb shows a one-time coach: drag your piece over the Enemy onto the star. That is a jump.
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
+- Captures are optional. You may slide, hop two empty squares, or jump an Enemy. After a capture, Skip jump stops the combo.
 - One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.
 - When only Kings are left, if nobody jumps for 8 hops, whoever has more pieces wins — a lone King cannot run forever.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
@@ -97,7 +98,6 @@ After each win you pick one that lasts the rest of the run:
 - **Second Chance** — once this climb, if you lose every piece, one King comes back on the far row and hops every diagonal
 - **Start as King** — every board, one of your pieces starts already a King
 - **Extra Piece** — +1 player piece at the start of every board
-- **Skip the Jump** — tap **Skip jump** to walk 1 square instead of capturing, or to stop a combo; the Enemy still must jump
 - **Hop Party** — every 4 captures this climb, one random non-King player piece becomes a King
 - **Far Jump** — once each turn, one regular piece may jump farther: over an Enemy, skip the next empty square, and land on the next dark square
 - **Double Crown** — when one of your pieces becomes a King, a regular piece next to it becomes a King too
@@ -126,8 +126,9 @@ Progress lives in the browser (`localStorage`). Sign in and it also lives in the
 | --- | --- |
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
-| Capture | Drop on a gold star |
-| Skip a jump | Skip jump (only with that power) — walk instead, or stop a combo |
+| Hop two | Drop on a star two squares away with an empty square in the middle |
+| Capture | Drop on a gold star past an Enemy (optional) |
+| Stop a combo | Skip jump, after a capture if another star appears |
 | Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
 | Today's board | Title → Today's board (same felt for everyone today) |

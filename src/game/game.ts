@@ -1051,23 +1051,14 @@ export class Game {
   }
 
   private youLegal(): Move[] {
-    return legalMoves(
-      this.board,
-      "you",
-      this.laws,
-      this.lock,
-      this.mods,
-      this.laws.freeJump && this.skippedJump,
-    );
+    return legalMoves(this.board, "you", this.laws, this.lock, this.mods);
   }
 
   private canSkipJump(): boolean {
-    if (!this.laws.freeJump) return false;
     if (this.screen !== "playing" || this.animating || this.thinking) return false;
     if (this.turn !== "you") return false;
-    if (this.lock) return moreJumps(this.board, this.lock, this.laws, this.mods);
-    if (this.skippedJump) return false;
-    return legalMoves(this.board, "you", this.laws, null, this.mods).some((m) => m.capture);
+    if (!this.lock) return false;
+    return moreJumps(this.board, this.lock, this.laws, this.mods);
   }
 
   private skipJump(): void {
@@ -1166,7 +1157,7 @@ export class Game {
     const shown = legal.filter((m) => m.from.r === from.r && m.from.c === from.c);
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(
-      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
+      shown.filter((m) => m.capture || m.overHole || m.leap).map((m) => `${m.to.r},${m.to.c}`),
     );
     const preys = new Set(
       shown
@@ -2172,30 +2163,22 @@ export class Game {
               ? "You're out. Tap Oops to undo — or that's the game."
               : "You're out."
             : this.lock
-              ? this.canSkipJump()
-                ? "Keep jumping, or Skip jump to stop."
-                : "Keep jumping!"
-              : this.skippedJump && this.turn === "you"
+              ? "Keep jumping the same frog, or Skip jump to stop."
+              : jumps.length
                 ? this.selected
-                  ? "Slide a pip, or still jump a star."
-                  : "Jump skipped. Slide a gold ring."
-                : jumps.length
-                  ? this.selected
-                    ? this.canSkipJump()
-                      ? "Jump the star past them, drop onto the Enemy, or Skip jump."
-                      : "Jump the star past the Enemy — or drop onto them."
-                    : this.canSkipJump()
-                      ? "Jump ready — or tap Skip jump."
-                      : "Jump ready — drag over the Enemy onto the star, or onto them."
-                  : this.selected
-                    ? legal.some((m) => m.overHole)
-                      ? "Jump over the pit onto the star — or drop onto the pit."
+                  ? "Capture on a star, hop two empties, or slide a pip."
+                  : "A jump is ready — you do not have to take it."
+                : this.selected
+                  ? legal.some((m) => m.overHole)
+                    ? "Jump over the pit onto the star — or drop onto the pit."
+                    : legal.some((m) => m.leap)
+                      ? "Hop two squares onto a star, or slide a pip."
                       : "Slide onto a pip."
-                    : this.turn === "you"
-                      ? this.canOops()
-                        ? "Slide a gold ring — or Oops that hop."
-                        : "Slide a gold ring, or tap then tap."
-                      : "Wait.";
+                  : this.turn === "you"
+                    ? this.canOops()
+                      ? "Slide, hop two, or jump an Enemy — or Oops that hop."
+                      : "Slide a pip, hop two squares, or jump an Enemy."
+                    : "Wait.";
       }
     }
     const counts = document.getElementById("counts");
@@ -2225,10 +2208,10 @@ export class Game {
     }
     const skip = document.getElementById("btn-skip");
     if (skip instanceof HTMLButtonElement) {
-      skip.classList.toggle("hidden", !this.laws.freeJump);
+      skip.classList.toggle("hidden", !this.lock);
       skip.disabled = !this.canSkipJump();
-      skip.textContent = this.skippedJump ? "Skipped" : "Skip jump";
-      skip.title = this.lock ? "Stop this combo here" : "Walk instead of capturing";
+      skip.textContent = "Skip jump";
+      skip.title = "Stop this combo here";
     }
     const laws = document.getElementById("laws");
     if (laws) {
@@ -2263,7 +2246,7 @@ export class Game {
     const shown = legal.filter((m) => !this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c));
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(
-      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
+      shown.filter((m) => m.capture || m.overHole || m.leap).map((m) => `${m.to.r},${m.to.c}`),
     );
     const longs = new Set(shown.filter((m) => m.far).map((m) => `${m.to.r},${m.to.c}`));
     const preys = new Set(

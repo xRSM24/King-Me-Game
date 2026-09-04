@@ -232,9 +232,27 @@ assert(!overPit.some((m) => samePos(m.to, { r: 4, c: 3 })), "nobody may land on 
 board = blank();
 board[5]![2] = { id: 56, side: "you", king: false };
 board[4]![1] = { id: 57, side: "them", king: false };
-const mustTake = legalMoves(board, "you", emptyLaws(), null, pitLeap);
-assert(mustTake.every((m) => m.capture), "a capture still beats leaping a pit");
-assert(mustTake.every((m) => !m.overHole), "you do not have to jump a pit when an Enemy is up");
+const mayTake = legalMoves(board, "you", emptyLaws(), null, pitLeap);
+assert(mayTake.some((m) => m.capture), "you may still capture when an Enemy is up");
+assert(mayTake.some((m) => m.overHole), "you may leap a pit even when an Enemy is up");
+
+board = blank();
+board[5]![2] = { id: 66, side: "you", king: false };
+board[4]![3] = { id: 67, side: "them", king: false };
+const walkAway = legalMoves(board, "you", emptyLaws(), null, std);
+assert(walkAway.some((m) => m.capture), "a capture is available");
+assert(
+  walkAway.some((m) => !m.capture && m.to.r === 4 && m.to.c === 1),
+  "you may slide the other way instead of capturing",
+);
+
+board = blank();
+board[5]![2] = { id: 59, side: "you", king: false };
+const emptyHop = legalMoves(board, "you", emptyLaws(), null, std);
+assert(
+  emptyHop.some((m) => m.leap && m.to.r === 3 && m.to.c === 4),
+  "you may hop two empty squares without capturing",
+);
 
 board = blank();
 board[7]![0] = { id: 58, side: "you", king: true };

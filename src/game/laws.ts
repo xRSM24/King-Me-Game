@@ -9,7 +9,6 @@ import {
   OPEN_KING_LAW_DESC,
   SCOUT_DESC,
   SECOND_CHANCE_DESC,
-  SKIP_JUMP_DESC,
   SUPER_KING_DESC,
   TRAPDOOR_DESC,
 } from "./copy.ts";
@@ -57,12 +56,6 @@ export const LAW_DEFS: LawDef[] = [
     name: "Extra Piece",
     desc: EXTRA_YOU_DESC,
     icon: "➕",
-  },
-  {
-    id: "freeJump",
-    name: "Skip the Jump",
-    desc: SKIP_JUMP_DESC,
-    icon: "🎈",
   },
   {
     id: "hopCrown",

@@ -18,9 +18,6 @@ export const JUMP_BACK_THEM_DESC =
 export const JUMP_BACK_BOTH_DESC =
   "Everyone may jump backward (all 4 diagonals). Quiet slides still go forward 1 square. Kings already jump every way.";
 
-export const SKIP_JUMP_DESC =
-  "When a star is up, tap Skip jump to walk 1 square instead of capturing. You can also stop a combo. The Enemy still must jump.";
-
 export const OPEN_KING_YOU_DESC = "One of your pieces starts this board already a King (moves 1 square any diagonal).";
 
 export const OPEN_KING_LAW_DESC =
@@ -68,10 +65,10 @@ export function chaseHint(quiet: number): string {
   if (left === 1) return "Last hop with no jump — then most pieces win.";
   return `Jump in ${left} hops or most pieces win.`;
 }
-export const JUMP_HOW = "Drag your piece over the Enemy onto the star. That is a jump.";
+export const JUMP_HOW = "Drag your piece over the Enemy onto the star to capture. You can also slide a pip, or hop two empty squares.";
 
 export const FIRST_JUMP_DESC =
-  "One of your pieces can jump an Enemy right away. Drag that piece over them onto the star.";
+  "One of your pieces can jump an Enemy right away. Drag that piece over them onto the star if you want the capture — you do not have to.";
 
 export const RACE_DESC =
   "You sit near the Enemy's back ranks; they sit near yours. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";
