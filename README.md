@@ -74,7 +74,7 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - The first climb shows a one-time coach: drag your piece over the Enemy onto the star. That is a jump.
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
-- Captures are optional. You may slide, hop two empty squares, or jump an Enemy. After a capture, that frog may hop a different star or slide instead of taking the next Enemy; Skip jump stops with no extra hop.
+- Captures are optional. A star appears only on a landing past an Enemy (or a pit). Other directions stay slide pips. After a capture, that frog may slide or Skip jump instead of taking the next Enemy.
 - One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.
 - When only Kings are left, if nobody jumps for 8 hops, whoever has more pieces wins — a lone King cannot run forever.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
@@ -126,9 +126,9 @@ Progress lives in the browser (`localStorage`). Sign in and it also lives in the
 | --- | --- |
 | Select / slide | Drag a gold ring onto a pip |
 | Hop | Drop on a cream pip, or tap then tap |
-| Hop two | Drop on a star two squares away with an empty square in the middle |
-| Capture | Drop on a gold star past an Enemy (optional) |
-| Stop a combo | Hop a different star, slide, or Skip jump |
+| Capture | Drop on a gold star past an Enemy (optional). A star is only that jump, not every diagonal. |
+| Pit | Drop on the star past a black pit |
+| Stop a combo | Slide a pip, or Skip jump |
 | Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
 | Today's board | Title → Today's board (same felt for everyone today) |

@@ -161,19 +161,6 @@ function addJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Board
   }
 }
 
-function addVacantJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
-  for (const d of jumpDirs(piece, laws, mods)) {
-    const mr = from.r + d.r;
-    const mc = from.c + d.c;
-    const tr = from.r + d.r * 2;
-    const tc = from.c + d.c * 2;
-    if (!playable(mr, mc, mods) || !playable(tr, tc, mods)) continue;
-    if (board[mr]![mc]) continue;
-    if (board[tr]![tc]) continue;
-    out.push({ from, to: { r: tr, c: tc }, leap: true });
-  }
-}
-
 /** Leap an empty pit: [you][pit][land]. Not a capture — you do not have to take it. */
 function addHoleJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
   if (!mods.holes.length) return;
@@ -229,7 +216,6 @@ export function movesFrom(board: Board, from: Pos, laws: Laws, mods: BoardMods =
   addJumps(board, from, piece, laws, mods, jumps);
   addFarJumps(board, from, piece, laws, mods, jumps);
   addHoleJumps(board, from, piece, laws, mods, jumps);
-  addVacantJumps(board, from, piece, laws, mods, jumps);
   addSlide(board, from, piece, laws, mods, slides);
   return [...jumps, ...slides];
 }
@@ -259,15 +245,11 @@ export function legalMoves(
   return all;
 }
 
-/** Square you hop over: Enemy, pit, or the empty dark square of a two-step leap. */
+/** Square you hop over: Enemy or pit. */
 export function hopOver(move: Move): Pos | null {
   if (move.capture) return move.capture;
   if (move.overHole) return move.overHole;
-  if (!move.leap) return null;
-  const r = (move.from.r + move.to.r) / 2;
-  const c = (move.from.c + move.to.c) / 2;
-  if (!Number.isInteger(r) || !Number.isInteger(c)) return null;
-  return { r, c };
+  return null;
 }
 
 export function moveHitting(moves: Move[], from: Pos, at: Pos): Move | undefined {

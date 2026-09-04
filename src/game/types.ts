@@ -22,8 +22,6 @@ export interface Move {
   far?: boolean;
   /** Pit you leap; landing is the next dark square. Not a capture. */
   overHole?: Pos;
-  /** Two-square hop over an empty dark square. Not a capture. */
-  leap?: boolean;
 }
 
 export interface Laws {

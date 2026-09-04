@@ -66,10 +66,10 @@ export function chaseHint(quiet: number): string {
   return `Jump in ${left} hops or most pieces win.`;
 }
 export const JUMP_HOW =
-  "You do not have to jump the Enemy. Drag onto a star past them to capture, hop a different empty star, or slide a pip.";
+  "A star means a jump over an Enemy. You do not have to take it — slide a pip the other way if you want.";
 
 export const FIRST_JUMP_DESC =
-  "One of your pieces can jump an Enemy right away. Capture on that star if you want — or hop a different star, or slide. You do not have to take them.";
+  "One of your pieces can jump an Enemy right away. Capture on that star if you want, or slide a pip. You do not have to take them.";
 
 export const RACE_DESC =
   "You sit near the Enemy's back ranks; they sit near yours. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";

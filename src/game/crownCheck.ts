@@ -5,7 +5,6 @@ import {
   campsFromRows,
   chaseArmed,
   chaseWinner,
-  hopOver,
   isHole,
   isHoleTrapped,
   legalMoves,
@@ -240,16 +239,17 @@ assert(mayTake.some((m) => m.overHole), "you may leap a pit even when an Enemy i
 board = blank();
 board[5]![2] = { id: 59, side: "you", king: false };
 const emptyHop = legalMoves(board, "you", emptyLaws(), null, std);
-const leapTwo = emptyHop.find((m) => m.leap && m.to.r === 3 && m.to.c === 4);
-assert(leapTwo, "you may hop two empty squares without capturing");
-assert(hopOver(leapTwo!) && samePos(hopOver(leapTwo!)!, { r: 4, c: 3 }), "the empty hop names the square you leap");
 assert(
-  moveHitting(emptyHop, leapTwo!.from, leapTwo!.to) === leapTwo,
-  "dropping on the far star is the two-square hop",
+  emptyHop.every((m) => !m.capture && !m.overHole),
+  "with nobody to jump, there is no star hop — only slides",
 );
 assert(
-  moveHitting(emptyHop, leapTwo!.from, { r: 4, c: 3 })?.leap !== true,
-  "the adjacent empty is a slide, not a forced hop over it",
+  emptyHop.some((m) => m.to.r === 4 && m.to.c === 3),
+  "the adjacent empty is a one-square slide",
+);
+assert(
+  emptyHop.every((m) => Math.abs(m.to.r - m.from.r) === 1),
+  "empty diagonals are slides, not two-square hops",
 );
 
 board = blank();
@@ -258,12 +258,16 @@ board[4]![3] = { id: 67, side: "them", king: false };
 const walkAway = legalMoves(board, "you", emptyLaws(), null, std);
 assert(walkAway.some((m) => m.capture), "a capture is available");
 assert(
+  walkAway.filter((m) => m.capture).length === 1,
+  "only the Enemy landing is a jump",
+);
+assert(
   walkAway.some((m) => !m.capture && m.to.r === 4 && m.to.c === 1),
   "you may slide the other way instead of capturing",
 );
 assert(
-  walkAway.some((m) => m.leap && m.to.r === 3 && m.to.c === 0),
-  "you may hop two empties the other way instead of capturing",
+  walkAway.every((m) => m.capture || Math.abs(m.to.r - m.from.r) === 1),
+  "the other direction is a slide pip, not a jump star",
 );
 
 board = blank();
@@ -276,7 +280,7 @@ const locked = legalMoves(afterCombo, "you", emptyLaws(), { r: 3, c: 4 }, std);
 assert(locked.some((m) => m.capture), "you may keep capturing during a combo");
 assert(
   locked.some((m) => !m.capture),
-  "you may hop or slide elsewhere instead of taking the next Enemy",
+  "you may slide a pip instead of taking the next Enemy",
 );
 assert(
   locked.every((m) => m.from.r === 3 && m.from.c === 4),

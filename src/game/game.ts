@@ -1158,7 +1158,7 @@ export class Game {
     const shown = legal.filter((m) => m.from.r === from.r && m.from.c === from.c);
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(
-      shown.filter((m) => m.capture || m.overHole || m.leap).map((m) => `${m.to.r},${m.to.c}`),
+      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
     );
     const preys = new Set(
       shown
@@ -2167,21 +2167,19 @@ export class Game {
               ? "You're out. Tap Oops to undo — or that's the game."
               : "You're out."
             : this.lock
-              ? "Keep capturing, hop a different star, slide, or Skip jump."
+              ? "Keep capturing, slide a pip, or Skip jump."
               : jumps.length
                 ? this.selected
-                  ? "Capture on a star, hop a different star, or slide a pip."
-                  : "A jump is ready — hop a different star or slide if you want."
+                  ? "The star is the jump. Slide a pip if you want to go another way."
+                  : "A jump is ready — you do not have to take it."
                 : this.selected
                   ? legal.some((m) => m.overHole)
                     ? "Jump over the pit onto the star — or drop onto the pit."
-                    : legal.some((m) => m.leap)
-                      ? "Hop two squares onto a star, or slide a pip."
-                      : "Slide onto a pip."
+                    : "Slide onto a pip."
                   : this.turn === "you"
                     ? this.canOops()
-                      ? "Slide, hop two, or jump an Enemy — or Oops that hop."
-                      : "Slide a pip, hop two squares, or jump an Enemy."
+                      ? "Slide a pip, or jump an Enemy — or Oops that hop."
+                      : "Slide a pip, or jump an Enemy."
                     : "Wait.";
       }
     }
@@ -2250,7 +2248,7 @@ export class Game {
     const shown = legal.filter((m) => !this.selected || (m.from.r === this.selected.r && m.from.c === this.selected.c));
     const hints = new Set(shown.map((m) => `${m.to.r},${m.to.c}`));
     const jumps = new Set(
-      shown.filter((m) => m.capture || m.overHole || m.leap).map((m) => `${m.to.r},${m.to.c}`),
+      shown.filter((m) => m.capture || m.overHole).map((m) => `${m.to.r},${m.to.c}`),
     );
     const longs = new Set(shown.filter((m) => m.far).map((m) => `${m.to.r},${m.to.c}`));
     const preys = new Set(
