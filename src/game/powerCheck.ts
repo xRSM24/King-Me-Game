@@ -13,9 +13,20 @@ import {
 } from "./rules.ts";
 import { boardSpec, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
+import { endYouTurn, noteCapture, type YouBurst } from "./tempo.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
+}
+
+function burst(p: Partial<YouBurst> = {}): YouBurst {
+  return {
+    lilyHops: 0,
+    openingHops: 0,
+    napPending: false,
+    napUsed: false,
+    ...p,
+  };
 }
 
 const laws = emptyLaws();
@@ -108,5 +119,31 @@ assert(laid10.length === 10 && laid10[0]!.length === 10, "laid 10×10");
 const m10 = modsFromSpec(spec10, { size: 10 });
 assert(m10.size === 10, "mods keep size 10");
 assert(m10.themKingRow === 9 || m10.youKingRow === 9, "one far edge is row 9");
+
+let n = endYouTurn(burst({ openingHops: 2 }), {});
+assert(n.next === "you" && n.burst.openingHops === 1, "Back 2 Back: first hop then you again");
+n = endYouTurn(n.burst, {});
+assert(n.next === "them" && n.burst.openingHops === 0, "Back 2 Back: second hop then Enemy");
+
+let nap = noteCapture(burst(), true);
+assert(nap.napPending, "capture arms Nap Time");
+nap = noteCapture(nap, true);
+assert(nap.napPending && !nap.napUsed, "second capture does not bank another nap");
+n = endYouTurn(nap, {});
+assert(n.next === "you" && n.burst.napUsed && !n.burst.napPending, "Enemy skips once, then you");
+n = endYouTurn(n.burst, {});
+assert(n.next === "them", "after the skip, Enemy plays");
+
+const slide = noteCapture(burst(), false);
+assert(!slide.napPending, "no nap law means no skip");
+
+n = endYouTurn(burst({ openingHops: 2 }), { tookLily: true });
+assert(n.next === "you" && n.burst.lilyHops === 2 && n.burst.openingHops === 1, "lily grant after landing; leftover opening");
+n = endYouTurn(n.burst, {});
+assert(n.burst.lilyHops === 1 && n.burst.openingHops === 1, "first lily extra");
+n = endYouTurn(n.burst, {});
+assert(n.burst.lilyHops === 0 && n.next === "you" && n.burst.openingHops === 1, "then leftover Back 2 Back");
+n = endYouTurn(n.burst, {});
+assert(n.next === "them" && n.burst.openingHops === 0, "then Enemy");
 
 console.log("powerCheck ok");

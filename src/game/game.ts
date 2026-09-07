@@ -35,6 +35,7 @@ import {
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
+import { applyBurst, burstFromMods, endYouTurn, noteCapture } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
@@ -770,6 +771,10 @@ export class Game {
     const spec = applied.spec;
     this.dailyLabel = dailyTitle();
     this.mods = modsFromSpec(spec, { themFly: applied.themFly, themBack: applied.themBack });
+    if (this.laws.back2Back) this.mods.openingHops = 2;
+    this.mods.napUsed = false;
+    this.mods.napPending = false;
+    this.mods.lilyHops = 0;
     this.blurb = spec.blurb;
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
     this.turn = "you";
@@ -868,6 +873,10 @@ export class Game {
     const size = this.laws.widePond ? 10 : 8;
     const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng, size);
     this.mods = modsFromSpec(spec, { size });
+    if (this.laws.back2Back) this.mods.openingHops = 2;
+    this.mods.napUsed = false;
+    this.mods.napPending = false;
+    this.mods.lilyHops = 0;
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
@@ -1068,11 +1077,20 @@ export class Game {
     if (!this.canSkipJump()) return;
     this.cancelDrag();
     if (this.lock) {
+      const tookLily = !!this.mods.lily && samePos(this.lock, this.mods.lily);
       this.lock = null;
       this.selected = null;
       this.skippedJump = false;
       this.pushLog("Stopped the combo. Your hop is done.");
       this.cheer("Skip!");
+      const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
+      applyBurst(this.mods, ended.burst);
+      if (ended.next === "you") {
+        this.turn = "you";
+        this.renderAll();
+        this.persistClimb();
+        return;
+      }
       this.afterYou();
       this.persistClimb();
       return;
@@ -1366,7 +1384,11 @@ export class Game {
       }
       this.board = applyMove(this.board, move, this.mods);
       if (move.far) this.mods.farJumpUsed = true;
-      if (move.capture) this.turnHadCapture = true;
+      if (move.capture) {
+        this.turnHadCapture = true;
+        const burst = noteCapture(burstFromMods(this.mods), this.laws.napTime);
+        applyBurst(this.mods, burst);
+      }
       const nowKing = at(this.board, move.to)?.king ?? false;
       let partyPos: Pos | null = null;
       let extraPos: Pos | null = null;
@@ -1459,6 +1481,15 @@ export class Game {
     }
     this.lock = null;
     this.selected = null;
+    const tookLily = !!this.mods.lily && samePos(move.to, this.mods.lily);
+    const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
+    applyBurst(this.mods, ended.burst);
+    if (ended.next === "you") {
+      this.turn = "you";
+      this.renderAll();
+      this.persistClimb();
+      return;
+    }
     this.afterYou();
     this.persistClimb();
   }

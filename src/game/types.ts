@@ -70,6 +70,8 @@ export interface BoardMods {
   napPending: boolean;
   /** Remaining Back 2 Back opening hops this board (0 if the law is off). */
   openingHops: number;
+  lily: Pos | null;
+  lilyHops: number;
 }
 
 export interface Meta {
@@ -163,6 +165,8 @@ export function emptyMods(): BoardMods {
     napUsed: false,
     napPending: false,
     openingHops: 0,
+    lily: null,
+    lilyHops: 0,
   };
 }
 
