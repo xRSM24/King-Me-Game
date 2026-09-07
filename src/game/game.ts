@@ -96,6 +96,7 @@ export class Game {
   skippedJump = false;
   quiet = 0;
   turnHadCapture = false;
+  turnTookLily = false;
   chaseTold = false;
   drag: {
     from: Pos;
@@ -1118,13 +1119,12 @@ export class Game {
     if (!this.canSkipJump()) return;
     this.cancelDrag();
     if (this.lock) {
-      const tookLily = !!this.mods.lily && samePos(this.lock, this.mods.lily);
       this.lock = null;
       this.selected = null;
       this.skippedJump = false;
       this.pushLog("Stopped the combo. Your hop is done.");
       this.cheer("Skip!");
-      const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
+      const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.turnTookLily });
       applyBurst(this.mods, ended.burst);
       if (ended.next === "you") {
         this.turn = "you";
@@ -1398,6 +1398,7 @@ export class Game {
       this.snapshotLastRites = this.lastRitesUsed;
       this.snapshotQuiet = this.quiet;
       this.turnHadCapture = false;
+      this.turnTookLily = false;
     }
     this.animating = true;
     let keepJumping = false;
@@ -1421,6 +1422,11 @@ export class Game {
         if (this.stale(gen)) return;
       }
       this.board = applyMove(this.board, move, this.mods);
+      const tookLily = !!this.mods.lily && samePos(move.to, this.mods.lily);
+      if (tookLily) {
+        this.mods.lily = null;
+        this.turnTookLily = true;
+      }
       if (move.far) this.mods.farJumpUsed = true;
       if (move.capture) {
         this.turnHadCapture = true;
@@ -1471,7 +1477,7 @@ export class Game {
       this.lock = keepJumping ? move.to : null;
       this.selected = keepJumping ? move.to : null;
       this.renderAll();
-      await this.settle(move.to, !wasKing && nowKing, keepJumping);
+      await this.settle(move.to, !wasKing && nowKing, keepJumping, tookLily);
       if (this.stale(gen)) return;
       if (!wasKing && nowKing) {
         this.audio.crown();
@@ -1519,8 +1525,7 @@ export class Game {
     }
     this.lock = null;
     this.selected = null;
-    const tookLily = !!this.mods.lily && samePos(move.to, this.mods.lily);
-    const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
+    const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.turnTookLily });
     applyBurst(this.mods, ended.burst);
     if (ended.next === "you") {
       this.turn = "you";
@@ -1769,10 +1774,15 @@ export class Game {
     fly.remove();
   }
 
-  private async settle(pos: Pos, willCrown: boolean, quick: boolean): Promise<void> {
+  private async settle(pos: Pos, willCrown: boolean, quick: boolean, tookLily = false): Promise<void> {
     const man = this.squareEl(pos)?.querySelector(".man") as HTMLElement | null;
     if (!man) return;
     man.classList.add(willCrown ? "just-crowned" : "just-landed");
+    if (tookLily) {
+      man.classList.add("just-lily");
+      this.cheer("Hop Lily!");
+      window.setTimeout(() => man.classList.remove("just-lily"), 420);
+    }
     if (!willCrown) this.audio.land();
     const sq = this.squareEl(pos);
     if (sq) this.puffAt(sq);

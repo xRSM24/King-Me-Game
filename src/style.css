@@ -871,6 +871,11 @@ button small {
   animation: land-squash 0.28s ease;
 }
 
+#board .man.just-lily {
+  background: radial-gradient(circle, #b9f27c 0 38%, #3f9d58 42% 66%, transparent 70%) center 88% / 0 0 no-repeat;
+  animation: lily-land 0.4s ease-out;
+}
+
 #board .man.just-crowned {
   animation: king-glow 0.6s ease;
 }
@@ -889,6 +894,21 @@ button small {
   }
   100% {
     transform: scale(1, 1);
+  }
+}
+
+@keyframes lily-land {
+  0% {
+    transform: scale(1.24, 0.74);
+    background-size: 0 0;
+  }
+  38% {
+    transform: scale(0.88, 1.16);
+    background-size: 28% 28%;
+  }
+  100% {
+    transform: scale(1, 1);
+    background-size: 0 0;
   }
 }
 
@@ -1265,6 +1285,7 @@ html.calm #board.coaching .sq.can,
 html.calm .cheer.popin,
 html.calm .man.pop,
 html.calm #board .man.just-landed,
+html.calm #board .man.just-lily,
 html.calm #board .man.just-crowned {
   animation: none;
 }
