@@ -2,6 +2,7 @@
 import { boardSize, emptyLaws, emptyMods, inBoard, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
+import { sceneMarkup } from "./getScenes.ts";
 import {
   campsFromRows,
   legalMoves,
@@ -145,5 +146,12 @@ n = endYouTurn(n.burst, {});
 assert(n.burst.lilyHops === 0 && n.next === "you" && n.burst.openingHops === 1, "then leftover Back 2 Back");
 n = endYouTurn(n.burst, {});
 assert(n.next === "them" && n.burst.openingHops === 0, "then Enemy");
+
+for (const d of LAW_DEFS) {
+  const html = sceneMarkup(d.scene, d.name);
+  assert(html.includes("YOU GOT"), `${d.id} stamps YOU GOT`);
+  assert(html.includes(d.id === "back2Back" ? "BACK 2 BACK" : d.name.toUpperCase()) || html.includes(d.name), `${d.id} shows the name`);
+}
+assert(sceneMarkup("missing", "Trapdoor").includes("YOU GOT TRAPDOOR"), "unknown scene still stamps");
 
 console.log("powerCheck ok");

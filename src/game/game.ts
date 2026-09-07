@@ -5,6 +5,7 @@ import { JUMP_HOW, CHASE_START, CHASE_END_MORE, CHASE_END_TIE, chaseHint } from 
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import * as feel from "./feel.ts";
+import { sceneMarkup } from "./getScenes.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
 import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, reportName, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
@@ -79,6 +80,7 @@ export class Game {
   lock: Pos | null = null;
   thinking = false;
   animating = false;
+  getting = false;
   aiTimer: number | null = null;
   wipeTimer: number | null = null;
   actionGen = 0;
@@ -213,6 +215,7 @@ export class Game {
   }
 
   command(cmd: string): void {
+    if (this.getting) return;
     this.unlock();
     if (cmd !== "oops" && cmd !== "skip-jump") this.audio.ui();
     if (cmd === "new") {
@@ -342,12 +345,44 @@ export class Game {
       const id = cmd.slice(4) as keyof Laws;
       if (this.screen === "pick" && id in this.laws) {
         this.laws[id] = true;
-        this.boardIndex += 1;
-        this.loadBoard();
-        this.show("playing");
-        this.persistClimb();
+        this.getting = true;
+        this.animating = true;
+        const def = LAW_DEFS.find((d) => d.id === id);
+        void this.playGet(def?.scene ?? "", def?.name ?? id).then(() => {
+          this.boardIndex += 1;
+          this.loadBoard();
+          this.show("playing");
+          this.persistClimb();
+          this.getting = false;
+          this.animating = false;
+        });
       }
     }
+  }
+
+  private async playGet(scene: string, name: string): Promise<void> {
+    const host = document.getElementById("get-overlay");
+    if (!host) return;
+    const stamp = scene === "back2Back" ? "BACK 2 BACK" : name.toUpperCase();
+    if (this.meta.reduceMotion) {
+      host.innerHTML = `<p class="get-stamp">${`YOU GOT ${stamp}!`}</p>`;
+      host.classList.remove("hidden");
+      host.setAttribute("aria-hidden", "false");
+      this.audio.fanfare();
+      await new Promise((r) => setTimeout(r, 700));
+      host.classList.add("hidden");
+      host.setAttribute("aria-hidden", "true");
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML = sceneMarkup(scene, name);
+    host.classList.remove("hidden");
+    host.setAttribute("aria-hidden", "false");
+    this.audio.fanfare();
+    await new Promise((r) => setTimeout(r, 2000));
+    host.classList.add("hidden");
+    host.setAttribute("aria-hidden", "true");
+    host.innerHTML = "";
   }
 
   private nativeBack(): boolean {
@@ -680,6 +715,7 @@ export class Game {
     this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
     this.thinking = saved.turn === "them";
     this.animating = false;
+    this.getting = false;
     this.aiMem = emptyMemory();
     this.clearAi();
     this.coachOn = false;
@@ -2087,8 +2123,9 @@ export class Game {
       <div class="col">
         ${this.offers
           .map(
-            (o) => `<button type="button" data-cmd="law:${o.id}">
-              <b class="mod-head">${o.icon} ${o.name}</b>
+            (o, i) => `<button type="button" class="pick-card" data-cmd="law:${o.id}" style="animation-delay:${i * 70}ms">
+              <span class="pick-icon">${o.icon}</span>
+              <b class="mod-head">${o.name}</b>
               <small class="mod-desc">${o.desc}</small>
             </button>`,
           )
