@@ -1,6 +1,14 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
-import { boardSize, emptyLaws, emptyMods, inBoard } from "./types.ts";
+import { boardSize, emptyLaws, emptyMods, inBoard, SIZE } from "./types.ts";
+import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
+import {
+  campsFromRows,
+  legalMoves,
+  setupBoard,
+  wouldCrown,
+  type Board,
+} from "./rules.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -39,5 +47,45 @@ assert(
   "owned laws drop out of the pick pool",
 );
 assert(unusedLaws(emptyLaws()).length === 14, "fresh climb can offer all fourteen");
+
+function blankSize(n: number): Board {
+  return Array.from({ length: n }, () => Array.from({ length: n }, () => null));
+}
+
+const tenCamps = campsFromRows([9, 8], [0, 1], 10);
+assert(tenCamps.youKingRow === 0, "10-board: you still king on the far top");
+assert(tenCamps.themKingRow === 9, "10-board: Enemy kings on row 9");
+assert(wouldCrown("you", 0, { ...emptyMods(), size: 10, ...tenCamps }), "you crown on row 0 of a 10-board");
+assert(!wouldCrown("you", 9, { ...emptyMods(), size: 10, ...tenCamps }), "you do not crown on your 10-board home");
+assert(wouldCrown("them", 9, { ...emptyMods(), size: 10, ...tenCamps }), "Enemy crowns on row 9");
+
+const fly = { ...emptyLaws(), flyingKings: true };
+const ten = { ...emptyMods(), size: 10, ...tenCamps };
+let b = blankSize(10);
+b[9]![0] = { id: 1, side: "you", king: true } satisfies Piece;
+const slides = legalMoves(b, "you", fly, null, ten, true);
+assert(slides.some((m) => m.to.r === 2 && m.to.c === 7), "Super King can slide 7 on a 10-board");
+assert(
+  slides.every((m) => Math.max(Math.abs(m.to.r - 9), Math.abs(m.to.c - 0)) <= 7),
+  "Super King never slides 8+ empty squares",
+);
+assert(!slides.some((m) => m.to.r === 0 && m.to.c === 9), "9-square king ride is illegal");
+
+const spec8 = {
+  you: 1,
+  them: 1,
+  youRows: [7, 6],
+  themRows: [0, 1],
+  themKings: 0,
+  openKing: false,
+  holes: [],
+  bounce: false,
+  themFly: false,
+  blurb: "",
+  feltMods: [],
+  size: 8 as const,
+};
+const laid8 = setupBoard(spec8, () => 1);
+assert(laid8.length === SIZE, "setupBoard default size 8");
 
 console.log("powerCheck ok");

@@ -97,6 +97,7 @@ export interface BoardSetup {
   feltMods: FeltMod[];
   youPos?: Pos[];
   themPos?: Pos[];
+  size?: number;
 }
 
 export const SIZE = 8;

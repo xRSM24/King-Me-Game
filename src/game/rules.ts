@@ -1,7 +1,8 @@
 import type { BoardMods, BoardSetup, Cell, Laws, Move, Piece, Pos, Side } from "./types.ts";
-import { CHASE_MAX_PIECES, SIZE, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { CHASE_MAX_PIECES, SIZE, boardSize, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 
 export type Board = Cell[][];
+export const FLY_SLIDE_MAX = 7;
 
 const ALL: Pos[] = [
   { r: -1, c: -1 },
@@ -10,8 +11,8 @@ const ALL: Pos[] = [
   { r: 1, c: 1 },
 ];
 
-function avgRow(rows: number[]): number {
-  if (!rows.length) return (SIZE - 1) / 2;
+function avgRow(rows: number[], size: number): number {
+  if (!rows.length) return (size - 1) / 2;
   return rows.reduce((s, r) => s + r, 0) / rows.length;
 }
 
@@ -19,14 +20,15 @@ function avgRow(rows: number[]): number {
 export function campsFromRows(
   youRows: number[],
   themRows: number[],
+  size = SIZE,
 ): Pick<BoardMods, "youKingRow" | "themKingRow" | "youHome" | "themHome"> {
   const uniq = (rows: number[]) => [...new Set(rows)].sort((a, b) => a - b);
-  const mid = (SIZE - 1) / 2;
-  let youKingRow = avgRow(youRows) < mid ? SIZE - 1 : 0;
-  let themKingRow = avgRow(themRows) < mid ? SIZE - 1 : 0;
+  const mid = (size - 1) / 2;
+  let youKingRow = avgRow(youRows, size) < mid ? size - 1 : 0;
+  let themKingRow = avgRow(themRows, size) < mid ? size - 1 : 0;
   if (youKingRow === themKingRow) {
     youKingRow = 0;
-    themKingRow = SIZE - 1;
+    themKingRow = size - 1;
   }
   return {
     youKingRow,
@@ -37,15 +39,17 @@ export function campsFromRows(
 }
 
 export function modsFromSpec(
-  spec: Pick<BoardSetup, "youRows" | "themRows" | "holes" | "bounce" | "themFly">,
+  spec: Pick<BoardSetup, "youRows" | "themRows" | "holes" | "bounce" | "themFly" | "size">,
   extra: Partial<BoardMods> = {},
 ): BoardMods {
+  const size = boardSize({ size: extra.size ?? spec.size });
   return {
     ...emptyMods(),
     holes: spec.holes,
     bounce: spec.bounce,
     themFly: spec.themFly,
-    ...campsFromRows(spec.youRows, spec.themRows),
+    size,
+    ...campsFromRows(spec.youRows, spec.themRows, size),
     ...extra,
   };
 }
@@ -53,7 +57,7 @@ export function modsFromSpec(
 /** +1 walks down the felt (toward row 7), -1 walks up (toward row 0). */
 export function manStep(side: Side, mods: BoardMods): number {
   const goal = side === "you" ? mods.youKingRow : mods.themKingRow;
-  return goal < SIZE / 2 ? -1 : 1;
+  return goal < boardSize(mods) / 2 ? -1 : 1;
 }
 
 export function wouldCrown(side: Side, toRow: number, mods: BoardMods): boolean {
@@ -64,7 +68,7 @@ export function wouldCrown(side: Side, toRow: number, mods: BoardMods): boolean 
 }
 
 function backRow(side: Side, mods: BoardMods): number {
-  return manStep(side, mods) < 0 ? SIZE - 1 : 0;
+  return manStep(side, mods) < 0 ? boardSize(mods) - 1 : 0;
 }
 
 function kingRow(side: Side, mods: BoardMods): number {
@@ -84,13 +88,13 @@ export function isHole(mods: BoardMods, r: number, c: number): boolean {
 }
 
 export function playable(r: number, c: number, mods: BoardMods): boolean {
-  return inBoard(r, c) && isDark(r, c) && !isHole(mods, r, c);
+  return inBoard(r, c, boardSize(mods)) && isDark(r, c) && !isHole(mods, r, c);
 }
 
 export function piecesOf(board: Board, side: Side): { piece: Piece; pos: Pos }[] {
   const out: { piece: Piece; pos: Pos }[] = [];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r]!.length; c++) {
       const p = board[r]![c];
       if (p && p.side === side) out.push({ piece: p, pos: { r, c } });
     }
@@ -127,11 +131,12 @@ function canFly(piece: Piece, laws: Laws, mods: BoardMods): boolean {
 
 function addSlide(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
   if (canFly(piece, laws, mods)) {
+    const size = boardSize(mods);
     for (const d of ALL) {
-      for (let k = 1; k < SIZE; k++) {
+      for (let k = 1; k <= FLY_SLIDE_MAX; k++) {
         const r = from.r + d.r * k;
         const c = from.c + d.c * k;
-        if (!inBoard(r, c) || !isDark(r, c)) break;
+        if (!inBoard(r, c, size) || !isDark(r, c)) break;
         if (isHole(mods, r, c)) continue;
         if (board[r]![c]) break;
         out.push({ from, to: { r, c } });
@@ -337,7 +342,7 @@ export function applyStartLaws(board: Board, laws: Laws, mods: BoardMods): Board
 export function recruitMan(board: Board, side: Side, nextId: () => number, mods: BoardMods = emptyMods()): Board {
   const next = cloneBoard(board);
   const row = backRow(side, mods);
-  for (let c = 0; c < SIZE; c++) {
+  for (let c = 0; c < boardSize(mods); c++) {
     if (!playable(row, c, mods)) continue;
     if (next[row]![c]) continue;
     next[row]![c] = { id: nextId(), side, king: false };
@@ -357,11 +362,12 @@ export function reviveKing(
   const next = cloneBoard(board);
   const goal = kingRow(side, mods);
   const towardHome = -manStep(side, mods);
+  const size = boardSize(mods);
   const spots: Pos[] = [];
-  for (let i = 0; i < SIZE; i++) {
+  for (let i = 0; i < size; i++) {
     const r = goal + towardHome * i;
-    if (r < 0 || r >= SIZE) break;
-    for (let c = 0; c < SIZE; c++) {
+    if (r < 0 || r >= size) break;
+    for (let c = 0; c < size; c++) {
       if (!playable(r, c, mods)) continue;
       if (next[r]![c]) continue;
       spots.push({ r, c });
@@ -430,10 +436,11 @@ export function chaseWinner(board: Board): "you" | "them" | "draw" {
 }
 
 export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
+  const size = spec.size === 10 ? 10 : SIZE;
   const board: Board = [];
-  for (let r = 0; r < SIZE; r++) {
+  for (let r = 0; r < size; r++) {
     const row: Cell[] = [];
-    for (let c = 0; c < SIZE; c++) row.push(null);
+    for (let c = 0; c < size; c++) row.push(null);
     board.push(row);
   }
 
@@ -460,7 +467,7 @@ export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
       }
     }
     for (const r of rows) {
-      for (let c = 0; c < SIZE; c++) {
+      for (let c = 0; c < size; c++) {
         if (n >= count) return;
         const king = kingFirst && !crowned && side === "you";
         if (stamp(side, { r, c }, king)) {
@@ -479,8 +486,8 @@ export function setupBoard(spec: BoardSetup, nextId: () => number): Board {
 
 function crownSide(board: Board, side: Side, n: number): void {
   let left = n;
-  for (let r = 0; r < SIZE && left > 0; r++) {
-    for (let c = 0; c < SIZE && left > 0; c++) {
+  for (let r = 0; r < board.length && left > 0; r++) {
+    for (let c = 0; c < board[r]!.length && left > 0; c++) {
       const p = board[r]![c];
       if (p && p.side === side && !p.king) {
         p.king = true;
