@@ -51,7 +51,22 @@ export const DOUBLE_CROWN_DESC =
   "When one of your pieces becomes a King, a regular piece next to it becomes a King too.";
 
 export const TRAPDOOR_DESC =
-  "Once this board, after you capture, the square you land on becomes a hole. Nobody may sit there after that. Jump over it onto the star past it.";
+  "Once this board, after you capture, the square the Enemy sat on becomes a hole. Nobody may sit there. Jump over it onto the star past it.";
+
+export const PICK_JUMP_BACK = "Player may hop backwards";
+export const PICK_SUPER_KING = "Player's king may move up to 7 spaces at once.";
+export const PICK_BUDDY_UP = "Player gets a new piece after an enemy is captured";
+export const PICK_SECOND_CHANCE = "If player loses, one king comes back to join the player";
+export const PICK_STARTING_KING = "One player piece starts as a King";
+export const PICK_EXTRA_PIECE = "Player gets one extra piece to start";
+export const PICK_HOP_PARTY = "Every 4 enemy captures creates a king for the player";
+export const PICK_FAR_JUMP = "One non-king piece may jump further each turn";
+export const PICK_DOUBLE_CROWN = "When a player piece becomes king, a non-king next to it becomes king.";
+export const PICK_TRAPDOOR = "When a piece is captured, that space becomes a hole";
+export const PICK_SCOUT = "One player piece begins closer to the middle of the board";
+export const PICK_WIDE_POND = "Boards are now 10x10";
+export const PICK_NAP_TIME = "The enemy falls asleep for one turn";
+export const PICK_BACK_2_BACK = "Player begins with 2 moves";
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
