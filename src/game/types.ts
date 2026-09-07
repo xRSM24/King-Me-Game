@@ -129,6 +129,18 @@ export function inBoard(r: number, c: number, size: number = SIZE): boolean {
   return r >= 0 && c >= 0 && r < size && c < size;
 }
 
+export function cellFromPoint(
+  x: number,
+  y: number,
+  box: { left: number; top: number; width: number; height: number },
+  size: number,
+): Pos | null {
+  if (box.width <= 0 || box.height <= 0) return null;
+  const c = Math.floor(((x - box.left) / box.width) * size);
+  const r = Math.floor(((y - box.top) / box.height) * size);
+  return inBoard(r, c, size) ? { r, c } : null;
+}
+
 export function emptyLaws(): Laws {
   return {
     backJump: false,

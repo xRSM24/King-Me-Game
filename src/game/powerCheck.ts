@@ -1,5 +1,5 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
-import { boardSize, emptyLaws, emptyMods, inBoard, SIZE } from "./types.ts";
+import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import { sceneMarkup } from "./getScenes.ts";
@@ -46,6 +46,14 @@ assert(boardSize({ ...mods, size: 10 }) === 10, "boardSize reads 10");
 assert(inBoard(9, 0, 10), "row 9 is on a 10-board");
 assert(!inBoard(9, 0, 8), "row 9 is off an 8-board");
 assert(!inBoard(8, 0), "inBoard without size still uses 8");
+
+const felt = { left: 0, top: 0, width: 100, height: 100 };
+const far10 = cellFromPoint(95, 95, felt, 10);
+assert(far10?.r === 9 && far10?.c === 9, "10-board drag maps the far corner to 9,9");
+const far8 = cellFromPoint(95, 95, felt, 8);
+assert(far8?.r === 7 && far8?.c === 7, "8-board drag maps the far corner to 7,7");
+assert(cellFromPoint(5, 5, felt, 10)?.r === 0, "10-board near corner is row 0");
+assert(cellFromPoint(-1, 0, felt, 10) === null, "pointer left of the felt is off");
 
 assert(LAW_DEFS.length === 14, "fourteen climb powers");
 assert(LAW_DEFS.every((d) => d.scene === d.id), "scene id matches law id");

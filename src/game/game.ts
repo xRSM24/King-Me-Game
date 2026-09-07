@@ -38,7 +38,7 @@ import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } fr
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import { applyBurst, burstFromMods, endYouTurn, noteCapture } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
   createAccount,
   deleteAccount,
@@ -1054,16 +1054,17 @@ export class Game {
 
   private moveFocus(dir: Pos): void {
     const active = document.activeElement;
-    let r = this.keyFocus?.r ?? 7;
+    let r = this.keyFocus?.r ?? boardSize(this.mods) - 1;
     let c = this.keyFocus?.c ?? 0;
     if (active instanceof HTMLElement && active.hasAttribute("data-r")) {
       r = Number(active.getAttribute("data-r"));
       c = Number(active.getAttribute("data-c"));
     }
+    const n = boardSize(this.mods);
     for (let i = 1; i < 16; i++) {
       const nr = r + dir.r * i;
       const nc = c + dir.c * i;
-      if (!inBoard(nr, nc)) break;
+      if (!inBoard(nr, nc, n)) break;
       if (!isDark(nr, nc) || isHole(this.mods, nr, nc)) continue;
       this.keyFocus = { r: nr, c: nc };
       this.squareEl(this.keyFocus)?.focus();
@@ -1073,7 +1074,7 @@ export class Game {
       for (const tilt of [-1, 1]) {
         const nr = r + dir.r * i + (dir.r === 0 ? tilt : 0);
         const nc = c + dir.c * i + (dir.c === 0 ? tilt : 0);
-        if (!inBoard(nr, nc) || !isDark(nr, nc) || isHole(this.mods, nr, nc)) continue;
+        if (!inBoard(nr, nc, n) || !isDark(nr, nc) || isHole(this.mods, nr, nc)) continue;
         this.keyFocus = { r: nr, c: nc };
         this.squareEl(this.keyFocus)?.focus();
         return;
@@ -1330,10 +1331,7 @@ export class Game {
     const w = rect.width - (parseFloat(style.borderLeftWidth) || 0) - (parseFloat(style.borderRightWidth) || 0);
     const h = rect.height - (parseFloat(style.borderTopWidth) || 0) - (parseFloat(style.borderBottomWidth) || 0);
     if (w <= 0 || h <= 0) return null;
-    const c = Math.floor(((x - left) / w) * 8);
-    const r = Math.floor(((y - top) / h) * 8);
-    if (r < 0 || r > 7 || c < 0 || c > 7) return null;
-    return { r, c };
+    return cellFromPoint(x, y, { left, top, width: w, height: h }, boardSize(this.mods));
   }
 
   private releasePointer(pointerId: number): void {
