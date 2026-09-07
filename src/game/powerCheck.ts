@@ -12,7 +12,7 @@ import {
   wouldCrown,
   type Board,
 } from "./rules.ts";
-import { boardSpec, pickLily, scaleRowsForSize } from "./setup.ts";
+import { boardSpec, maplePathToKingRank, pickLily, pickSafeHoles, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
 import {
   applyBurst,
@@ -200,5 +200,35 @@ for (const d of LAW_DEFS) {
 }
 assert(sceneMarkup("missing", "Trapdoor").includes("YOU GOT TRAPDOOR"), "unknown scene still stamps");
 assert(!sceneMarkup("back2Back", "Back 2 Back").includes('class="star"'), "back2Back has no jump star");
+
+const wall = blankSize(8);
+wall[7]![0] = { id: 1, side: "you", king: false };
+const isolated = {
+  ...emptyMods(),
+  youKingRow: 0,
+  youHome: [6, 7],
+  themKingRow: 7,
+  themHome: [0, 1],
+  holes: [
+    { r: 6, c: 1 },
+    { r: 5, c: 0 },
+    { r: 5, c: 2 },
+    { r: 4, c: 1 },
+    { r: 3, c: 0 },
+    { r: 3, c: 2 },
+    { r: 2, c: 1 },
+    { r: 1, c: 0 },
+    { r: 1, c: 2 },
+  ],
+};
+assert(
+  !maplePathToKingRank(wall, isolated, { r: 7, c: 0 }),
+  "a maple boxed from row 0 has no path",
+);
+const safe = pickSafeHoles(new Rng(3), 8, wall, emptyLaws(), { ...isolated, holes: [] });
+assert(
+  maplePathToKingRank(wall, { ...isolated, holes: safe }, { r: 7, c: 0 }),
+  "pickSafeHoles will not wall the maple off row 0",
+);
 
 console.log("powerCheck ok");

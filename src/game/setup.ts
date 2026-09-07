@@ -1,5 +1,5 @@
 import type { BoardMods, BoardSetup, FeltMod, Laws, Pos } from "./types.ts";
-import { PATH_END, boardSize, emptyLaws, isDark, samePos } from "./types.ts";
+import { PATH_END, boardSize, emptyLaws, inBoard, isDark, samePos } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
 import {
   CLOSE_QUARTERS_DESC,
@@ -192,6 +192,45 @@ function trappedByHoles(board: Board, laws: Laws, mods: BoardMods): Pos[] {
   return out;
 }
 
+export function maplePathToKingRank(_board: Board, mods: BoardMods, from: Pos): boolean {
+  const size = boardSize(mods);
+  if (!inBoard(from.r, from.c, size) || !isDark(from.r, from.c) || blocked(mods.holes, from)) {
+    return false;
+  }
+  const seen = new Set<string>([key(from)]);
+  const queue: Pos[] = [from];
+  for (let i = 0; i < queue.length; i++) {
+    const here = queue[i]!;
+    if (here.r === mods.youKingRow) return true;
+    for (const dr of [-1, 1]) {
+      for (const dc of [-1, 1]) {
+        const next = { r: here.r + dr, c: here.c + dc };
+        const nextKey = key(next);
+        if (
+          inBoard(next.r, next.c, size) &&
+          isDark(next.r, next.c) &&
+          !blocked(mods.holes, next) &&
+          !seen.has(nextKey)
+        ) {
+          seen.add(nextKey);
+          queue.push(next);
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function pathlessMaples(board: Board, mods: BoardMods): Pos[] {
+  return piecesOf(board, "you")
+    .map(({ pos }) => pos)
+    .filter((pos) => !maplePathToKingRank(board, mods, pos));
+}
+
+function holeProblems(board: Board, laws: Laws, mods: BoardMods): number {
+  return trappedByHoles(board, laws, mods).length + pathlessMaples(board, mods).length;
+}
+
 /** Place pits one at a time. Skip a square if it would wall in you or the Enemy. */
 export function pickSafeHoles(rng: Rng, n: number, board: Board, laws: Laws, mods: BoardMods): Pos[] {
   if (n <= 0) return [];
@@ -203,6 +242,7 @@ export function pickSafeHoles(rng: Rng, n: number, board: Board, laws: Laws, mod
     if (holes.length >= n) break;
     const trial: BoardMods = { ...mods, holes: [...holes, p] };
     if (trappedByHoles(board, laws, trial).length) continue;
+    if (pathlessMaples(board, trial).length) continue;
     holes.push(p);
   }
   return holes;
@@ -229,14 +269,13 @@ export function withHoleMods(felt: FeltMod[], n: number): FeltMod[] {
  */
 export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng): BoardMods {
   if (!mods.holes.length) return mods;
-  if (!trappedByHoles(board, laws, mods).length) return mods;
+  if (!holeProblems(board, laws, mods)) return mods;
   let holes = mods.holes.map((h) => ({ r: h.r, c: h.c }));
   let next: BoardMods = { ...mods, holes };
   const size = boardSize(mods);
-  for (let guard = 0; guard < 24; guard++) {
-    const trapped = trappedByHoles(board, laws, next);
-    if (!trapped.length) return next;
-    const count = trapped.length;
+  while (holes.length) {
+    const count = holeProblems(board, laws, next);
+    if (!count) return next;
     const dests = darkPlayable(holeBand(size), [], size).filter(
       (p) => !at(board, p) && !holes.some((h) => samePos(h, p)),
     );
@@ -246,7 +285,7 @@ export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng
       for (const dest of dests) {
         const trial = holes.map((h, j) => (j === i ? dest : h));
         const cand: BoardMods = { ...mods, holes: trial };
-        if (trappedByHoles(board, laws, cand).length < count) {
+        if (holeProblems(board, laws, cand) < count) {
           holes = trial;
           next = cand;
           moved = true;
@@ -256,7 +295,7 @@ export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng
       if (moved) break;
       const dropped = holes.filter((_, j) => j !== i);
       const cand: BoardMods = { ...mods, holes: dropped };
-      if (trappedByHoles(board, laws, cand).length < count) {
+      if (holeProblems(board, laws, cand) < count) {
         holes = dropped;
         next = cand;
         moved = true;
