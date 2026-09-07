@@ -37,6 +37,9 @@ export interface Laws {
   doubleCrown: boolean;
   trapdoor: boolean;
   scout: boolean;
+  widePond: boolean;
+  napTime: boolean;
+  back2Back: boolean;
 }
 
 export interface FeltMod {
@@ -61,6 +64,12 @@ export interface BoardMods {
   farJumpUsed: boolean;
   /** Trapdoor already made a hole this board. */
   trapdoorUsed: boolean;
+  /** 8 unless Wide Pond made this climb 10×10. */
+  size: number;
+  napUsed: boolean;
+  napPending: boolean;
+  /** Remaining Back 2 Back opening hops this board (0 if the law is off). */
+  openingHops: number;
 }
 
 export interface Meta {
@@ -109,8 +118,12 @@ export function isDark(r: number, c: number): boolean {
   return (r + c) % 2 === 1;
 }
 
-export function inBoard(r: number, c: number): boolean {
-  return r >= 0 && c >= 0 && r < SIZE && c < SIZE;
+export function boardSize(mods: { size?: number }): number {
+  return mods.size === 10 ? 10 : 8;
+}
+
+export function inBoard(r: number, c: number, size: number = SIZE): boolean {
+  return r >= 0 && c >= 0 && r < size && c < size;
 }
 
 export function emptyLaws(): Laws {
@@ -127,6 +140,9 @@ export function emptyLaws(): Laws {
     doubleCrown: false,
     trapdoor: false,
     scout: false,
+    widePond: false,
+    napTime: false,
+    back2Back: false,
   };
 }
 
@@ -142,6 +158,10 @@ export function emptyMods(): BoardMods {
     themHome: [0, 1],
     farJumpUsed: false,
     trapdoorUsed: false,
+    size: SIZE,
+    napUsed: false,
+    napPending: false,
+    openingHops: 0,
   };
 }
 
