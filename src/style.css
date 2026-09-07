@@ -618,6 +618,11 @@ button small {
   background: var(--board-back, #2a1a0c);
 }
 
+#board.size-10 {
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: repeat(10, 1fr);
+}
+
 .sq {
   border: 0;
   border-radius: 0;

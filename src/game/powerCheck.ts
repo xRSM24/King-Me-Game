@@ -5,11 +5,14 @@ import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import {
   campsFromRows,
   legalMoves,
+  modsFromSpec,
   setupBoard,
   trapdoorHole,
   wouldCrown,
   type Board,
 } from "./rules.ts";
+import { boardSpec, scaleRowsForSize } from "./setup.ts";
+import { Rng } from "./rng.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -92,5 +95,18 @@ assert(laid8.length === SIZE, "setupBoard default size 8");
 const take = { from: { r: 5, c: 2 }, to: { r: 3, c: 4 }, capture: { r: 4, c: 3 } };
 assert(trapdoorHole(take)?.r === 4 && trapdoorHole(take)?.c === 3, "hole is where the Enemy sat");
 assert(trapdoorHole({ from: { r: 5, c: 2 }, to: { r: 4, c: 3 } }) == null, "slides make no trapdoor");
+
+assert(scaleRowsForSize([7, 6], 10).join(",") === "9,8", "bottom home rows shift on 10");
+assert(scaleRowsForSize([0, 1, 2], 10).join(",") === "0,1,2", "top rows stay");
+assert(scaleRowsForSize([7, 6], 8).join(",") === "7,6", "8-board rows unchanged");
+
+const spec10 = boardSpec(1, 0, false, new Rng(99), 10);
+assert(spec10.size === 10, "boardSpec stores size 10");
+assert(spec10.youRows.every((r) => r <= 9), "you rows fit a 10-board");
+const laid10 = setupBoard(spec10, () => 1);
+assert(laid10.length === 10 && laid10[0]!.length === 10, "laid 10×10");
+const m10 = modsFromSpec(spec10, { size: 10 });
+assert(m10.size === 10, "mods keep size 10");
+assert(m10.themKingRow === 9 || m10.youKingRow === 9, "one far edge is row 9");
 
 console.log("powerCheck ok");

@@ -36,7 +36,7 @@ import {
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, CHASE_HOPS, PATH_END, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
   createAccount,
   deleteAccount,
@@ -865,8 +865,9 @@ export class Game {
   private loadBoard(): void {
     const openKing = this.laws.openKing || this.rng.chance(notchBonus(this.meta.notches).kingChance);
     const boardRng = new Rng(hashSeed(this.runSeed + (this.boardIndex + 1) * 104729));
-    const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng);
-    this.mods = modsFromSpec(spec);
+    const size = this.laws.widePond ? 10 : 8;
+    const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng, size);
+    this.mods = modsFromSpec(spec, { size });
     this.blurb = spec.blurb;
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
@@ -2259,9 +2260,10 @@ export class Game {
         .map((m) => `${(m.capture ?? m.overHole)!.r},${(m.capture ?? m.overHole)!.c}`),
     );
     const froms = new Set(legal.map((m) => `${m.from.r},${m.from.c}`));
+    const n = boardSize(this.mods);
     let html = "";
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
         const dark = (r + c) % 2 === 1;
         const hole = isHole(this.mods, r, c);
         const p = this.board[r]![c];
@@ -2281,6 +2283,7 @@ export class Game {
       }
     }
     el.innerHTML = html;
+    el.classList.toggle("size-10", n === 10);
     el.classList.toggle("coaching", this.coachOn);
     const keep = this.keyFocus ?? this.selected;
     if (keep) this.squareEl(keep)?.focus();

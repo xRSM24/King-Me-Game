@@ -1,5 +1,5 @@
 import type { BoardMods, BoardSetup, FeltMod, Laws, Pos } from "./types.ts";
-import { PATH_END, emptyLaws, isDark, samePos } from "./types.ts";
+import { PATH_END, boardSize, emptyLaws, isDark, samePos } from "./types.ts";
 import { Rng, hashSeed } from "./rng.ts";
 import {
   CLOSE_QUARTERS_DESC,
@@ -95,10 +95,11 @@ export function feltTheme(seed: number, index: number): FeltTheme {
   return rng.pick(FELTS);
 }
 
-function inLane(p: Pos, lane: Lane): boolean {
-  if (lane === "left") return p.c <= 3;
-  if (lane === "right") return p.c >= 4;
-  if (lane === "center") return p.c >= 2 && p.c <= 5;
+function inLane(p: Pos, lane: Lane, size = 8): boolean {
+  const split = size / 2;
+  if (lane === "left") return p.c < split;
+  if (lane === "right") return p.c >= split;
+  if (lane === "center") return p.c >= split - 2 && p.c <= split + 1;
   return true;
 }
 
@@ -117,10 +118,23 @@ function blocked(holes: Pos[], p: Pos): boolean {
   return holes.some((h) => h.r === p.r && h.c === p.c);
 }
 
-export function darkPlayable(rows: number[], holes: Pos[] = []): Pos[] {
+export function scaleRowsForSize(rows: number[], size: number): number[] {
+  if (size === 8) return rows.slice();
+  const delta = size - 8;
+  return rows.map((r) => (r >= 4 ? r + delta : r));
+}
+
+export function holeBand(size: number): number[] {
+  const last = size - 3;
+  const out: number[] = [];
+  for (let r = 2; r <= last; r++) out.push(r);
+  return out;
+}
+
+export function darkPlayable(rows: number[], holes: Pos[] = [], size = 8): Pos[] {
   const out: Pos[] = [];
   for (const r of rows) {
-    for (let c = 0; c < 8; c++) {
+    for (let c = 0; c < size; c++) {
       if (!isDark(r, c)) continue;
       const p = { r, c };
       if (!blocked(holes, p)) out.push(p);
@@ -136,9 +150,10 @@ export function pickSpots(
   holes: Pos[],
   used: Set<string>,
   lane: Lane = "any",
+  size = 8,
 ): Pos[] {
-  const open = darkPlayable(rows, holes).filter((p) => !used.has(key(p)));
-  const narrowed = lane === "any" ? open : open.filter((p) => inLane(p, lane));
+  const open = darkPlayable(rows, holes, size).filter((p) => !used.has(key(p)));
+  const narrowed = lane === "any" ? open : open.filter((p) => inLane(p, lane, size));
   const spots = narrowed.length >= n ? narrowed : open;
   rng.shuffle(spots);
   const out = spots.slice(0, Math.max(0, n));
@@ -146,8 +161,8 @@ export function pickSpots(
   return out;
 }
 
-export function pickHoles(rng: Rng, n: number, used: Set<string>): Pos[] {
-  const spots = darkPlayable([2, 3, 4, 5]).filter((p) => !used.has(key(p)));
+export function pickHoles(rng: Rng, n: number, used: Set<string>, size = 8): Pos[] {
+  const spots = darkPlayable(holeBand(size), [], size).filter((p) => !used.has(key(p)));
   rng.shuffle(spots);
   const out = spots.slice(0, Math.max(0, n));
   for (const p of out) used.add(key(p));
@@ -167,7 +182,8 @@ function trappedByHoles(board: Board, laws: Laws, mods: BoardMods): Pos[] {
 /** Place pits one at a time. Skip a square if it would wall in you or the Enemy. */
 export function pickSafeHoles(rng: Rng, n: number, board: Board, laws: Laws, mods: BoardMods): Pos[] {
   if (n <= 0) return [];
-  const spots = darkPlayable([2, 3, 4, 5]).filter((p) => !at(board, p));
+  const size = boardSize(mods);
+  const spots = darkPlayable(holeBand(size), [], size).filter((p) => !at(board, p));
   rng.shuffle(spots);
   const holes: Pos[] = [];
   for (const p of spots) {
@@ -203,11 +219,12 @@ export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng
   if (!trappedByHoles(board, laws, mods).length) return mods;
   let holes = mods.holes.map((h) => ({ r: h.r, c: h.c }));
   let next: BoardMods = { ...mods, holes };
+  const size = boardSize(mods);
   for (let guard = 0; guard < 24; guard++) {
     const trapped = trappedByHoles(board, laws, next);
     if (!trapped.length) return next;
     const count = trapped.length;
-    const dests = darkPlayable([2, 3, 4, 5]).filter(
+    const dests = darkPlayable(holeBand(size), [], size).filter(
       (p) => !at(board, p) && !holes.some((h) => samePos(h, p)),
     );
     rng.shuffle(dests);
@@ -243,10 +260,15 @@ export function unstickHoles(board: Board, laws: Laws, mods: BoardMods, rng: Rng
 }
 
 /** Ivory (higher row) jumps a charcoal toward the crown. */
-export function openingJump(rng: Rng, holes: Pos[] = [], lane: Lane = "any"): { you: Pos; them: Pos; land: Pos } {
+export function openingJump(
+  rng: Rng,
+  holes: Pos[] = [],
+  lane: Lane = "any",
+  size = 8,
+): { you: Pos; them: Pos; land: Pos } {
   const options: { you: Pos; them: Pos; land: Pos }[] = [];
   for (let r = 2; r <= 4; r++) {
-    for (let c = 0; c < 8; c++) {
+    for (let c = 0; c < size; c++) {
       if (!isDark(r, c)) continue;
       const land = { r, c };
       if (blocked(holes, land)) continue;
@@ -254,14 +276,14 @@ export function openingJump(rng: Rng, holes: Pos[] = [], lane: Lane = "any"): { 
         const them = { r: r + 1, c: c + dc };
         const you = { r: r + 2, c: c + dc * 2 };
         if (!isDark(them.r, them.c) || !isDark(you.r, you.c)) continue;
-        if (them.c < 0 || them.c > 7 || you.c < 0 || you.c > 7) continue;
-        if (you.r > 7) continue;
+        if (them.c < 0 || them.c >= size || you.c < 0 || you.c >= size) continue;
+        if (you.r >= size) continue;
         if (blocked(holes, them) || blocked(holes, you)) continue;
         options.push({ you, them, land });
       }
     }
   }
-  const preferred = lane === "any" ? options : options.filter((o) => inLane(o.land, lane));
+  const preferred = lane === "any" ? options : options.filter((o) => inLane(o.land, lane, size));
   const pool = preferred.length ? preferred : options;
   rng.shuffle(pool);
   return pool[0] ?? { you: { r: 5, c: 2 }, them: { r: 4, c: 3 }, land: { r: 3, c: 4 } };
@@ -377,15 +399,20 @@ function between(rng: Rng, span: [number, number]): number {
   return rng.range(span[0], span[1]);
 }
 
-function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
+function firstHop(rng: Rng, extraYou: number, openKing: boolean, size: number): BoardSetup {
   const used = new Set<string>();
   const lane: Lane = rng.pick(["left", "right", "center"]);
-  const jump = openingJump(rng, [], lane);
+  const jump = openingJump(rng, [], lane, size);
   used.add(key(jump.you));
   used.add(key(jump.them));
   const you = 3 + extraYou;
-  const youPos = [jump.you, ...pickSpots(rng, [7, 6, 5], you - 1, [], used, lane)];
-  const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used, lane)];
+  const youRows = scaleRowsForSize([7, 6], size);
+  const themRows = scaleRowsForSize([0, 1], size);
+  const youPos = [
+    jump.you,
+    ...pickSpots(rng, scaleRowsForSize([7, 6, 5], size), you - 1, [], used, lane, size),
+  ];
+  const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used, lane, size)];
   const file = laneTitle(lane);
   const feltMods: FeltMod[] = [{ title: "First Jump", desc: FIRST_JUMP_DESC }];
   if (file) {
@@ -399,8 +426,8 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
   return {
     you,
     them: 2,
-    youRows: [7, 6],
-    themRows: [0, 1],
+    youRows,
+    themRows,
     themKings: 0,
     openKing,
     holes: [],
@@ -410,6 +437,7 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean): BoardSetup {
     themPos,
     blurb: FIRST_JUMP_DESC,
     feltMods,
+    size,
   };
 }
 
@@ -423,10 +451,10 @@ function debugFelt(): string | null {
 }
 
 /** Each New climb rolls a new path. Daily boards ignore this and use dailySeed(). */
-export function boardSpec(index: number, extraYou: number, openKing: boolean, rng: Rng): BoardSetup {
+export function boardSpec(index: number, extraYou: number, openKing: boolean, rng: Rng, size = 8): BoardSetup {
   const i = Math.min(Math.max(index, 0), PATH_END - 1);
   const forceRace = debugFelt() === "race";
-  if (i === 0 && !forceRace) return firstHop(rng, extraYou, openKing);
+  if (i === 0 && !forceRace) return firstHop(rng, extraYou, openKing, size);
   const tier = TIERS[i]!;
   let youRows = tier.youRows;
   let themRows = tier.themRows;
@@ -467,6 +495,8 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
     themRows = [0, 1, 2];
     feltMods.push({ title: "Staggered Line", desc: STAGGER_DESC });
   }
+  youRows = scaleRowsForSize(youRows, size);
+  themRows = scaleRowsForSize(themRows, size);
 
   const them = between(rng, tier.them);
   const themKings = between(rng, tier.themKings);
@@ -475,8 +505,8 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   const themFly = tier.themFly;
   const used = new Set<string>();
   const you = tier.you + extraYou;
-  const youPos = pickSpots(rng, youRows, you, [], used, youLane);
-  const themPos = pickSpots(rng, themRows, them, [], used, themLane);
+  const youPos = pickSpots(rng, youRows, you, [], used, youLane, size);
+  const themPos = pickSpots(rng, themRows, them, [], used, themLane, size);
   const draft: BoardSetup = {
     you,
     them,
@@ -491,6 +521,7 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
     themPos,
     blurb: "",
     feltMods: [],
+    size,
   };
   let hid = 0;
   const laid = setupBoard(draft, () => ++hid);
@@ -531,5 +562,6 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
     themPos,
     blurb,
     feltMods,
+    size,
   };
 }

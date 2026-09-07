@@ -38,28 +38,29 @@ export interface ClimbSave {
 
 type SavedCell = { id: number; side: Side; king: boolean } | null;
 
-function asRows(v: unknown, fallback: number[]): number[] {
+function asRows(v: unknown, fallback: number[], size = SIZE): number[] {
   if (!Array.isArray(v)) return fallback;
-  const rows = v.filter((n): n is number => typeof n === "number" && n >= 0 && n < SIZE);
+  const rows = v.filter((n): n is number => typeof n === "number" && n >= 0 && n < size);
   return rows.length ? rows : fallback;
 }
 
 function campsForSave(
   raw: Partial<BoardMods> | undefined,
   feltMods: FeltMod[],
+  size: number,
 ): Pick<BoardMods, "youKingRow" | "themKingRow" | "youHome" | "themHome"> {
   if (raw && typeof raw.youKingRow === "number" && typeof raw.themKingRow === "number") {
     return {
-      youKingRow: raw.youKingRow === SIZE - 1 ? SIZE - 1 : 0,
-      themKingRow: raw.themKingRow === 0 ? 0 : SIZE - 1,
-      youHome: asRows(raw.youHome, emptyMods().youHome),
-      themHome: asRows(raw.themHome, emptyMods().themHome),
+      youKingRow: raw.youKingRow === size - 1 ? size - 1 : 0,
+      themKingRow: raw.themKingRow === 0 ? 0 : size - 1,
+      youHome: asRows(raw.youHome, emptyMods().youHome, size),
+      themHome: asRows(raw.themHome, emptyMods().themHome, size),
     };
   }
   if (feltMods.some((m) => m.title === "Race to the Far Row")) {
-    return campsFromRows([3, 2], [6, 5, 7]);
+    return campsFromRows([3, 2], size === 10 ? [8, 7, 9] : [6, 5, 7], size);
   }
-  return campsFromRows([7, 6], [0, 1]);
+  return campsFromRows(size === 10 ? [9, 8] : [7, 6], [0, 1], size);
 }
 
 export function packBoard(board: Board): SavedCell[][] {
@@ -79,6 +80,7 @@ export function loadClimb(): ClimbSave | null {
     const feltMods = Array.isArray(p.feltMods)
       ? p.feltMods.filter((m): m is FeltMod => !!m && typeof m.title === "string" && typeof m.desc === "string")
       : [];
+    const size = p.board.length === 10 ? 10 : SIZE;
     return {
       v: 1,
       runSeed: p.runSeed,
@@ -88,8 +90,9 @@ export function loadClimb(): ClimbSave | null {
       mods: {
         ...emptyMods(),
         ...(p.mods ?? {}),
+        size,
         holes: Array.isArray(p.mods?.holes) ? p.mods.holes : [],
-        ...campsForSave(p.mods, feltMods),
+        ...campsForSave(p.mods, feltMods, size),
       },
       blurb: typeof p.blurb === "string" ? p.blurb : "",
       feltMods,
@@ -106,8 +109,9 @@ export function loadClimb(): ClimbSave | null {
         ? {
             ...emptyMods(),
             ...p.snapshotMods,
+            size,
             holes: Array.isArray(p.snapshotMods.holes) ? p.snapshotMods.holes : [],
-            ...campsForSave(p.snapshotMods, feltMods),
+            ...campsForSave(p.snapshotMods, feltMods, size),
           }
         : null,
       snapshotHops: Number(p.snapshotHops) || 0,
