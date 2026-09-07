@@ -1,7 +1,7 @@
 import { Rng } from "./rng.ts";
 import { applyMove, at, legalMoves, manStep, moreJumps, piecesOf, type Board } from "./rules.ts";
 import type { BoardMods, Laws, Move, Pos } from "./types.ts";
-import { SIZE, emptyMods, samePos } from "./types.ts";
+import { boardSize, emptyMods, samePos } from "./types.ts";
 
 export interface AiMemory {
   lastFrom: Pos | null;
@@ -111,7 +111,7 @@ export function think(
 
   let best = pool[0]!;
   let bestS = -1e9;
-  const themBack = manStep("them", mods) < 0 ? SIZE - 1 : 0;
+  const themBack = manStep("them", mods) < 0 ? boardSize(mods) - 1 : 0;
   for (const m of pool) {
     const next = chainValue(board, m, laws, mods, rng, skill);
     let s = next.score;

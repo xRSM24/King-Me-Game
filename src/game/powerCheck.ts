@@ -8,6 +8,7 @@ import {
   legalMoves,
   modsFromSpec,
   setupBoard,
+  spreadCrown,
   trapdoorHole,
   wouldCrown,
   type Board,
@@ -19,6 +20,7 @@ import {
   burstFromMods,
   endYouTurn,
   noteCapture,
+  shouldGrantExtras,
   takeLilyOnBoard,
   type YouBurst,
 } from "./tempo.ts";
@@ -124,6 +126,25 @@ assert(
 );
 assert(!slides.some((m) => m.to.r === 0 && m.to.c === 9), "9-square king ride is illegal");
 
+const farLaw = { ...emptyLaws(), farJump: true };
+const farBoard = blankSize(10);
+farBoard[9]![0] = { id: 1, side: "you", king: false };
+farBoard[8]![1] = { id: 2, side: "them", king: false };
+const farMoves = legalMoves(farBoard, "you", farLaw, null, ten);
+assert(
+  farMoves.some((m) => m.far && m.to.r === 6 && m.to.c === 3),
+  "Far Jump works from row 9 on a 10-board",
+);
+
+const crownBoard = blankSize(10);
+crownBoard[8]![1] = { id: 3, side: "you", king: true };
+crownBoard[9]![2] = { id: 4, side: "you", king: false };
+const edgeSpread = spreadCrown(crownBoard, { r: 8, c: 1 }, "you");
+assert(
+  edgeSpread.pos?.r === 9 && edgeSpread.pos.c === 2 && edgeSpread.board[9]![2]?.king,
+  "Double Crown reaches an in-bounds neighbor past row 7",
+);
+
 const spec8 = {
   you: 1,
   them: 1,
@@ -192,6 +213,8 @@ continued.lilyPending = false;
 assert(continued.lilyHops === 2, "Continue mid-combo grants two lily extras");
 assert(continued.lilyPending === false, "Continue mid-combo clears lilyPending");
 assert(ended.next === "you", "Continue mid-combo stays on you for extras");
+assert(!shouldGrantExtras(0), "last capture wins before granting extras");
+assert(shouldGrantExtras(1), "extras remain available while an Enemy remains");
 
 for (const d of LAW_DEFS) {
   const html = sceneMarkup(d.scene, d.name);

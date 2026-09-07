@@ -28,6 +28,10 @@ export function takeLilyOnBoard(mods: BoardMods): void {
   mods.lilyPending = true;
 }
 
+export function shouldGrantExtras(themLeft: number): boolean {
+  return themLeft > 0;
+}
+
 export function noteCapture(burst: YouBurst, napLaw: boolean): YouBurst {
   if (!napLaw || burst.napUsed || burst.napPending) return burst;
   return { ...burst, napPending: true };

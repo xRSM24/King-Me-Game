@@ -186,6 +186,7 @@ function addHoleJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: B
 function addFarJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: BoardMods, out: Move[]): void {
   if (piece.side !== "you" || piece.king) return;
   if (!laws.farJump || mods.farJumpUsed) return;
+  const size = boardSize(mods);
   for (const d of jumpDirs(piece, laws, mods)) {
     const er = from.r + d.r;
     const ec = from.c + d.c;
@@ -193,7 +194,7 @@ function addFarJumps(board: Board, from: Pos, piece: Piece, laws: Laws, mods: Bo
     const sc = from.c + d.c * 2;
     const tr = from.r + d.r * 3;
     const tc = from.c + d.c * 3;
-    if (!inBoard(er, ec) || !inBoard(sr, sc)) continue;
+    if (!inBoard(er, ec, size) || !inBoard(sr, sc, size)) continue;
     if (!isDark(sr, sc)) continue;
     if (!playable(tr, tc, mods)) continue;
     const mid = board[er]?.[ec];
@@ -299,7 +300,7 @@ export function spreadCrown(board: Board, pos: Pos, side: Side): { board: Board;
   for (const d of ALL) {
     const r = pos.r + d.r;
     const c = pos.c + d.c;
-    if (!inBoard(r, c)) continue;
+    if (!inBoard(r, c, board.length)) continue;
     const p = next[r]![c];
     if (p && p.side === side && !p.king) {
       p.king = true;

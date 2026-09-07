@@ -36,7 +36,7 @@ import {
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
-import { applyBurst, burstFromMods, endYouTurn, noteCapture, takeLilyOnBoard } from "./tempo.ts";
+import { applyBurst, burstFromMods, endYouTurn, noteCapture, shouldGrantExtras, takeLilyOnBoard } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
@@ -1123,10 +1123,16 @@ export class Game {
       this.skippedJump = false;
       this.pushLog("Stopped the combo. Your hop is done.");
       this.cheer("Skip!");
+      if (!shouldGrantExtras(piecesOf(this.board, "them").length)) {
+        this.moves += 1;
+        this.boardCleared();
+        return;
+      }
       const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.mods.lilyPending });
       this.mods.lilyPending = false;
       applyBurst(this.mods, ended.burst);
       if (ended.next === "you") {
+        this.mods.farJumpUsed = false;
         this.turn = "you";
         this.renderAll();
         this.persistClimb();
@@ -1523,11 +1529,17 @@ export class Game {
     }
     this.lock = null;
     this.selected = null;
+    if (!shouldGrantExtras(piecesOf(this.board, "them").length)) {
+      this.moves += 1;
+      this.boardCleared();
+      return;
+    }
     const tookLily = this.mods.lilyPending || (!!this.mods.lily && samePos(move.to, this.mods.lily));
     const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
     this.mods.lilyPending = false;
     applyBurst(this.mods, ended.burst);
     if (ended.next === "you") {
+      this.mods.farJumpUsed = false;
       this.turn = "you";
       this.renderAll();
       this.persistClimb();
@@ -2309,7 +2321,7 @@ export class Game {
           (d) =>
             `<li class="mod-card"><p class="mod-head">${d.icon} ${escapeHtml(d.name)}</p><p class="mod-desc">${escapeHtml(d.desc)}</p></li>`,
         );
-        if (this.mods.lily || this.mods.lilyHops > 0) {
+        if (this.mods.lily || this.mods.lilyPending || this.mods.lilyHops > 0) {
           powers.push(
             `<li class="mod-card"><p class="mod-head">Hop Lily</p><p class="mod-desc">Hop on: 2 extra hops.</p></li>`,
           );
