@@ -14,7 +14,7 @@ import {
 } from "./rules.ts";
 import { boardSpec, pickLily, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
-import { endYouTurn, noteCapture, type YouBurst } from "./tempo.ts";
+import { endYouTurn, noteCapture, takeLilyOnBoard, type YouBurst } from "./tempo.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -42,6 +42,7 @@ assert(mods.napUsed === false, "napUsed defaults false");
 assert(mods.napPending === false, "napPending defaults false");
 assert(mods.openingHops === 0, "openingHops defaults 0");
 assert(mods.lily == null, "lily defaults null");
+assert(mods.lilyPending === false, "lilyPending defaults false");
 assert(mods.lilyHops === 0, "lilyHops defaults 0");
 assert(boardSize(mods) === 8, "boardSize reads 8");
 assert(boardSize({ ...mods, size: 10 }) === 10, "boardSize reads 10");
@@ -84,6 +85,9 @@ const lily = pickLily(new Rng(1), open, base);
 assert(lily, "an empty 8-board gets a lily");
 assert(isDark(lily!.r, lily!.c), "lily sits on dark");
 assert(!(lily!.r === 3 && lily!.c === 4), "lily is not a hole");
+base.lily = lily;
+takeLilyOnBoard(base);
+assert(base.lily == null && base.lilyPending, "taking the lily clears it and persists the pending extras");
 
 const packed = blankSize(8);
 for (let r = 0; r < 8; r++) {

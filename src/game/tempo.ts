@@ -23,6 +23,11 @@ export function applyBurst(mods: BoardMods, burst: YouBurst): void {
   mods.napUsed = burst.napUsed;
 }
 
+export function takeLilyOnBoard(mods: BoardMods): void {
+  mods.lily = null;
+  mods.lilyPending = true;
+}
+
 export function noteCapture(burst: YouBurst, napLaw: boolean): YouBurst {
   if (!napLaw || burst.napUsed || burst.napPending) return burst;
   return { ...burst, napPending: true };

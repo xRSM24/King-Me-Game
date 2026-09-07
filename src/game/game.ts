@@ -36,7 +36,7 @@ import {
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
-import { applyBurst, burstFromMods, endYouTurn, noteCapture } from "./tempo.ts";
+import { applyBurst, burstFromMods, endYouTurn, noteCapture, takeLilyOnBoard } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
@@ -96,7 +96,6 @@ export class Game {
   skippedJump = false;
   quiet = 0;
   turnHadCapture = false;
-  turnTookLily = false;
   chaseTold = false;
   drag: {
     from: Pos;
@@ -1124,7 +1123,8 @@ export class Game {
       this.skippedJump = false;
       this.pushLog("Stopped the combo. Your hop is done.");
       this.cheer("Skip!");
-      const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.turnTookLily });
+      const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.mods.lilyPending });
+      this.mods.lilyPending = false;
       applyBurst(this.mods, ended.burst);
       if (ended.next === "you") {
         this.turn = "you";
@@ -1398,7 +1398,6 @@ export class Game {
       this.snapshotLastRites = this.lastRitesUsed;
       this.snapshotQuiet = this.quiet;
       this.turnHadCapture = false;
-      this.turnTookLily = false;
     }
     this.animating = true;
     let keepJumping = false;
@@ -1424,8 +1423,7 @@ export class Game {
       this.board = applyMove(this.board, move, this.mods);
       const tookLily = !!this.mods.lily && samePos(move.to, this.mods.lily);
       if (tookLily) {
-        this.mods.lily = null;
-        this.turnTookLily = true;
+        takeLilyOnBoard(this.mods);
       }
       if (move.far) this.mods.farJumpUsed = true;
       if (move.capture) {
@@ -1525,7 +1523,9 @@ export class Game {
     }
     this.lock = null;
     this.selected = null;
-    const ended = endYouTurn(burstFromMods(this.mods), { tookLily: this.turnTookLily });
+    const tookLily = this.mods.lilyPending || (!!this.mods.lily && samePos(move.to, this.mods.lily));
+    const ended = endYouTurn(burstFromMods(this.mods), { tookLily });
+    this.mods.lilyPending = false;
     applyBurst(this.mods, ended.burst);
     if (ended.next === "you") {
       this.turn = "you";
