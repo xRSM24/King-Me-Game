@@ -14,7 +14,14 @@ import {
 } from "./rules.ts";
 import { boardSpec, pickLily, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
-import { endYouTurn, noteCapture, takeLilyOnBoard, type YouBurst } from "./tempo.ts";
+import {
+  applyBurst,
+  burstFromMods,
+  endYouTurn,
+  noteCapture,
+  takeLilyOnBoard,
+  type YouBurst,
+} from "./tempo.ts";
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -176,6 +183,15 @@ n = endYouTurn(n.burst, {});
 assert(n.burst.lilyHops === 0 && n.next === "you" && n.burst.openingHops === 1, "then leftover Back 2 Back");
 n = endYouTurn(n.burst, {});
 assert(n.next === "them" && n.burst.openingHops === 0, "then Enemy");
+
+const continued = { ...emptyMods(), lily: null, lilyPending: true, lilyHops: 0 };
+const tookLily = continued.lilyPending;
+const ended = endYouTurn(burstFromMods(continued), { tookLily });
+applyBurst(continued, ended.burst);
+continued.lilyPending = false;
+assert(continued.lilyHops === 2, "Continue mid-combo grants two lily extras");
+assert(continued.lilyPending === false, "Continue mid-combo clears lilyPending");
+assert(ended.next === "you", "Continue mid-combo stays on you for extras");
 
 for (const d of LAW_DEFS) {
   const html = sceneMarkup(d.scene, d.name);
