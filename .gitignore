@@ -46,4 +46,7 @@ ios/DerivedData
 # Capacitor assets dump
 /icons
 
+# Superpowers brainstorm mockups
+.superpowers/
+
 
