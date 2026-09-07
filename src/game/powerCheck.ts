@@ -153,5 +153,6 @@ for (const d of LAW_DEFS) {
   assert(html.includes(d.id === "back2Back" ? "BACK 2 BACK" : d.name.toUpperCase()) || html.includes(d.name), `${d.id} shows the name`);
 }
 assert(sceneMarkup("missing", "Trapdoor").includes("YOU GOT TRAPDOOR"), "unknown scene still stamps");
+assert(!sceneMarkup("back2Back", "Back 2 Back").includes('class="star"'), "back2Back has no jump star");
 
 console.log("powerCheck ok");

@@ -63,7 +63,7 @@ export function sceneMarkup(scene: string, name: string): string {
     scout: `<div class="get-felt mid">${you}</div>`,
     widePond: `<figure class="get-wide-frame"><div class="get-wide-art" role="img" aria-label="Wide Pond"></div></figure>`,
     napTime: `<div class="get-felt sleep">${sleep}${sleep}<i class="zzz">Zzz</i></div>`,
-    back2Back: `<div class="get-felt pair"><i class="ring"></i>${you}${you}<b class="times">×2</b><i class="star"></i></div>`,
+    back2Back: `<div class="get-felt pair"><i class="ring"></i>${you}${you}<b class="times">×2</b></div>`,
   };
   return poster(scene, stamp, art[scene] ?? "");
 }
