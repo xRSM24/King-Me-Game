@@ -344,11 +344,11 @@ export class Game {
     if (cmd.startsWith("law:")) {
       const id = cmd.slice(4) as keyof Laws;
       if (this.screen === "pick" && id in this.laws) {
-        this.laws[id] = true;
         this.getting = true;
         this.animating = true;
         const def = LAW_DEFS.find((d) => d.id === id);
         void this.playGet(def?.scene ?? "", def?.name ?? id).then(() => {
+          this.laws[id] = true;
           this.boardIndex += 1;
           this.loadBoard();
           this.show("playing");
