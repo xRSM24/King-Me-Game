@@ -30,6 +30,7 @@ import {
   reviveKing,
   setupBoard,
   spreadCrown,
+  trapdoorHole,
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
@@ -1379,8 +1380,9 @@ export class Game {
         this.pushLog(move.far ? "Far jump!" : this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
         if (this.coachOn) this.finishCoach();
         if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
-        if (this.laws.trapdoor && !this.mods.trapdoorUsed) {
-          this.mods.holes = [...this.mods.holes, { r: move.to.r, c: move.to.c }];
+        const pit = trapdoorHole(move);
+        if (this.laws.trapdoor && !this.mods.trapdoorUsed && pit) {
+          this.mods.holes = [...this.mods.holes, { r: pit.r, c: pit.c }];
           this.mods.trapdoorUsed = true;
           this.pushLog("Trapdoor! That square is a hole now.");
         }

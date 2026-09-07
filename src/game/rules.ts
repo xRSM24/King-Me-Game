@@ -257,6 +257,10 @@ export function hopOver(move: Move): Pos | null {
   return null;
 }
 
+export function trapdoorHole(move: Move): Pos | null {
+  return move.capture ?? null;
+}
+
 export function moveHitting(moves: Move[], from: Pos, at: Pos): Move | undefined {
   const mine = moves.filter((m) => samePos(m.from, from));
   const land = mine.find((m) => samePos(m.to, at));

@@ -6,6 +6,7 @@ import {
   campsFromRows,
   legalMoves,
   setupBoard,
+  trapdoorHole,
   wouldCrown,
   type Board,
 } from "./rules.ts";
@@ -87,5 +88,9 @@ const spec8 = {
 };
 const laid8 = setupBoard(spec8, () => 1);
 assert(laid8.length === SIZE, "setupBoard default size 8");
+
+const take = { from: { r: 5, c: 2 }, to: { r: 3, c: 4 }, capture: { r: 4, c: 3 } };
+assert(trapdoorHole(take)?.r === 4 && trapdoorHole(take)?.c === 3, "hole is where the Enemy sat");
+assert(trapdoorHole({ from: { r: 5, c: 2 }, to: { r: 4, c: 3 } }) == null, "slides make no trapdoor");
 
 console.log("powerCheck ok");

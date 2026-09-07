@@ -210,11 +210,11 @@ board[4]![3] = { id: 51, side: "them", king: false };
 board[2]![5] = { id: 52, side: "them", king: false };
 const afterTake = applyMove(board, { from: { r: 5, c: 2 }, to: { r: 3, c: 4 }, capture: { r: 4, c: 3 } }, std);
 assert(afterTake[3]![4]?.side === "you", "the capturer sits on the landing");
-const trap = { ...std, holes: [{ r: 3, c: 4 }], trapdoorUsed: true };
-assert(isHole(trap, 3, 4), "Trapdoor marks the landing as a hole");
-assert(afterTake[3]![4], "the piece may keep sitting on the new hole");
-assert(!playable(3, 4, trap), "nobody else may land there after");
-assert(moreJumps(afterTake, { r: 3, c: 4 }, emptyLaws(), trap), "you can still jump from a Trapdoor hole");
+const trap = { ...std, holes: [{ r: 4, c: 3 }], trapdoorUsed: true };
+assert(isHole(trap, 4, 3), "Trapdoor marks the sit-square as a hole");
+assert(afterTake[3]![4], "the capturer keeps sitting on the landing");
+assert(!playable(4, 3, trap), "nobody else may land on the sit-square after");
+assert(moreJumps(afterTake, { r: 3, c: 4 }, emptyLaws(), trap), "you can still jump from the landing");
 
 board = blank();
 board[5]![2] = { id: 55, side: "you", king: false };
