@@ -169,6 +169,19 @@ export function pickHoles(rng: Rng, n: number, used: Set<string>, size = 8): Pos
   return out;
 }
 
+export function pickLily(rng: Rng, board: Board, mods: BoardMods): Pos | null {
+  const size = boardSize(mods);
+  const emptyDark = (rows: number[]): Pos[] =>
+    darkPlayable(rows, mods.holes, size).filter((p) => !at(board, p));
+  const mid = emptyDark(holeBand(size));
+  rng.shuffle(mid);
+  if (mid[0]) return mid[0];
+  const rows = Array.from({ length: size }, (_, r) => r);
+  const any = emptyDark(rows);
+  rng.shuffle(any);
+  return any[0] ?? null;
+}
+
 function trappedByHoles(board: Board, laws: Laws, mods: BoardMods): Pos[] {
   const out: Pos[] = [];
   for (const side of ["you", "them"] as const) {

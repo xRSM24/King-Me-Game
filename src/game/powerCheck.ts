@@ -1,5 +1,5 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
-import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, SIZE } from "./types.ts";
+import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import { sceneMarkup } from "./getScenes.ts";
@@ -12,7 +12,7 @@ import {
   wouldCrown,
   type Board,
 } from "./rules.ts";
-import { boardSpec, scaleRowsForSize } from "./setup.ts";
+import { boardSpec, pickLily, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
 import { endYouTurn, noteCapture, type YouBurst } from "./tempo.ts";
 
@@ -41,6 +41,8 @@ assert(mods.size === 8, "default board size is 8");
 assert(mods.napUsed === false, "napUsed defaults false");
 assert(mods.napPending === false, "napPending defaults false");
 assert(mods.openingHops === 0, "openingHops defaults 0");
+assert(mods.lily == null, "lily defaults null");
+assert(mods.lilyHops === 0, "lilyHops defaults 0");
 assert(boardSize(mods) === 8, "boardSize reads 8");
 assert(boardSize({ ...mods, size: 10 }) === 10, "boardSize reads 10");
 assert(inBoard(9, 0, 10), "row 9 is on a 10-board");
@@ -75,6 +77,22 @@ assert(unusedLaws(emptyLaws()).length === 14, "fresh climb can offer all fourtee
 function blankSize(n: number): Board {
   return Array.from({ length: n }, () => Array.from({ length: n }, () => null));
 }
+
+const open = blankSize(8);
+const base = { ...emptyMods(), holes: [{ r: 3, c: 4 }] };
+const lily = pickLily(new Rng(1), open, base);
+assert(lily, "an empty 8-board gets a lily");
+assert(isDark(lily!.r, lily!.c), "lily sits on dark");
+assert(!(lily!.r === 3 && lily!.c === 4), "lily is not a hole");
+
+const packed = blankSize(8);
+for (let r = 0; r < 8; r++) {
+  for (let c = 0; c < 8; c++) {
+    if (isDark(r, c) && !(r === 7 && c === 0)) packed[r]![c] = { id: 1, side: "them", king: false };
+  }
+}
+const fallback = pickLily(new Rng(2), packed, emptyMods());
+assert(fallback && fallback.r === 7 && fallback.c === 0, "if mid is full, any empty dark");
 
 const tenCamps = campsFromRows([9, 8], [0, 1], 10);
 assert(tenCamps.youKingRow === 0, "10-board: you still king on the far top");

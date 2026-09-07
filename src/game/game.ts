@@ -35,7 +35,7 @@ import {
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
-import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, unstickHoles, withHoleMods } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
 import { applyBurst, burstFromMods, endYouTurn, noteCapture } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
@@ -810,6 +810,7 @@ export class Game {
     if (this.laws.back2Back) this.mods.openingHops = 2;
     this.mods.napUsed = false;
     this.mods.napPending = false;
+    this.mods.lily = null;
     this.mods.lilyHops = 0;
     this.blurb = spec.blurb;
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
@@ -917,6 +918,9 @@ export class Game {
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
     this.freeSealedPieces(boardRng);
+    if (this.mode === "run" && this.boardIndex >= 2 && this.boardIndex <= 5) {
+      this.mods.lily = pickLily(boardRng, this.board, this.mods);
+    }
     this.turn = "you";
     this.selected = null;
     this.lock = null;
@@ -2295,6 +2299,11 @@ export class Game {
           (d) =>
             `<li class="mod-card"><p class="mod-head">${d.icon} ${escapeHtml(d.name)}</p><p class="mod-desc">${escapeHtml(d.desc)}</p></li>`,
         );
+        if (this.mods.lily || this.mods.lilyHops > 0) {
+          powers.push(
+            `<li class="mod-card"><p class="mod-head">Hop Lily</p><p class="mod-desc">Hop on: 2 extra hops.</p></li>`,
+          );
+        }
         laws.innerHTML =
           cards.join("") +
           (powers.length ? powers.join("") : cards.length ? "" : `<li class="quiet">Win a board to pick a power.</li>`);
@@ -2332,6 +2341,7 @@ export class Game {
       for (let c = 0; c < n; c++) {
         const dark = (r + c) % 2 === 1;
         const hole = isHole(this.mods, r, c);
+        const lily = !!this.mods.lily && this.mods.lily.r === r && this.mods.lily.c === c;
         const p = this.board[r]![c];
         const sel = this.selected && this.selected.r === r && this.selected.c === c;
         const hint = hints.has(`${r},${c}`);
@@ -2339,7 +2349,7 @@ export class Game {
         const far = longs.has(`${r},${c}`);
         const can = p && p.side === "you" && froms.has(`${r},${c}`) && !this.lock;
         const focusable = dark && (!hole || !!p || prey);
-        html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${prey ? "prey" : ""} ${far ? "long" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${focusable ? 'tabindex="0"' : 'tabindex="-1"'}>`;
+        html += `<div role="gridcell" class="sq ${dark ? "dark" : "light"} ${hole ? "hole" : ""} ${lily ? "lily" : ""} ${sel ? "sel" : ""} ${hint ? "hint" : ""} ${prey ? "prey" : ""} ${far ? "long" : ""} ${can ? "can" : ""}" data-r="${r}" data-c="${c}" ${focusable ? 'tabindex="0"' : 'tabindex="-1"'}>`;
         if (p) {
           html += `<span class="man ${p.side} ${p.king ? "king" : ""}" aria-label="${p.side === "you" ? "player" : "enemy"} ${p.king ? "King" : "piece"}"><span class="face" aria-hidden="true"></span></span>`;
         } else if (hint) {
