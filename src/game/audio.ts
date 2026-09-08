@@ -1,3 +1,19 @@
+export type ConfirmNote = {
+  freq: number;
+  dur: number;
+  type: OscillatorType;
+  gain: number;
+  wait: number;
+};
+
+/** Short fifth, not a rising fanfare. Used when a climb power is picked. */
+export function getConfirmNotes(): ConfirmNote[] {
+  return [
+    { freq: 392, dur: 0.1, type: "sine", gain: 0.026, wait: 0 },
+    { freq: 587, dur: 0.16, type: "sine", gain: 0.022, wait: 0.07 },
+  ];
+}
+
 export class AudioSys {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -26,9 +42,9 @@ export class AudioSys {
     void this.ctx.resume();
   }
 
-  private tone(freq: number, dur: number, type: OscillatorType, gain = 0.06, slide = 0): void {
+  private tone(freq: number, dur: number, type: OscillatorType, gain = 0.06, slide = 0, wait = 0): void {
     if (!this.ctx || !this.master || this.muted) return;
-    const t = this.ctx.currentTime;
+    const t = this.ctx.currentTime + wait;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = type;
@@ -170,5 +186,23 @@ export class AudioSys {
     this.tone(784, 0.16, "triangle", 0.06);
     this.tone(1046, 0.22, "sine", 0.05);
     this.tone(1318, 0.28, "triangle", 0.04);
+  }
+
+  get(): void {
+    if (!this.ctx || !this.master || this.muted) return;
+    for (const n of getConfirmNotes()) {
+      const t = this.ctx.currentTime + n.wait;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = n.type;
+      osc.frequency.setValueAtTime(n.freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(n.gain, t + 0.018);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + n.dur);
+      osc.connect(g);
+      g.connect(this.master);
+      osc.start(t);
+      osc.stop(t + n.dur + 0.03);
+    }
   }
 }

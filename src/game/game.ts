@@ -1,11 +1,11 @@
 import { emptyMemory, remember, think, type AiMemory } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
-import { comboName, comboTier } from "./combo.ts";
+import { comboAfterHop, comboName, comboTier } from "./combo.ts";
 import { JUMP_HOW, CHASE_START, CHASE_END_MORE, CHASE_END_TIE, chaseHint } from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import * as feel from "./feel.ts";
-import { sceneMarkup } from "./getScenes.ts";
+import { getHoldMs, sceneMarkup } from "./getScenes.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
 import { commitName, escapeHtml, fetchBoard, hasName, loadName, postScore, reportName, tryName, type Score } from "./leaderboard.ts";
 import { loadMeta, notchBonus, notchesFromRun, saveMeta } from "./meta.ts";
@@ -368,8 +368,8 @@ export class Game {
       host.innerHTML = `<p class="get-stamp">${`YOU GOT ${stamp}!`}</p>`;
       host.classList.remove("hidden");
       host.setAttribute("aria-hidden", "false");
-      this.audio.fanfare();
-      await new Promise((r) => setTimeout(r, 700));
+      this.audio.get();
+      await new Promise((r) => setTimeout(r, getHoldMs(true)));
       host.classList.add("hidden");
       host.setAttribute("aria-hidden", "true");
       host.innerHTML = "";
@@ -378,8 +378,8 @@ export class Game {
     host.innerHTML = sceneMarkup(scene, name);
     host.classList.remove("hidden");
     host.setAttribute("aria-hidden", "false");
-    this.audio.fanfare();
-    await new Promise((r) => setTimeout(r, 2000));
+    this.audio.get();
+    await new Promise((r) => setTimeout(r, getHoldMs(false)));
     host.classList.add("hidden");
     host.setAttribute("aria-hidden", "true");
     host.innerHTML = "";
@@ -1120,6 +1120,7 @@ export class Game {
     if (this.lock) {
       this.lock = null;
       this.selected = null;
+      this.combo = 0;
       this.skippedJump = false;
       this.pushLog("Stopped the combo. Your hop is done.");
       this.cheer("Skip!");
@@ -1396,6 +1397,7 @@ export class Game {
 
   private async play(move: Move, fromDrag = false): Promise<void> {
     const gen = this.actionGen;
+    const chained = !!this.lock;
     if (!this.lock) {
       this.snapshot = cloneBoard(this.board);
       this.snapshotMods = cloneMods(this.mods);
@@ -1443,7 +1445,7 @@ export class Game {
       let partyExtra: Pos | null = null;
       if (move.capture) {
         this.hops += 1;
-        this.combo += 1;
+        this.combo = comboAfterHop(this.combo, true, chained);
         this.audio.capture(this.combo);
         feel.bump();
         const yell = comboName(this.combo);
@@ -1463,7 +1465,7 @@ export class Game {
           if (c.did) partyPos = c.pos;
         }
       } else {
-        this.combo = 0;
+        this.combo = comboAfterHop(this.combo, false, chained);
         if (fromDrag) this.audio.hop();
       }
       if (this.laws.doubleCrown && !wasKing && nowKing) {
@@ -1529,6 +1531,7 @@ export class Game {
     }
     this.lock = null;
     this.selected = null;
+    this.combo = 0;
     if (!shouldGrantExtras(piecesOf(this.board, "them").length)) {
       this.moves += 1;
       this.boardCleared();

@@ -1,5 +1,9 @@
 /** Overlay HTML for climb power gets. No image or SVG file imports — Node tests load this. */
 
+export function getHoldMs(reduceMotion: boolean): number {
+  return reduceMotion ? 450 : 900;
+}
+
 const MAPLE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <ellipse cx="15" cy="54" rx="12" ry="6.5" fill="#e4b87a" stroke="#6b3a14" stroke-width="2.2"/>
   <ellipse cx="49" cy="54" rx="12" ry="6.5" fill="#e4b87a" stroke="#6b3a14" stroke-width="2.2"/>

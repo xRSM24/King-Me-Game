@@ -2,7 +2,9 @@
 import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
-import { sceneMarkup } from "./getScenes.ts";
+import { getConfirmNotes } from "./audio.ts";
+import { comboAfterHop, comboName } from "./combo.ts";
+import { getHoldMs, sceneMarkup } from "./getScenes.ts";
 import {
   campsFromRows,
   legalMoves,
@@ -223,6 +225,22 @@ for (const d of LAW_DEFS) {
 }
 assert(sceneMarkup("missing", "Trapdoor").includes("YOU GOT TRAPDOOR"), "unknown scene still stamps");
 assert(!sceneMarkup("back2Back", "Back 2 Back").includes('class="star"'), "back2Back has no jump star");
+assert(getHoldMs(false) === 900, "get overlay is a short beat");
+assert(getHoldMs(true) === 450, "motion off get is a flash");
+const getNotes = getConfirmNotes();
+assert(getNotes.length === 2, "get confirm is two notes");
+assert(getNotes.every((n) => n.type === "sine"), "get confirm is sine");
+assert(getNotes.every((n) => n.gain < 0.04), "get confirm stays quiet");
+assert(getNotes.every((n) => n.freq < 1000), "get confirm is not a fanfare climb");
+assert((getNotes[1]?.wait ?? 0) > 0, "get confirm staggers the fifth");
+
+assert(comboAfterHop(0, true, false) === 1, "first capture of a hop is Got one");
+assert(comboName(comboAfterHop(0, true, false)) === "Got one!", "first take yells Got one");
+assert(comboAfterHop(1, true, true) === 2, "a chained jump is Double hop");
+assert(comboName(comboAfterHop(1, true, true)) === "Double hop!", "same-turn second take yells Double hop");
+assert(comboAfterHop(1, true, false) === 1, "a new hop after the Enemy is not a combo");
+assert(comboName(comboAfterHop(1, true, false)) === "Got one!", "Enemy-in-between take yells Got one");
+assert(comboAfterHop(2, false, false) === 0, "a quiet slide breaks the combo");
 
 const wall = blankSize(8);
 wall[7]![0] = { id: 1, side: "you", king: false };

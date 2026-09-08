@@ -1787,6 +1787,18 @@ html.calm .pick-card {
   align-items: center;
   width: min(92vw, 440px);
   font-family: "Zen Maru Gothic", "Segoe UI", sans-serif;
+  animation: get-poster-in 0.22s ease-out;
+}
+
+@keyframes get-poster-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .get-art {
@@ -1912,7 +1924,7 @@ html.calm .pick-card {
 }
 
 .get-backJump .get-frog {
-  animation: get-back-hop 0.75s ease-in-out 0.12s 2;
+  animation: get-back-hop 0.38s ease-in-out 0.05s 2;
 }
 
 @keyframes get-back-hop {
@@ -1946,7 +1958,7 @@ html.calm .pick-card {
 }
 
 .get-flyingKings .get-frog.crowned {
-  animation: get-king-slide 1.35s ease-in-out infinite alternate;
+  animation: get-king-slide 0.72s ease-in-out infinite alternate;
 }
 
 @keyframes get-king-slide {
@@ -2253,7 +2265,7 @@ html.calm .pick-card {
   font-size: 1.8rem;
   color: var(--ivory);
   text-shadow: 0 2px 0 #1a120c;
-  animation: get-zzz 1.25s ease-in-out infinite;
+  animation: get-zzz 0.7s ease-in-out infinite;
 }
 
 @keyframes get-zzz {
@@ -2337,6 +2349,7 @@ html.calm .pick-card {
 }
 
 html.calm .pick-card,
+html.calm .get-poster,
 html.calm .get-frog,
 html.calm .get-felt .spark,
 html.calm .get-felt .pip,
