@@ -21,6 +21,7 @@ export interface Session {
   email: string;
   name: string;
   studio: boolean;
+  mailOk: boolean;
 }
 
 interface AccountReply {
@@ -28,11 +29,17 @@ interface AccountReply {
   email?: string;
   name?: string;
   studio?: boolean;
+  mailOk?: boolean | number;
+  mailList?: string[];
   token?: string;
   save?: CloudSave;
   error?: string;
   stats?: InsightStats;
   ok?: boolean;
+}
+
+export function sessionMailOk(raw: { mailOk?: boolean } | null | undefined): boolean {
+  return raw?.mailOk === true;
 }
 
 export interface InsightStats {
@@ -59,6 +66,7 @@ export function loadSession(): Session | null {
       email: String(p.email),
       name: String(p.name || ""),
       studio: !!p.studio,
+      mailOk: !!p.mailOk,
     };
   } catch {
     return null;
@@ -112,6 +120,7 @@ function remember(reply: AccountReply): Session | null {
     email: reply.email,
     name: reply.name || "",
     studio: !!reply.studio,
+    mailOk: !!reply.mailOk,
   };
   saveSession(session);
   if (reply.save) applySave(reply.save);
@@ -164,15 +173,29 @@ function authInit(session: Session | null, extra: { clearClimb?: boolean } = {})
   };
 }
 
-export async function createAccount(email: string, password: string): Promise<Session> {
+export async function createAccount(email: string, password: string, mailOk = true): Promise<Session> {
   const data = await requestAccount("signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, ...packLocal() }),
+    body: JSON.stringify({ email, password, mailOk, ...packLocal() }),
   });
   const session = remember(data);
   if (!session) throw new Error("Could not open the hop book.");
   return session;
+}
+
+export async function setMailOk(on: boolean): Promise<Session | null> {
+  const session = loadSession();
+  if (!session) return null;
+  const data = await requestAccount("mail", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.token}`,
+    },
+    body: JSON.stringify({ token: session.token, mailOk: on }),
+  });
+  return remember(data);
 }
 
 export async function signIn(email: string, password: string): Promise<Session> {
@@ -244,11 +267,20 @@ export async function deleteAccount(password: string): Promise<void> {
   saveSession(null);
 }
 
-export async function fetchInsight(): Promise<InsightStats | null> {
+export async function fetchInsight(): Promise<{
+  stats: InsightStats;
+  mailOk: number;
+  mailList: string[];
+} | null> {
   const session = loadSession();
   if (!session?.studio) return null;
   const data = await requestAccount("insight", authInit(session, {}));
-  return data.stats ?? null;
+  if (!data.stats) return null;
+  return {
+    stats: data.stats,
+    mailOk: Number(data.mailOk) || 0,
+    mailList: Array.isArray(data.mailList) ? data.mailList.map(String) : [],
+  };
 }
 
 export function signOut(): void {

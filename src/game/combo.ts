@@ -19,6 +19,11 @@ export function comboName(combo: number): string {
   return NAMES[Math.min(combo, NAMES.length) - 1]!;
 }
 
+export function comboLog(combo: number, far = false): string {
+  if (far) return "Far jump!";
+  return comboName(combo);
+}
+
 export function comboTier(combo: number): number {
   return Math.min(Math.max(combo, 1), 5);
 }

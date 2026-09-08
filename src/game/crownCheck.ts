@@ -34,17 +34,18 @@ function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
 }
 
-const race = { ...emptyMods(), ...campsFromRows([3, 2], [6, 5, 7]) };
-assert(race.youKingRow === 7, "race: you king on the bottom edge");
-assert(race.themKingRow === 0, "race: Enemy king on the top edge");
-assert(manStep("you", race) === 1, "race: you walk down, away from your camp");
-assert(manStep("them", race) === -1, "race: Enemy walks up, away from their camp");
-assert(!wouldCrown("you", 0, race), "race: row 0 is not your far row");
-assert(!wouldCrown("you", 2, race), "race: your starting ranks never crown");
-assert(!wouldCrown("you", 3, race), "race: your starting ranks never crown");
-assert(wouldCrown("you", 7, race), "race: far row 7 does crown you");
-assert(wouldCrown("them", 0, race), "race: far row 0 does crown the Enemy");
-assert(!wouldCrown("them", 7, race), "race: Enemy starting ranks never crown");
+const race = { ...emptyMods(), ...campsFromRows([5, 4], [2, 3, 1]) };
+assert(race.youKingRow === 0, "race: you king on the top edge");
+assert(race.themKingRow === 7, "race: Enemy king on the bottom edge");
+assert(manStep("you", race) === -1, "race: you walk up, away from your camp");
+assert(manStep("them", race) === 1, "race: Enemy walks down, away from their camp");
+assert(wouldCrown("you", 0, race), "race: far row 0 does crown you");
+assert(!wouldCrown("you", 4, race), "race: your starting ranks never crown");
+assert(!wouldCrown("you", 5, race), "race: your starting ranks never crown");
+assert(!wouldCrown("you", 7, race), "race: the bottom edge is the Enemy far row");
+assert(wouldCrown("them", 7, race), "race: far row 7 does crown the Enemy");
+assert(!wouldCrown("them", 0, race), "race: Enemy starting neighborhood never crowns them");
+assert(!wouldCrown("them", 2, race), "race: Enemy starting ranks never crown");
 
 const std = emptyMods();
 assert(wouldCrown("you", 0, std), "normal: you crown on row 0");
@@ -56,21 +57,21 @@ assert(manStep("them", std) === 1, "normal: Enemy walks down");
 
 let board = blank();
 const you: Piece = { id: 1, side: "you", king: false };
-board[2]![1] = you;
-const intoOwnTop = applyMove(board, { from: { r: 2, c: 1 }, to: { r: 0, c: 3 } }, race);
-assert(!intoOwnTop[0]![3]?.king, "moving into your own starting neighborhood does not king");
+board[5]![2] = you;
+const intoOwnBack = applyMove(board, { from: { r: 5, c: 2 }, to: { r: 7, c: 4 } }, race);
+assert(!intoOwnBack[7]![4]?.king, "stepping toward the bottom edge does not king you on a race");
 
 board = blank();
-board[6]![1] = { id: 2, side: "you", king: false };
-const intoFar = applyMove(board, { from: { r: 6, c: 1 }, to: { r: 7, c: 0 } }, race);
-assert(intoFar[7]![0]?.king, "reaching the far edge from your camp does king");
+board[2]![1] = { id: 2, side: "you", king: false };
+const intoFar = applyMove(board, { from: { r: 2, c: 1 }, to: { r: 0, c: 3 } }, race);
+assert(intoFar[0]![3]?.king, "reaching the far edge from your camp does king");
 
 board = blank();
-board[3]![2] = { id: 3, side: "you", king: false };
+board[5]![2] = { id: 3, side: "you", king: false };
 const slides = legalMoves(board, "you", emptyLaws(), null, race, true);
 assert(slides.length > 0, "a man in the race camp can step");
 assert(
-  slides.every((m) => m.to.r > m.from.r),
+  slides.every((m) => m.to.r < m.from.r),
   "race men only walk toward the far edge, not back into their camp",
 );
 
@@ -353,6 +354,19 @@ for (let seed = 1; seed <= 40; seed++) {
     const mods = modsFromSpec(spec);
     let n = 0;
     const felt = applyStartLaws(setupBoard(spec, () => ++n), emptyLaws(), mods);
+    assert(mods.youKingRow === 0, `board ${i} seed ${seed}: maple still kings at the top`);
+    assert(mods.themKingRow === SIZE - 1, `board ${i} seed ${seed}: Enemy still kings at the bottom`);
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const p = felt[r]![c];
+        if (!p) continue;
+        if (p.side === "you") {
+          assert(r >= SIZE / 2, `board ${i} seed ${seed}: maple at ${r},${c} is not on the bottom`);
+        } else {
+          assert(r < SIZE / 2, `board ${i} seed ${seed}: Enemy at ${r},${c} is not on the top`);
+        }
+      }
+    }
     const free = unstickHoles(felt, emptyLaws(), mods, new Rng(seed + i));
     for (let r = 0; r < SIZE; r++) {
       for (let c = 0; c < SIZE; c++) {

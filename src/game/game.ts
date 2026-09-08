@@ -1,7 +1,18 @@
 import { emptyMemory, remember, think, type AiMemory } from "./ai.ts";
 import { AudioSys } from "./audio.ts";
-import { comboAfterHop, comboName, comboTier } from "./combo.ts";
-import { JUMP_HOW, CHASE_START, CHASE_END_MORE, CHASE_END_TIE, chaseHint } from "./copy.ts";
+import { comboAfterHop, comboLog, comboName, comboTier } from "./combo.ts";
+import {
+  JUMP_HOW,
+  CHASE_START,
+  CHASE_END_MORE,
+  CHASE_END_TIE,
+  boardOpenLog,
+  chaseHint,
+  climbHintLine,
+  hopStatus,
+  oopsLabel,
+  wipeAutoEndMs,
+} from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
 import * as feel from "./feel.ts";
@@ -35,7 +46,7 @@ import {
   type Board,
 } from "./rules.ts";
 import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } from "./save.ts";
-import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
+import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, normalizeClimbNames, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
 import { applyBurst, burstFromMods, endYouTurn, noteCapture, shouldGrantExtras, takeLilyOnBoard } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
 import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
@@ -47,10 +58,12 @@ import {
   pushAccount,
   recordHop,
   refreshAccount,
+  setMailOk,
   signIn,
   signOut,
 } from "./account.ts";
 import { describeHop, loadHistory, whenHop } from "./history.ts";
+import { keepSaveFormHtml, shouldOfferKeepSave } from "./keepSave.ts";
 import { bootNative } from "../native.ts";
 
 export class Game {
@@ -124,6 +137,7 @@ export class Game {
   keyFocus: Pos | null = null;
   cloudTimer: number | null = null;
   accountBusy = false;
+  keepSaveSkip = false;
 
   constructor() {
     this.bind();
@@ -194,16 +208,22 @@ export class Game {
         e.preventDefault();
         this.saveHopperName(e.target);
       }
-      if (e.target.id === "account-form") {
+      if (e.target.id === "acct-save-form" || e.target.id === "keep-save-form") {
         e.preventDefault();
         const submitter = (e as SubmitEvent).submitter;
-        const intent = submitter instanceof HTMLButtonElement ? submitter.value : "login";
-        void this.submitAccount(intent);
+        const intent = submitter instanceof HTMLButtonElement ? submitter.value : "signup";
+        const prefix = e.target.id === "acct-save-form" ? "acct" : "keep";
+        void this.submitKeepSave(prefix, intent);
       }
       if (e.target.id === "account-delete") {
         e.preventDefault();
         void this.submitDeleteAccount();
       }
+    });
+    document.addEventListener("change", (e) => {
+      const el = e.target;
+      if (!(el instanceof HTMLInputElement) || el.id !== "acct-news-toggle") return;
+      void this.submitMailOk(el.checked);
     });
     document.addEventListener("focusout", (e) => {
       const t = e.target;
@@ -274,6 +294,11 @@ export class Game {
       this.cheer("Hops stay on this phone.");
       return;
     }
+    if (cmd === "skip-keep-save") {
+      this.keepSaveSkip = true;
+      this.renderEnd();
+      return;
+    }
     if (cmd === "back") {
       const dest = this.returnTo;
       this.returnTo = "title";
@@ -327,6 +352,12 @@ export class Game {
     }
     if (cmd === "oops") {
       this.oops();
+      return;
+    }
+    if (cmd === "accept-wipe") {
+      if (this.screen !== "playing" || this.end) return;
+      if (piecesOf(this.board, "you").length > 0) return;
+      this.finish(false);
       return;
     }
     if (cmd === "skip-jump") {
@@ -496,7 +527,7 @@ export class Game {
         ? `Saving hops for ${session.email}.`
         : "Hops stay on this phone until you save them.";
     }
-    const nav = document.querySelector('[data-cmd="account"]');
+    const nav = document.getElementById("title-account");
     if (nav) nav.textContent = session ? "Account" : "Save hops";
   }
 
@@ -514,19 +545,7 @@ export class Game {
     if (!session) {
       root.innerHTML = `
         <p class="kicker">Hop book</p>
-        <h2>Keep your hops</h2>
-        <p class="lead">Ask a grown-up. An email and a password save Stars, a paused climb, and your hop history if this phone is cleared. You can still play without one.</p>
-        <form id="account-form" class="account-form">
-          <label for="account-email">Email</label>
-          <input id="account-email" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="80" />
-          <label for="account-password">Password</label>
-          <input id="account-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="64" />
-          <div class="account-actions">
-            <button name="intent" value="signup" type="submit">Create account</button>
-            <button class="ghost" name="intent" value="login" type="submit">Log in</button>
-          </div>
-        </form>
-        <p class="quiet" id="account-note">We store a password hash, not the password. No ads. Nothing to buy.</p>
+        ${keepSaveFormHtml({ idPrefix: "acct", showNotNow: false })}
         <div class="col">
           <button class="ghost" data-cmd="history" type="button">Hop history</button>
           <button class="ghost" data-cmd="back" type="button">Back</button>
@@ -537,6 +556,11 @@ export class Game {
       <p class="kicker">Hop book</p>
       <h2>Signed in</h2>
       <p class="lead">Hops for <strong>${escapeHtml(session.email)}</strong> can follow you to another phone. This device still keeps a copy so you can play offline.</p>
+      <label class="keep-news">
+        <input id="acct-news-toggle" type="checkbox"${session.mailOk ? " checked" : ""} />
+        <span>News mail — On: Daily and King Me news. Off: hops only.</span>
+      </label>
+      <p class="quiet" id="account-news-note"></p>
       <div class="col">
         <button data-cmd="history" type="button">Hop history</button>
         ${session.studio ? `<button class="ghost" data-cmd="studio" type="button">Hop data</button>` : ""}
@@ -581,15 +605,21 @@ export class Game {
     if (!root) return;
     root.innerHTML = `<p class="kicker">Studio</p><h2>Hop data</h2><p class="lead">Counting the table.</p>`;
     try {
-      const stats = await fetchInsight();
-      if (!stats) {
+      const insight = await fetchInsight();
+      if (!insight) {
         root.innerHTML = `<p class="kicker">Studio</p><h2>Hop data</h2><p class="lead">This book is for the table.</p><button data-cmd="account" type="button">Back</button>`;
         return;
       }
+      const emails = insight.mailList.length
+        ? `<ul>${insight.mailList.map((email) => `<li>${escapeHtml(email)}</li>`).join("")}</ul>`
+        : `<p class="quiet">Nobody asked for news mail yet.</p>`;
+      const stats = insight.stats;
       root.innerHTML = `
         <p class="kicker">Studio</p>
         <h2>Hop data</h2>
-        <p class="lead">No emails here. Just how the table is hopping.</p>
+        <p class="lead">Opted-in news mail. Do not paste this in public.</p>
+        <p><strong>${insight.mailOk}</strong> opted-in emails</p>
+        ${emails}
         <div class="stat-grid">
           <p><strong>${stats.accounts}</strong> accounts</p>
           <p><strong>${stats.logins}</strong> sign-ins</p>
@@ -604,24 +634,59 @@ export class Game {
     }
   }
 
-  private async submitAccount(intent: string): Promise<void> {
+  private newsChecked(prefix: string): boolean {
+    const el = document.getElementById(`${prefix}-news`);
+    return el instanceof HTMLInputElement ? el.checked : true;
+  }
+
+  private async submitKeepSave(prefix: string, intent: string): Promise<void> {
     if (this.accountBusy) return;
-    const emailEl = document.getElementById("account-email");
-    const passEl = document.getElementById("account-password");
+    const emailEl = document.getElementById(`${prefix}-email`);
+    const passEl = document.getElementById(`${prefix}-password`);
+    const note = document.getElementById(`${prefix}-save-note`);
     const email = emailEl instanceof HTMLInputElement ? emailEl.value : "";
     const password = passEl instanceof HTMLInputElement ? passEl.value : "";
+    const mailOk = this.newsChecked(prefix);
     this.accountBusy = true;
-    this.accountNote("Opening the hop book…");
+    if (note) {
+      note.textContent = "Opening the hop book…";
+      note.classList.remove("danger");
+    }
     try {
-      if (intent === "signup") await createAccount(email, password);
+      if (intent === "signup") await createAccount(email, password, mailOk);
       else await signIn(email, password);
       this.meta = loadMeta();
       this.applyPrefs();
       this.paintAccount();
-      this.renderAccount();
+      if (this.screen === "account") this.renderAccount();
+      if (this.screen === "end") this.renderEnd();
       this.cheer("Hops can follow you.");
     } catch (err) {
-      this.accountNote(err instanceof Error ? err.message : "Could not open the hop book.", true);
+      if (note) {
+        note.textContent = err instanceof Error ? err.message : "Could not open the hop book.";
+        note.classList.add("danger");
+      }
+    } finally {
+      this.accountBusy = false;
+    }
+  }
+
+  private async submitMailOk(on: boolean): Promise<void> {
+    if (this.accountBusy) {
+      this.renderAccount();
+      return;
+    }
+    this.accountBusy = true;
+    try {
+      await setMailOk(on);
+      if (this.screen === "account") this.renderAccount();
+    } catch (err) {
+      this.renderAccount();
+      const note = document.getElementById("account-news-note");
+      if (note) {
+        note.textContent = err instanceof Error ? err.message : "Could not change news mail.";
+        note.classList.add("danger");
+      }
     } finally {
       this.accountBusy = false;
     }
@@ -666,7 +731,6 @@ export class Game {
     this.meta.runs += 1;
     saveMeta(this.meta);
     this.loadBoard();
-    this.pushLog(JUMP_HOW);
     this.show("playing");
     this.cheer("Let's hop!");
     this.maybeCoach();
@@ -686,7 +750,7 @@ export class Game {
     this.twists = [];
     this.runSeed = saved.runSeed;
     this.rng = new Rng(saved.runSeed + saved.hops * 17 + saved.boardIndex * 31);
-    this.pathNames = saved.pathNames.length ? saved.pathNames : climbNames(saved.runSeed);
+    this.pathNames = normalizeClimbNames(saved.pathNames.length ? saved.pathNames : climbNames(saved.runSeed));
     this.board = unpackBoard(saved.board);
     this.laws = saved.laws;
     this.mods = { ...emptyMods(), ...saved.mods };
@@ -747,7 +811,7 @@ export class Game {
     saveClimb({
       v: 1,
       runSeed: this.runSeed,
-      pathNames: this.pathNames,
+      pathNames: normalizeClimbNames(this.pathNames),
       board: packBoard(this.board),
       laws: this.laws,
       mods: this.mods,
@@ -896,7 +960,7 @@ export class Game {
 
   private modifierCard(title: string, desc: string, side?: "you" | "them"): string {
     const cls = side === "you" ? "help-you" : side === "them" ? "help-them" : "";
-    return `<li class="mod-card ${cls}"><p class="mod-head">Modifier: ${escapeHtml(title.toUpperCase())}</p><p class="mod-desc">${escapeHtml(desc)}</p></li>`;
+    return `<li class="mod-card ${cls}"><p class="mod-head">${escapeHtml(title)}</p><p class="mod-desc">${escapeHtml(desc)}</p></li>`;
   }
 
   private extraMen(): number {
@@ -935,8 +999,10 @@ export class Game {
     this.chaseTold = false;
     this.aiMem = emptyMemory();
     this.clearAi();
+    this.log = [];
     const name = this.pathNames[this.boardIndex] ?? "Next board";
-    this.pushLog(`${name}. ${spec.blurb}`);
+    const openLine = boardOpenLog(name, spec.blurb);
+    if (openLine) this.pushLog(openLine);
     this.persistClimb();
   }
 
@@ -975,12 +1041,14 @@ export class Game {
   private finishCoach(): void {
     if (!this.coachOn && this.meta.sawTutorial) {
       this.hideCoach();
+      this.renderHud();
       return;
     }
     this.coachOn = false;
     this.meta.sawTutorial = true;
     saveMeta(this.meta);
     this.hideCoach();
+    this.renderHud();
   }
 
   private hideCoach(): void {
@@ -1450,7 +1518,7 @@ export class Game {
         feel.bump();
         const yell = comboName(this.combo);
         this.cheer(move.far ? "Far jump!" : yell, this.combo);
-        this.pushLog(move.far ? "Far jump!" : this.combo >= 2 ? `${yell} x${this.combo}` : "Got one!");
+        this.pushLog(comboLog(this.combo, !!move.far));
         if (this.coachOn) this.finishCoach();
         if (this.laws.recruit) this.board = recruitMan(this.board, "you", this.pid, this.mods);
         const pit = trapdoorHole(move);
@@ -1853,7 +1921,7 @@ export class Game {
     this.loseOrHoldOops();
   }
 
-  /** After a wipe, Oops can still undo — then the board ends. Never wait on Give up. */
+  /** After a wipe, Oops can still undo. Wait for Oops or That's the game. */
   private loseOrHoldOops(): void {
     this.turn = "you";
     this.thinking = false;
@@ -1872,13 +1940,18 @@ export class Game {
     }
     this.renderAll();
     this.persistClimb();
-    const wait = canUndo ? (this.mode === "daily" ? 900 : 2200) : 700;
+    const wait = wipeAutoEndMs(canUndo);
+    if (wait == null) return;
     this.wipeTimer = window.setTimeout(() => {
       this.wipeTimer = null;
       if (this.end) return;
       if (piecesOf(this.board, "you").length > 0) return;
       this.finish(false);
     }, wait);
+  }
+
+  private holdingWipeOops(): boolean {
+    return this.screen === "playing" && !this.end && this.canOops() && piecesOf(this.board, "you").length === 0;
   }
 
   private boardCleared(): void {
@@ -1921,6 +1994,7 @@ export class Game {
     this.clearWipe();
     this.thinking = false;
     this.animating = false;
+    this.keepSaveSkip = false;
     this.hideCoach();
     this.coachOn = false;
     if (this.mode === "run") {
@@ -2039,13 +2113,18 @@ export class Game {
     document.querySelectorAll("[data-screen]").forEach((el) => {
       const on = el.getAttribute("data-screen") === name;
       el.classList.toggle("hidden", !on);
+      el.setAttribute("aria-hidden", on ? "false" : "true");
       if (on && el instanceof HTMLElement) {
         el.classList.remove("enter");
         void el.offsetWidth;
         el.classList.add("enter");
       }
     });
-    document.getElementById("table")?.classList.toggle("hidden", name !== "playing");
+    const table = document.getElementById("table");
+    const atTable = name === "playing";
+    table?.classList.toggle("hidden", !atTable);
+    table?.setAttribute("aria-hidden", atTable ? "false" : "true");
+    if (name !== "title") document.querySelector(".title-more")?.removeAttribute("open");
     if (name === "title") this.renderTitle();
     if (name === "end") this.renderEnd();
     if (name === "pick") this.renderPick();
@@ -2073,10 +2152,6 @@ export class Game {
   private renderTitle(): void {
     const rem = document.getElementById("notch-count");
     if (rem) rem.textContent = String(this.meta.notches);
-    const dlabel = document.getElementById("daily-chip");
-    if (dlabel) dlabel.textContent = dailyTitle();
-    const mini = document.getElementById("title-leaders");
-    if (mini) mini.innerHTML = this.scoreList(5);
     const main = document.getElementById("play-main");
     const label = document.getElementById("play-main-label");
     const sub = document.getElementById("play-main-sub");
@@ -2089,25 +2164,9 @@ export class Game {
     const dailyName = document.getElementById("play-daily-name");
     if (dailyName) dailyName.textContent = dailyTitle();
     const hint = document.getElementById("climb-hint");
-    if (hint) {
-      hint.textContent = `Each new game begins a new challenge. Each challenge is randomly seeded. The Daily Challenge is ${dailyTitle()}.`;
-    }
+    if (hint) hint.textContent = climbHintLine(dailyTitle());
     this.paintName();
     this.paintAccount();
-    void this.warmTitleScores();
-  }
-
-  private titleWarmed = false;
-  private async warmTitleScores(): Promise<void> {
-    if (this.titleWarmed && this.scores.length) return;
-    this.titleWarmed = true;
-    const board = await fetchBoard(utcDayKey());
-    this.scores = board.scores;
-    this.boardLive = !!board.live;
-    if (this.screen === "title") {
-      const mini = document.getElementById("title-leaders");
-      if (mini) mini.innerHTML = this.scoreList(5);
-    }
   }
 
   private renderDaily(): void {
@@ -2200,6 +2259,7 @@ export class Game {
       return;
     }
     const b = notchBonus(s.notches);
+    const session = loadSession();
     const close = s.board >= 3;
     box.innerHTML = `
       <p class="kicker">${s.win ? "You did it" : close ? "So close" : "Nice try"}</p>
@@ -2217,6 +2277,17 @@ export class Game {
           b.kingChance > 0.05 ? ` · ${Math.round(b.kingChance * 100)}% a player piece starts as a King` : ""
         }</li>
       </ul>
+      ${
+        shouldOfferKeepSave(!!session, "run") && !this.keepSaveSkip
+          ? keepSaveFormHtml({ idPrefix: "keep", showNotNow: true })
+          : session
+            ? `<p class="quiet">Saving hops for ${escapeHtml(session.email)}. ${
+                session.mailOk
+                  ? "We'll email Daily and King Me news. Turn that off in Account."
+                  : "Hops only — no news mail."
+              }</p>`
+            : ""
+      }
     `;
     const extra = document.getElementById("end-actions");
     if (extra) {
@@ -2247,39 +2318,24 @@ export class Game {
     }
     const legal = this.turn === "you" && !this.thinking ? this.youLegal() : [];
     const jumps = legal.filter((m) => m.capture);
+    const fromSel = (m: (typeof legal)[number]) =>
+      !!this.selected && m.from.r === this.selected.r && m.from.c === this.selected.c;
     const status = document.getElementById("status");
     if (status) {
-      if (this.coachOn) {
-        status.textContent = JUMP_HOW;
-      } else {
-        const wiped =
-          this.turn === "you" &&
-          !this.thinking &&
-          piecesOf(this.board, "you").length === 0;
-        status.textContent = this.thinking
-          ? this.canOops()
-            ? "Enemy… Oops still works."
-            : "The Enemy is hopping…"
-          : wiped
-            ? this.canOops()
-              ? "You're out. Tap Oops to undo — or that's the game."
-              : "You're out."
-            : this.lock
-              ? "Keep capturing, slide a pip, or Skip jump."
-              : jumps.length
-                ? this.selected
-                  ? "The star is the jump. Slide a pip if you want to go another way."
-                  : "A jump is ready — you do not have to take it."
-                : this.selected
-                  ? legal.some((m) => m.overHole)
-                    ? "Jump over the pit onto the star — or drop onto the pit."
-                    : "Slide onto a pip."
-                  : this.turn === "you"
-                    ? this.canOops()
-                      ? "Slide a pip, or jump an Enemy — or Oops that hop."
-                      : "Slide a pip, or jump an Enemy."
-                    : "Wait.";
-      }
+      const wiped =
+        this.turn === "you" && !this.thinking && piecesOf(this.board, "you").length === 0;
+      status.textContent = hopStatus({
+        coachOn: this.coachOn,
+        thinking: this.thinking,
+        canOops: this.canOops(),
+        wiped,
+        locked: !!this.lock,
+        yourTurn: this.turn === "you",
+        selected: !!this.selected,
+        anyJump: jumps.length > 0,
+        selectedJump: legal.some((m) => m.capture && fromSel(m)),
+        overHole: legal.some((m) => m.overHole && fromSel(m)),
+      });
     }
     const counts = document.getElementById("counts");
     if (counts) {
@@ -2299,12 +2355,17 @@ export class Game {
     }
     const oops = document.getElementById("btn-oops");
     if (oops instanceof HTMLButtonElement) {
+      const ready = this.canOops();
+      const waiting = !ready && this.oopsLeft > 0;
       oops.classList.remove("hidden");
-      oops.disabled = !this.canOops();
-      oops.textContent = this.oopsLeft > 0 ? `Oops ×${this.oopsLeft}` : "Oops used";
-      oops.title = this.canOops()
+      oops.classList.toggle("waiting", waiting);
+      oops.disabled = !ready;
+      oops.textContent = oopsLabel(this.oopsLeft, ready);
+      oops.title = ready
         ? "Take back your last hop, even after the Enemy replies"
-        : "Hop first, then Oops after you see the Enemy's reply";
+        : waiting
+          ? "Hop first, then Oops after you see the Enemy's reply"
+          : "No Oops left on this board";
     }
     const skip = document.getElementById("btn-skip");
     if (skip instanceof HTMLButtonElement) {
@@ -2312,6 +2373,12 @@ export class Game {
       skip.disabled = !this.canSkipJump();
       skip.textContent = "Skip jump";
       skip.title = "Stop here without hopping again";
+    }
+    const done = document.getElementById("btn-done");
+    if (done instanceof HTMLButtonElement) {
+      const hold = this.holdingWipeOops();
+      done.classList.toggle("hidden", !hold);
+      done.disabled = !hold;
     }
     const laws = document.getElementById("laws");
     if (laws) {
@@ -2338,7 +2405,10 @@ export class Game {
       }
     }
     const log = document.getElementById("log");
-    if (log) log.innerHTML = this.log.map((l) => `<div>${l}</div>`).join("");
+    if (log) {
+      log.innerHTML = this.log.map((l) => `<div>${l}</div>`).join("");
+      log.classList.toggle("hidden", this.log.length === 0);
+    }
   }
 
   private renderBoard(): void {

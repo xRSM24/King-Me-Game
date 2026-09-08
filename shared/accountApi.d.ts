@@ -1,11 +1,17 @@
 export const HISTORY_CAP: number;
 export const HOP_KINDS: Set<string>;
+export const MAIL_OK_KEY: string;
 
 export interface AccountStore {
   getJSON(key: string): Promise<unknown>;
   setJSON(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<void>;
 }
+
+export function signupMailOk(body: unknown): boolean;
+export function accountMailOk(account: unknown): boolean;
+export function loadMailList(store: AccountStore): Promise<string[]>;
+export function setMailListed(store: AccountStore, email: string, on: boolean): Promise<void>;
 
 export function emptyStats(): Record<string, unknown>;
 export function todayUtc(): string;

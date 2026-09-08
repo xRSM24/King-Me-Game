@@ -21,7 +21,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 
 | Type | Linked to identity | Used for tracking | Why |
 | --- | --- | --- | --- |
-| Email | Yes, if they create an account | No | Optional hop book sign-in |
+| Email | Yes, if they create an account | No | App functionality (restore hops). Developer communications about Daily and King Me unless they uncheck news. Not ads. Not tracking |
 | Name (nickname) | Only if they also make an account | No | Optional daily leaderboard |
 | Gameplay (climb, Stars, hop log) | Yes, if they create an account | No | Restore hops; anonymous counts for us |
 | Location, contacts, photos, IDFA | — | — | Not collected |
@@ -95,7 +95,7 @@ IARC questionnaire: this is a board game, no violence beyond capturing pieces, n
 | Question | Answer |
 | --- | --- |
 | Does the app collect data? | Yes (Daily pins; optional account) |
-| Email | Collected **only** if they create an account. Linked to that account. Not for ads |
+| Email | Collected **only** if they create an account. Linked to that account. App functionality (restore hops). Developer communications about Daily and King Me unless they uncheck news. Not for ads. Not tracking |
 | Name | Collected for the public daily board; linked to the account if they signed in |
 | Gameplay / app activity | Climb and Stars stay on device. If they have an account, a hop log is saved so they can restore it. Anonymous counts (boards, Crowns) are stored without emails on the public site |
 | Location, contacts, photos, files, audio, health, financial, device IDs | Not collected |

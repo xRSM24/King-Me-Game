@@ -308,6 +308,46 @@ h2 {
   background: rgba(232, 197, 71, 0.12);
 }
 
+.title-more {
+  width: min(340px, 100%);
+  margin: 0 auto 8px;
+  text-align: center;
+}
+
+.title-more > summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ivory);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.title-more > summary::-webkit-details-marker,
+.title-more > summary::marker {
+  display: none;
+  content: none;
+}
+
+.title-more[open] > summary {
+  border-color: var(--gold);
+  background: rgba(232, 197, 71, 0.12);
+}
+
+.title-more-nav {
+  margin-top: 10px;
+}
+
+.title-more .opts {
+  margin-top: 8px;
+}
+
 #play-fresh {
   display: block;
   width: 100%;
@@ -414,6 +454,29 @@ button:disabled {
   color: #3a2408;
   box-shadow: 0 3px 0 var(--brass);
   opacity: 1;
+}
+
+#btn-oops:disabled {
+  opacity: 1;
+  cursor: default;
+  background: transparent;
+  color: var(--ivory);
+  border: 2px dashed rgba(255, 244, 228, 0.55);
+  box-shadow: none;
+}
+
+#btn-oops:disabled:not(.waiting) {
+  opacity: 0.55;
+  color: var(--muted);
+  border-style: solid;
+  border-color: var(--line);
+}
+
+#btn-done:not(.hidden) {
+  background: transparent;
+  color: var(--ivory);
+  border: 2px solid var(--line);
+  box-shadow: none;
 }
 
 button small {
@@ -1475,6 +1538,11 @@ html.calm .petals {
   text-align: center;
 }
 
+.name-form input::placeholder {
+  color: var(--gold);
+  opacity: 0.9;
+}
+
 .name-form button {
   min-height: 48px;
   padding: 10px 16px;
@@ -1537,6 +1605,31 @@ html.calm .petals {
   flex: 1 1 8rem;
 }
 
+.keep-save h2 {
+  text-align: left;
+}
+
+.keep-news {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--ivory);
+  font-weight: 700;
+  text-align: left;
+}
+
+.keep-news input {
+  margin-top: 4px;
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--gold);
+  border: 0;
+  background: none;
+  flex: 0 0 auto;
+}
+
 .hop-log {
   list-style: none;
   margin: 0 0 16px;
@@ -1581,25 +1674,9 @@ html.calm .petals {
   font-size: 1.4rem;
 }
 
-#account-note.danger {
+#account-note.danger,
+#account-news-note.danger {
   color: #f3b4a0;
-}
-
-.title-daily {
-  margin: 20px auto 0;
-  width: 100%;
-  max-width: 100%;
-  text-align: center;
-}
-
-.title-daily .kicker {
-  text-align: center;
-  white-space: normal;
-}
-
-.title-daily > button {
-  width: 100%;
-  margin-top: 12px;
 }
 
 .leaderboard.compact {
@@ -1639,6 +1716,7 @@ html.calm .petals {
   .hud-btn,
   .title-nav button.texty,
   .opts button.texty,
+  .title-more > summary,
   button {
     min-height: 48px;
   }
@@ -1687,9 +1765,6 @@ html.calm .petals {
     padding: 12px;
   }
   .stars-chip {
-    margin-top: 12px;
-  }
-  .title-daily {
     margin-top: 12px;
   }
 }

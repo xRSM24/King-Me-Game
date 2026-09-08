@@ -29,9 +29,7 @@
           </div>
           <h1>King Me</h1>
           <p class="tagline">Six Boards. Take the Challenge!</p>
-          <p id="climb-hint" class="quiet climb-hint">
-            Each new game begins a new challenge. Each challenge is randomly seeded.
-          </p>
+          <p id="climb-hint" class="quiet climb-hint">New climb is yours.</p>
           <form id="name-form" class="name-form">
             <label for="hopper-name">I'm</label>
             <input
@@ -62,23 +60,22 @@
               </span>
             </button>
           </div>
-          <nav class="title-nav">
-            <button class="texty" data-cmd="how" type="button">How to Play</button>
-            <button class="texty" data-cmd="account" type="button">Account</button>
-            <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
-            <button class="texty" data-cmd="privacy" type="button">Privacy</button>
-            <button class="texty" data-cmd="support" type="button">Support</button>
-          </nav>
-          <div class="opts">
-            <button class="texty" id="opt-cb" data-cmd="colorblind" type="button">Colorblind off</button>
-            <button class="texty" id="opt-motion" data-cmd="motion" type="button">Motion on</button>
-          </div>
+          <details class="title-more">
+            <summary>More</summary>
+            <nav class="title-nav title-more-nav">
+              <button class="texty" data-cmd="how" type="button">How to Play</button>
+              <button class="texty" id="title-account" data-cmd="account" type="button">Save hops</button>
+              <button class="texty" id="title-mute" data-cmd="mute" type="button">Sound</button>
+              <button class="texty" data-cmd="daily" type="button">Leaderboard</button>
+              <button class="texty" data-cmd="privacy" type="button">Privacy</button>
+              <button class="texty" data-cmd="support" type="button">Support</button>
+            </nav>
+            <div class="opts">
+              <button class="texty" id="opt-cb" data-cmd="colorblind" type="button">Colorblind off</button>
+              <button class="texty" id="opt-motion" data-cmd="motion" type="button">Motion on</button>
+            </div>
+          </details>
           <p class="stars-chip">★ <strong id="notch-count">0</strong> stars</p>
-          <div class="title-daily">
-            <p class="kicker">Leaderboard · <span id="daily-chip">Daily</span></p>
-            <ol id="title-leaders" class="leaderboard compact"></ol>
-            <button type="button" data-cmd="daily">Open leaderboard</button>
-          </div>
         </div>
       </section>
 
@@ -100,12 +97,13 @@
               whoever has more pieces wins. A lone King cannot run forever.
             </li>
             <li>
-              <b>Six boards to the Crown.</b> Each New climb rolls a new path — different files,
+              <b>Six boards to the Crown.</b> Each New climb rolls a new path — different sides,
               different felt, different names. Continue is the same climb you paused.
             </li>
             <li>
               <b>Oops is OK.</b> One take-back per climb board. Wait for the Enemy to hop,
-              see what happened, then Oops if you want your hop back. Today's tough board gives you
+              see what happened, then Oops if you want your hop back. If you lose your last piece,
+              Oops still works until you tap That's the game. Today's tough board gives you
               two unless a modifier says otherwise. If you lose your last piece on the climb, you still get Stars.
             </li>
             <li>
@@ -121,7 +119,9 @@
             <li>
               <b>Save your hops.</b> An optional account (a grown-up email and a password)
               keeps Stars, a paused climb, and your hop history if this phone is cleared.
-              You can still play with the radio off; the hop book waits until you are back online.
+              After a Crown or a loss, the end screen may ask: Keep your save? Enter your email!
+              News mail starts checked — uncheck to keep hops only. You can still play with the radio off;
+              the hop book waits until you are back online.
             </li>
             <li>
               <b>Offline.</b> The climb works with the radio off. Daily pins and accounts need a network.
@@ -149,8 +149,10 @@
           <p>
             A nickname leaves the device if you pin a Daily Challenge score, or if you
             create an account. Then we keep that name, the email, a password hash, the
-            climb, Stars, and a hop log so you can sign in later. We never ask for a
-            real name, phone, or location.
+            climb, Stars, and a hop log so you can sign in later. News mail starts on for a
+            new keep-save unless you uncheck the box. Turn it off in Account or email us.
+            We do not sell the list. It is developer mail, not ads. We never ask for a real
+            name, phone, or location.
           </p>
           <p>
             Mean words are blocked. Hide hides a name for you right away and takes it off
@@ -193,6 +195,7 @@
           <div class="row tiny">
             <button class="ghost hud-btn hidden" data-cmd="skip-jump" id="btn-skip" type="button" title="Stop here without hopping again">Skip jump</button>
             <button class="ghost hud-btn" data-cmd="oops" id="btn-oops" type="button">Oops</button>
+            <button class="ghost hud-btn hidden" data-cmd="accept-wipe" id="btn-done" type="button" title="End this climb">That's the game</button>
             <button class="ghost hud-btn" data-cmd="mute" id="btn-mute" type="button">Sound on</button>
             <button class="ghost hud-btn" data-cmd="pause" type="button">Menu</button>
           </div>

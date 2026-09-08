@@ -29,18 +29,14 @@ const ADJ = [
   "Spark",
   "Moon",
   "Rapid",
-  "Hidden",
   "Brave",
   "Lucky",
-  "Misty",
   "Zesty",
   "Cherry",
   "Thunder",
   "Copper",
   "Plum",
   "Neon",
-  "Foggy",
-  "Jolly",
   "Crisp",
 ];
 const NOUN = [
@@ -143,6 +139,34 @@ export function darkPlayable(rows: number[], holes: Pos[] = [], size = 8): Pos[]
   return out;
 }
 
+function growRowsForLane(
+  rows: number[],
+  n: number,
+  lane: Lane,
+  holes: Pos[],
+  used: Set<string>,
+  size: number,
+): number[] {
+  if (lane === "any") return rows.slice();
+  const out = rows.slice();
+  const inLaneCount = (): number =>
+    darkPlayable(out, holes, size).filter((p) => !used.has(key(p)) && inLane(p, lane, size)).length;
+  const themSide = out.reduce((a, b) => a + b, 0) / out.length < size / 2;
+  let guard = 0;
+  while (inLaneCount() < n && guard++ < size) {
+    if (themSide) {
+      const next = Math.max(...out) + 1;
+      if (next >= size / 2) break;
+      out.push(next);
+    } else {
+      const next = Math.min(...out) - 1;
+      if (next < size / 2) break;
+      out.push(next);
+    }
+  }
+  return out;
+}
+
 export function pickSpots(
   rng: Rng,
   rows: number[],
@@ -152,9 +176,9 @@ export function pickSpots(
   lane: Lane = "any",
   size = 8,
 ): Pos[] {
-  const open = darkPlayable(rows, holes, size).filter((p) => !used.has(key(p)));
-  const narrowed = lane === "any" ? open : open.filter((p) => inLane(p, lane, size));
-  const spots = narrowed.length >= n ? narrowed : open;
+  const grown = growRowsForLane(rows, n, lane, holes, used, size);
+  const open = darkPlayable(grown, holes, size).filter((p) => !used.has(key(p)));
+  const spots = lane === "any" ? open : open.filter((p) => inLane(p, lane, size));
   rng.shuffle(spots);
   const out = spots.slice(0, Math.max(0, n));
   for (const p of out) used.add(key(p));
@@ -357,13 +381,17 @@ export function climbNames(seed: number): string[] {
     return rng.pick(pool);
   };
   return [
-    `First Hop · ${pick(ADJ)}`,
+    "First Hop",
     `${pick(ADJ)} ${pick(NOUN)}`,
     `${pick(ADJ)} ${pick(NOUN)}`,
     `${pick(ADJ)} ${pick(NOUN)}`,
     `${pick(ADJ)} ${pick(NOUN)}`,
     `The Crown · ${pick(NOUN)}`,
   ];
+}
+
+export function normalizeClimbNames(names: string[]): string[] {
+  return names.map((n, i) => (i === 0 ? "First Hop" : n));
 }
 
 interface Tier {
@@ -515,8 +543,8 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
   const feltMods: FeltMod[] = [];
   const shape = rng.next();
   if (forceRace || rng.chance(tier.race)) {
-    youRows = [3, 2];
-    themRows = [6, 5, 7];
+    youRows = [5, 4];
+    themRows = [2, 3, 1];
     feltMods.push({ title: "Race to the Far Row", desc: RACE_DESC });
   } else if (shape < 0.2) {
     youLane = rng.pick(["left", "right"]);

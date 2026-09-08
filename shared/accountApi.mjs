@@ -15,6 +15,33 @@ import {
 
 export const HISTORY_CAP = 200;
 export const HOP_KINDS = new Set(["board-clear", "climb-win", "climb-lose", "daily-win", "daily-lose"]);
+export const MAIL_OK_KEY = "mail-ok";
+
+export function signupMailOk(body) {
+  return body?.mailOk !== false;
+}
+
+export function accountMailOk(account) {
+  return !!(account && typeof account === "object" && account.mailOk === true);
+}
+
+export async function loadMailList(store) {
+  const raw = await store.getJSON(MAIL_OK_KEY);
+  return Array.isArray(raw) ? raw.map(String) : [];
+}
+
+export async function setMailListed(store, email, on) {
+  const e = String(email || "").toLowerCase();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const cur = await loadMailList(store);
+    if (cur.includes(e) === on) return;
+    const next = on ? [...new Set([...cur, e])] : cur.filter((x) => x !== e);
+    await store.setJSON(MAIL_OK_KEY, next);
+    const saved = await loadMailList(store);
+    if (saved.includes(e) === on) return;
+  }
+  throw new Error(`Could not update ${MAIL_OK_KEY}.`);
+}
 
 export function emptyStats() {
   return {
@@ -147,6 +174,7 @@ function publicMe(account, save, token) {
     studio: email === studioEmail(),
     token,
     save,
+    mailOk: accountMailOk(account),
   };
 }
 
@@ -220,6 +248,8 @@ export async function handleAccount({ op, method, body, auth, store }) {
       hash,
       name: name ? sanitizeName(name) : "",
       createdAt: Date.now(),
+      mailOk: signupMailOk(body),
+      mailOkAt: Date.now(),
     };
     const save = mergeProgress(packFromBody(body), {
       meta: {},
@@ -230,6 +260,11 @@ export async function handleAccount({ op, method, body, auth, store }) {
     });
     await writeAccount(store, account);
     await writeSave(store, account.id, save);
+    try {
+      await setMailListed(store, email, account.mailOk);
+    } catch {
+      // The account is already durable; list maintenance must not turn signup into a failure.
+    }
     await store.setJSON("hop-stats", bumpStats(await statsOf(store), "signup"));
     const token = makeToken(account.id);
     return { status: 200, body: publicMe(account, save, token) };
@@ -289,6 +324,7 @@ export async function handleAccount({ op, method, body, auth, store }) {
     if (!verifyPassword(String(body?.password ?? ""), session.account.salt, session.account.hash)) {
       return { status: 401, body: { error: "Password did not match." } };
     }
+    await setMailListed(store, session.account.email, false);
     await store.delete(`acct:${emailKey(session.account.email)}`);
     await store.delete(`acct-id:${session.account.id}`);
     await store.delete(`save:${session.account.id}`);
@@ -304,7 +340,22 @@ export async function handleAccount({ op, method, body, auth, store }) {
     if (String(session.account.email || "") !== studioEmail()) {
       return { status: 403, body: { error: "That book is for the table." } };
     }
-    return { status: 200, body: { stats: await statsOf(store) } };
+    const list = await loadMailList(store);
+    return {
+      status: 200,
+      body: { stats: await statsOf(store), mailOk: list.length, mailList: list },
+    };
+  }
+
+  if (action === "mail" && verb === "POST") {
+    const session = await requireSession(store, auth, body?.token);
+    if (session.error) return { status: session.status, body: { error: session.error } };
+    const on = !!body?.mailOk;
+    session.account.mailOk = on;
+    session.account.mailOkAt = Date.now();
+    await writeAccount(store, session.account);
+    await setMailListed(store, session.account.email, on);
+    return { status: 200, body: publicMe(session.account, session.save, session.token) };
   }
 
   return { status: 404, body: { error: "Unknown hop." } };

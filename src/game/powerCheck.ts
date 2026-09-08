@@ -1,9 +1,25 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
+import { sessionMailOk } from "./account.ts";
+import { KEEP_SAVE_HEAD, keepSaveFormHtml, shouldOfferKeepSave } from "./keepSave.ts";
 import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import { getConfirmNotes } from "./audio.ts";
-import { comboAfterHop, comboName } from "./combo.ts";
+import { comboAfterHop, comboLog, comboName } from "./combo.ts";
+import {
+  FIRST_JUMP_DESC,
+  FIRST_LANE_CENTER,
+  FIRST_LANE_LEFT,
+  FIRST_LANE_RIGHT,
+  OPPOSITE_WINGS_DESC,
+  STAR_ELSEWHERE,
+  boardOpenLog,
+  climbHintLine,
+  hopStatus,
+  laneDesc,
+  oopsLabel,
+  wipeAutoEndMs,
+} from "./copy.ts";
 import { getHoldMs, sceneMarkup } from "./getScenes.ts";
 import {
   campsFromRows,
@@ -15,7 +31,7 @@ import {
   wouldCrown,
   type Board,
 } from "./rules.ts";
-import { boardSpec, maplePathToKingRank, pickLily, pickSafeHoles, scaleRowsForSize } from "./setup.ts";
+import { boardSpec, climbNames, maplePathToKingRank, normalizeClimbNames, pickLily, pickSafeHoles, pickSpots, scaleRowsForSize } from "./setup.ts";
 import { Rng } from "./rng.ts";
 import {
   applyBurst,
@@ -30,6 +46,20 @@ import {
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
 }
+
+assert(sessionMailOk(null) === false, "no session is not news mail");
+assert(sessionMailOk({ mailOk: true }) === true, "session mailOk true");
+assert(sessionMailOk({}) === false, "missing mailOk is false");
+
+assert(KEEP_SAVE_HEAD === "Keep your save? Enter your email!", "keep-save headline is locked");
+assert(shouldOfferKeepSave(false, "run") === true, "unsigned climb end offers keep-save");
+assert(shouldOfferKeepSave(true, "run") === false, "signed-in climb end does not ask again");
+assert(shouldOfferKeepSave(false, "daily") === false, "daily end has no keep-save");
+const html = keepSaveFormHtml({ idPrefix: "keep", showNotNow: true });
+assert(html.includes(KEEP_SAVE_HEAD), "form stamps the headline");
+assert(html.includes("type=\"checkbox\"") && html.includes("checked"), "news box starts checked");
+assert(html.includes("Not now"), "end form can dismiss");
+assert(!keepSaveFormHtml({ idPrefix: "acct", showNotNow: false }).includes("Not now"), "Save hops has no Not now");
 
 function burst(p: Partial<YouBurst> = {}): YouBurst {
   return {
@@ -242,6 +272,19 @@ assert(comboAfterHop(1, true, false) === 1, "a new hop after the Enemy is not a 
 assert(comboName(comboAfterHop(1, true, false)) === "Got one!", "Enemy-in-between take yells Got one");
 assert(comboAfterHop(2, false, false) === 0, "a quiet slide breaks the combo");
 
+const rightThem = pickSpots(new Rng(1), [0, 1], 6, [], new Set(), "right", 8);
+assert(rightThem.length === 6, "right file still seats six Enemies");
+assert(
+  rightThem.every((p) => p.c >= 4),
+  "right file does not spill onto columns 1–4",
+);
+const leftYou = pickSpots(new Rng(2), [6, 7], 5, [], new Set(), "left", 8);
+assert(leftYou.length === 5, "left file still seats five maples");
+assert(
+  leftYou.every((p) => p.c < 4),
+  "left file does not spill onto columns 5–8",
+);
+
 const wall = blankSize(8);
 wall[7]![0] = { id: 1, side: "you", king: false };
 const isolated = {
@@ -271,5 +314,81 @@ assert(
   maplePathToKingRank(wall, { ...isolated, holes: safe }, { r: 7, c: 0 }),
   "pickSafeHoles will not wall the maple off row 0",
 );
+
+const idleHop = {
+  coachOn: false,
+  thinking: false,
+  canOops: false,
+  wiped: false,
+  locked: false,
+  yourTurn: true,
+  selected: false,
+  anyJump: false,
+  selectedJump: false,
+  overHole: false,
+};
+assert(
+  hopStatus({ ...idleHop, anyJump: true }) === "A jump is ready — you do not have to take it.",
+  "unselected HUD names a ready jump",
+);
+assert(
+  hopStatus({ ...idleHop, selected: true, anyJump: true, selectedJump: true }) ===
+    "The star is the jump. Slide a pip if you want to go another way.",
+  "selected jumper HUD names the star on this maple",
+);
+assert(
+  hopStatus({ ...idleHop, selected: true, anyJump: true, selectedJump: false }) === STAR_ELSEWHERE,
+  "selected non-jumper HUD points at the other maple's star",
+);
+assert(
+  hopStatus({ ...idleHop, selected: true }) === "Slide onto a pip.",
+  "selected maple with only pips does not invent a star",
+);
+
+for (const line of [
+  laneDesc("left"),
+  laneDesc("right"),
+  laneDesc("center"),
+  FIRST_LANE_LEFT,
+  FIRST_LANE_RIGHT,
+  FIRST_LANE_CENTER,
+  OPPOSITE_WINGS_DESC,
+]) {
+  assert(!/\bfiles?\b|\bcolumns?\b/i.test(line), `lane copy skips chess jargon: ${line}`);
+}
+assert(laneDesc("center").toLowerCase().includes("middle"), "center lane says middle");
+assert(laneDesc("left").toLowerCase().includes("left"), "left lane says left");
+assert(laneDesc("right").toLowerCase().includes("right"), "right lane says right");
+
+assert(boardOpenLog("First Hop", FIRST_JUMP_DESC) === null, "board flavor stays off the play log");
+assert(!climbHintLine("Pond Rush").includes("randomly seeded"), "title hint is not a seed lecture");
+assert(!climbHintLine("Pond Rush").includes("Each new game begins"), "title hint is not three sentences");
+assert(climbHintLine("Pond Rush").includes("Pond Rush"), "title hint still names today's daily");
+
+assert(oopsLabel(1, false) === "Oops", "waiting Oops does not look counted-out");
+assert(oopsLabel(1, true) === "Oops ×1", "ready Oops shows remaining takes");
+assert(oopsLabel(0, false) === "Oops used", "spent Oops says used");
+
+assert(wipeAutoEndMs(true) === null, "Oops still up: do not auto-end the wipe");
+assert(wipeAutoEndMs(false) === 700, "no Oops left: a short beat then the end screen");
+
+assert(comboLog(1, false) === "Got one!", "first take logs Got one");
+assert(comboLog(2, false) === "Double hop!", "double take logs the yell only");
+assert(!comboLog(2, false).includes("x2"), "combo log does not repeat the count");
+assert(comboLog(4, true) === "Far jump!", "far jump log stays Far jump");
+
+assert(climbNames(1)[0] === "First Hop", "board 1 is just First Hop");
+assert(
+  normalizeClimbNames(["First Hop · Hidden", "Velvet Forge"])[0] === "First Hop",
+  "old First Hop · flavor saves display as First Hop",
+);
+for (let seed = 1; seed <= 80; seed++) {
+  const names = climbNames(seed);
+  assert(names[0] === "First Hop", `seed ${seed} First Hop has no suffix`);
+  assert(
+    names.every((n) => !/\bHidden\b|\bFoggy\b|\bMisty\b/.test(n)),
+    `seed ${seed} climb names do not sound like fog rules: ${names.join(", ")}`,
+  );
+}
 
 console.log("powerCheck ok");

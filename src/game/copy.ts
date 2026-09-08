@@ -53,20 +53,20 @@ export const DOUBLE_CROWN_DESC =
 export const TRAPDOOR_DESC =
   "Once this board, after you capture, the square the Enemy sat on becomes a hole. Nobody may sit there. Jump over it onto the star past it.";
 
-export const PICK_JUMP_BACK = "Player may hop backwards";
-export const PICK_SUPER_KING = "Player's king may move up to 7 spaces at once.";
-export const PICK_BUDDY_UP = "Player gets a new piece after an enemy is captured";
-export const PICK_SECOND_CHANCE = "If player loses, one king comes back to join the player";
-export const PICK_STARTING_KING = "One player piece starts as a King";
-export const PICK_EXTRA_PIECE = "Player gets one extra piece to start";
-export const PICK_HOP_PARTY = "Every 4 enemy captures creates a king for the player";
-export const PICK_FAR_JUMP = "One non-king piece may jump further each turn";
-export const PICK_DOUBLE_CROWN = "When a player piece becomes king, a non-king next to it becomes king.";
-export const PICK_TRAPDOOR = "When a piece is captured, that space becomes a hole";
-export const PICK_SCOUT = "One player piece begins closer to the middle of the board";
-export const PICK_WIDE_POND = "Boards are now 10x10";
-export const PICK_NAP_TIME = "The enemy falls asleep for one turn";
-export const PICK_BACK_2_BACK = "Player begins with 2 moves";
+export const PICK_JUMP_BACK = "Your maples may jump all 4 diagonals.";
+export const PICK_SUPER_KING = "Your Kings may slide up to 7 empty squares on a diagonal.";
+export const PICK_BUDDY_UP = "After you capture, a new maple sits on your back row if a dark square is empty.";
+export const PICK_SECOND_CHANCE = "Once this climb, if you lose every piece, one King comes back on the far row.";
+export const PICK_STARTING_KING = "One of your maples starts every board already a King.";
+export const PICK_EXTRA_PIECE = "You start every board with one extra maple.";
+export const PICK_HOP_PARTY = "Every 4 captures this climb, one maple becomes a King.";
+export const PICK_FAR_JUMP = "Once a turn, one regular maple may jump farther.";
+export const PICK_DOUBLE_CROWN = "When you king, a neighbor maple becomes a King too.";
+export const PICK_TRAPDOOR = "Once a board, the square you capture on becomes a hole.";
+export const PICK_SCOUT = "One maple starts closer to the middle.";
+export const PICK_WIDE_POND = "Boards are 10×10.";
+export const PICK_NAP_TIME = "After you capture, the Enemy skips their next hop.";
+export const PICK_BACK_2_BACK = "You hop twice before the Enemy answers.";
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
@@ -83,11 +83,66 @@ export function chaseHint(quiet: number): string {
 export const JUMP_HOW =
   "A star means a jump over an Enemy. You do not have to take it — slide a pip the other way if you want.";
 
+export const STAR_ELSEWHERE = "This maple only has pips. Another maple has the star.";
+
+export type HopCue = {
+  coachOn: boolean;
+  thinking: boolean;
+  canOops: boolean;
+  wiped: boolean;
+  locked: boolean;
+  yourTurn: boolean;
+  selected: boolean;
+  anyJump: boolean;
+  selectedJump: boolean;
+  overHole: boolean;
+};
+
+/** HUD line for your hop. Status follows the selected maple, not every star on the felt. */
+export function hopStatus(c: HopCue): string {
+  if (c.coachOn) return JUMP_HOW;
+  if (c.thinking) return c.canOops ? "Enemy… Oops still works." : "The Enemy is hopping…";
+  if (c.wiped) return c.canOops ? "You're out. Tap Oops to undo — or that's the game." : "You're out.";
+  if (c.locked) return "Keep capturing, slide a pip, or Skip jump.";
+  if (c.selected && c.anyJump && !c.selectedJump) return STAR_ELSEWHERE;
+  if (c.anyJump) {
+    return c.selected
+      ? "The star is the jump. Slide a pip if you want to go another way."
+      : "A jump is ready — you do not have to take it.";
+  }
+  if (c.selected) {
+    return c.overHole ? "Jump over the pit onto the star — or drop onto the pit." : "Slide onto a pip.";
+  }
+  if (c.yourTurn) {
+    return c.canOops ? "Slide a pip, or jump an Enemy — or Oops that hop." : "Slide a pip, or jump an Enemy.";
+  }
+  return "Wait.";
+}
+
+export function boardOpenLog(_name: string, _blurb: string): string | null {
+  return null;
+}
+
+export function climbHintLine(dailyName: string): string {
+  return `New climb is yours. Daily is ${dailyName}.`;
+}
+
+export function oopsLabel(oopsLeft: number, ready: boolean): string {
+  if (oopsLeft <= 0) return "Oops used";
+  if (!ready) return "Oops";
+  return `Oops ×${oopsLeft}`;
+}
+
+/** Null means wait for Oops or That's the game — do not steal the take-back. */
+export function wipeAutoEndMs(canUndo: boolean): number | null {
+  return canUndo ? null : 700;
+}
+
 export const FIRST_JUMP_DESC =
   "One of your pieces can jump an Enemy right away. Capture on that star if you want, or slide a pip. You do not have to take them.";
 
 export const RACE_DESC =
-  "You sit near the Enemy's back ranks; they sit near yours. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";
+  "Everyone starts closer to the middle. You still sit on the bottom, the Enemy on top. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";
 
 export const CLOSE_QUARTERS_DESC =
   "Everyone starts 1 row closer to the middle than a normal setup. Less room to hide.";
@@ -106,14 +161,14 @@ export function enemyKingsDesc(n: number): string {
 }
 
 export function laneDesc(lane: "left" | "right" | "center"): string {
-  if (lane === "left") return "Both sides start on the left 4 files (columns 1–4).";
-  if (lane === "right") return "Both sides start on the right 4 files (columns 5–8).";
-  return "Both sides start on the middle 4 files (columns 3–6).";
+  if (lane === "left") return "Both sides start on the left side of the board.";
+  if (lane === "right") return "Both sides start on the right side of the board.";
+  return "Both sides start in the middle of the board.";
 }
 
 export const OPPOSITE_WINGS_DESC =
-  "You start on one half of the board (4 files), the Enemy on the other half.";
+  "You start on one half of the board, the Enemy on the other half.";
 
-export const FIRST_LANE_LEFT = "The opening star sits on the left 4 files (columns 1–4). A New climb can move it.";
-export const FIRST_LANE_RIGHT = "The opening star sits on the right 4 files (columns 5–8). A New climb can move it.";
-export const FIRST_LANE_CENTER = "The opening star sits on the middle 4 files (columns 3–6). A New climb can move it.";
+export const FIRST_LANE_LEFT = "The opening star sits on the left side of the board. A New climb can move it.";
+export const FIRST_LANE_RIGHT = "The opening star sits on the right side of the board. A New climb can move it.";
+export const FIRST_LANE_CENTER = "The opening star sits in the middle of the board. A New climb can move it.";
