@@ -1,6 +1,7 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
 import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
+import { comboAfterHop, comboName } from "./combo.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import { sceneMarkup } from "./getScenes.ts";
 import {
@@ -253,5 +254,13 @@ assert(
   maplePathToKingRank(wall, { ...isolated, holes: safe }, { r: 7, c: 0 }),
   "pickSafeHoles will not wall the maple off row 0",
 );
+
+assert(comboAfterHop(0, true, false) === 1, "first capture of a hop is Got one");
+assert(comboName(comboAfterHop(0, true, false)) === "Got one!", "first take yells Got one");
+assert(comboAfterHop(1, true, true) === 2, "a chained jump is Double hop");
+assert(comboName(comboAfterHop(1, true, true)) === "Double hop!", "same-turn second take yells Double hop");
+assert(comboAfterHop(1, true, false) === 1, "a new hop after the Enemy is not a combo");
+assert(comboName(comboAfterHop(1, true, false)) === "Got one!", "Enemy-in-between take yells Got one");
+assert(comboAfterHop(2, false, false) === 0, "a quiet slide breaks the combo");
 
 console.log("powerCheck ok");
