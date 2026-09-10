@@ -107,7 +107,7 @@ export const SIZE = 8;
 export const PATH_END = 6;
 export const RUN_GOAL = "Beat the Crown";
 /** Quiet hops allowed once only Kings remain (4 or fewer pieces). Then most pieces win. */
-export const CHASE_HOPS = 8;
+export const CHASE_HOPS = 10;
 export const CHASE_MAX_PIECES = 4;
 
 export function posKey(p: Pos): string {

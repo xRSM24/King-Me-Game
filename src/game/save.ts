@@ -2,6 +2,7 @@ import type { Board } from "./rules.ts";
 import { campsFromRows } from "./rules.ts";
 import type { BoardMods, FeltMod, Laws, Pos, Side } from "./types.ts";
 import { SIZE, emptyLaws, emptyMods } from "./types.ts";
+import { climbFeltMods } from "./copy.ts";
 
 const KEY = "jumpgrave-climb-v1";
 
@@ -77,14 +78,17 @@ export function loadClimb(): ClimbSave | null {
     if (!raw) return null;
     const p = JSON.parse(raw) as Partial<ClimbSave>;
     if (p.v !== 1 || !Array.isArray(p.board) || typeof p.runSeed !== "number") return null;
-    const feltMods = Array.isArray(p.feltMods)
+    const feltModsRaw = Array.isArray(p.feltMods)
       ? p.feltMods.filter((m): m is FeltMod => !!m && typeof m.title === "string" && typeof m.desc === "string")
       : [];
     const size = p.board.length === 10 ? 10 : SIZE;
+    const pathNames = Array.isArray(p.pathNames) ? p.pathNames.map(String) : [];
+    const boardIndex = Number(p.boardIndex) || 0;
+    const feltMods = climbFeltMods(boardIndex, pathNames[boardIndex] ?? "", feltModsRaw);
     return {
       v: 1,
       runSeed: p.runSeed,
-      pathNames: Array.isArray(p.pathNames) ? p.pathNames.map(String) : [],
+      pathNames,
       board: p.board,
       laws: { ...emptyLaws(), ...(p.laws ?? {}) },
       mods: {
@@ -92,7 +96,7 @@ export function loadClimb(): ClimbSave | null {
         ...(p.mods ?? {}),
         size,
         holes: Array.isArray(p.mods?.holes) ? p.mods.holes : [],
-        ...campsForSave(p.mods, feltMods, size),
+        ...campsForSave(p.mods, feltModsRaw, size),
       },
       blurb: typeof p.blurb === "string" ? p.blurb : "",
       feltMods,
@@ -111,7 +115,7 @@ export function loadClimb(): ClimbSave | null {
             ...p.snapshotMods,
             size,
             holes: Array.isArray(p.snapshotMods.holes) ? p.snapshotMods.holes : [],
-            ...campsForSave(p.snapshotMods, feltMods, size),
+            ...campsForSave(p.snapshotMods, feltModsRaw, size),
           }
         : null,
       snapshotHops: Number(p.snapshotHops) || 0,

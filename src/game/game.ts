@@ -3,18 +3,27 @@ import { AudioSys } from "./audio.ts";
 import { comboAfterHop, comboLog, comboName, comboTier } from "./combo.ts";
 import {
   JUMP_HOW,
+  HOW_RULES,
   CHASE_START,
   CHASE_END_MORE,
   CHASE_END_TIE,
   boardOpenLog,
   chaseHint,
+  chaseShouldResolve,
   climbHintLine,
+  climbLoseBlurb,
+  captureCount,
+  roundCount,
   hopStatus,
+  pauseLead,
   oopsLabel,
   wipeAutoEndMs,
 } from "./copy.ts";
 import { dailySpec, dailyTitle, utcDayKey } from "./daily.ts";
 import { applyDailyMods, asFelt, dailyMods, type DailyMod } from "./dailyMods.ts";
+import { endlessLily, endlessPinRounds, endlessSkill, endlessSpecIndex, endlessSwap, endlessTake, ownedLawIds } from "./endless.ts";
+import { fetchEndlessBoard, postEndlessScore, type EndlessScore } from "./endlessBoard.ts";
+import { clearEndless, hasEndless, loadEndless, saveEndless } from "./endlessSave.ts";
 import * as feel from "./feel.ts";
 import { getHoldMs, sceneMarkup } from "./getScenes.ts";
 import { LAW_DEFS, unusedLaws, type LawDef } from "./laws.ts";
@@ -49,7 +58,7 @@ import { clearClimb, hasClimb, loadClimb, packBoard, saveClimb, unpackBoard } fr
 import { boardSpec, climbNames, CLIMB_SKILL, feltTheme, holesEqual, normalizeClimbNames, pickLily, unstickHoles, withHoleMods } from "./setup.ts";
 import { applyBurst, burstFromMods, endYouTurn, noteCapture, shouldGrantExtras, takeLilyOnBoard } from "./tempo.ts";
 import type { BoardMods, FeltMod, Laws, Meta, Move, Pos, Screen } from "./types.ts";
-import { BOARD_NAMES, CHASE_HOPS, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
+import { BOARD_NAMES, PATH_END, boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, samePos } from "./types.ts";
 import {
   createAccount,
   deleteAccount,
@@ -82,7 +91,12 @@ export class Game {
   moves = 0;
   combo = 0;
   boardIndex = 0;
-  mode: "run" | "daily" = "run";
+  mode: "run" | "daily" | "endless" = "run";
+  endlessRound = 1;
+  clears = 0;
+  pendingTake: keyof Laws | null = null;
+  endlessScores: EndlessScore[] = [];
+  endlessPostFailed = false;
   dailyLabel = "";
   twists: DailyMod[] = [];
   scores: Score[] = [];
@@ -96,6 +110,7 @@ export class Game {
   getting = false;
   aiTimer: number | null = null;
   wipeTimer: number | null = null;
+  pickTimer: number | null = null;
   actionGen = 0;
   aiMem: AiMemory = emptyMemory();
   lastRitesUsed = false;
@@ -130,6 +145,7 @@ export class Game {
     notches: number;
     gained: number;
     board: number;
+    chaseOver: boolean;
   } | null = null;
   idSeq = 1;
   cheerTimer: number | null = null;
@@ -194,14 +210,15 @@ export class Game {
     });
     document.addEventListener("keydown", (e) => this.onKey(e));
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") this.persistClimb();
+      if (document.visibilityState === "hidden") this.persistCurrent();
     });
-    window.addEventListener("pagehide", () => this.persistClimb());
+    window.addEventListener("pagehide", () => this.persistCurrent());
     document.addEventListener("submit", (e) => {
       if (!(e.target instanceof HTMLFormElement)) return;
       if (e.target.id === "score-form") {
         e.preventDefault();
-        void this.submitDaily();
+        if (this.mode === "endless") void this.submitEndless();
+        else void this.submitDaily();
         return;
       }
       if (e.target.id === "name-form" || e.target.id === "pause-name-form") {
@@ -253,6 +270,18 @@ export class Game {
     }
     if (cmd === "daily") {
       void this.openDaily();
+      return;
+    }
+    if (cmd === "endless") {
+      this.newEndless();
+      return;
+    }
+    if (cmd === "endless-continue") {
+      this.continueEndless();
+      return;
+    }
+    if (cmd === "endless-fresh") {
+      this.newEndless();
       return;
     }
     if (cmd === "daily-play") {
@@ -312,13 +341,14 @@ export class Game {
     }
     if (cmd === "pause") {
       if (this.screen === "playing") {
-        this.persistClimb();
+        this.persistCurrent();
         this.show("pause");
+        this.persistCurrent();
       }
       return;
     }
     if (cmd === "home") {
-      this.persistClimb();
+      this.persistCurrent();
       this.show("title");
       return;
     }
@@ -356,7 +386,7 @@ export class Game {
     }
     if (cmd === "accept-wipe") {
       if (this.screen !== "playing" || this.end) return;
-      if (piecesOf(this.board, "you").length > 0) return;
+      if (!this.holdingWipeOops() && !this.holdingChaseEnd()) return;
       this.finish(false);
       return;
     }
@@ -375,6 +405,31 @@ export class Game {
     if (cmd.startsWith("law:")) {
       const id = cmd.slice(4) as keyof Laws;
       if (this.screen === "pick" && id in this.laws) {
+        if (this.mode === "endless") {
+          const taken = endlessTake(this.laws, id);
+          if (!taken) return;
+          if (taken.needsDrop) {
+            this.pendingTake = id;
+            this.renderPick();
+            this.persistEndless();
+            return;
+          }
+          this.getting = true;
+          this.animating = true;
+          const def = LAW_DEFS.find((d) => d.id === id);
+          void this.playGet(def?.scene ?? "", def?.name ?? id).then(() => {
+            this.laws = taken.laws;
+            this.clears += 1;
+            this.endlessRound += 1;
+            this.pendingTake = null;
+            this.loadBoard();
+            this.show("playing");
+            this.persistEndless();
+            this.getting = false;
+            this.animating = false;
+          });
+          return;
+        }
         this.getting = true;
         this.animating = true;
         const def = LAW_DEFS.find((d) => d.id === id);
@@ -388,6 +443,27 @@ export class Game {
           this.animating = false;
         });
       }
+      return;
+    }
+    if (cmd.startsWith("drop:")) {
+      if (this.mode !== "endless" || this.screen !== "pick" || !this.pendingTake) return;
+      const dropId = cmd.slice(5) as keyof Laws;
+      const next = endlessSwap(this.laws, this.pendingTake, dropId);
+      if (!next || ownedLawIds(next).length > 3) return;
+      const takeDef = LAW_DEFS.find((d) => d.id === this.pendingTake);
+      this.getting = true;
+      this.animating = true;
+      void this.playGet(takeDef?.scene ?? "", takeDef?.name ?? "").then(() => {
+        this.laws = next;
+        this.pendingTake = null;
+        this.clears += 1;
+        this.endlessRound += 1;
+        this.loadBoard();
+        this.show("playing");
+        this.persistEndless();
+        this.getting = false;
+        this.animating = false;
+      });
     }
   }
 
@@ -448,6 +524,7 @@ export class Game {
     this.audio.ui();
     await reportName(name);
     this.scores = this.scores.filter((s) => s.name.toLowerCase() !== name.toLowerCase());
+    this.endlessScores = this.endlessScores.filter((s) => s.name.toLowerCase() !== name.toLowerCase());
     if (this.screen === "title") this.renderTitle();
     if (this.screen === "daily") this.renderDaily();
     if (this.screen === "end") this.renderEnd();
@@ -711,6 +788,8 @@ export class Game {
   }
 
   newRun(): void {
+    this.actionGen += 1;
+    this.clearPickTimer();
     this.unlock();
     this.mode = "run";
     clearClimb();
@@ -743,6 +822,8 @@ export class Game {
       this.newRun();
       return;
     }
+    this.actionGen += 1;
+    this.clearPickTimer();
     this.unlock();
     this.mode = "run";
     this.end = null;
@@ -790,8 +871,118 @@ export class Game {
       return;
     }
     this.show("playing");
-    this.pushLog("Welcome back. The pieces waited.");
+    if (chaseShouldResolve(this.quiet, chaseArmed(this.board))) {
+      if (chaseWinner(this.board) === "you") {
+        this.endChase();
+        return;
+      }
+      this.holdChaseEnd(false);
+      return;
+    }
+    if (this.log[0] !== "Welcome back. The pieces waited.") {
+      this.pushLog("Welcome back. The pieces waited.");
+    }
     this.cheer("Welcome back!");
+    if (this.turn === "them") this.scheduleAi(280);
+  }
+
+  newEndless(): void {
+    this.actionGen += 1;
+    this.clearPickTimer();
+    this.unlock();
+    clearEndless();
+    this.mode = "endless";
+    const seed = freshSeed();
+    this.runSeed = seed;
+    this.rng = new Rng(seed);
+    this.pathNames = climbNames(seed);
+    this.laws = emptyLaws();
+    this.twists = [];
+    this.hops = 0;
+    this.moves = 0;
+    this.combo = 0;
+    this.boardIndex = 0;
+    this.endlessRound = 1;
+    this.clears = 0;
+    this.pendingTake = null;
+    this.offers = [];
+    this.lastRitesUsed = false;
+    this.end = null;
+    this.posted = false;
+    this.endlessPostFailed = false;
+    this.idSeq = 1;
+    this.loadBoard();
+    this.show("playing");
+    this.persistEndless();
+  }
+
+  continueEndless(): void {
+    this.actionGen += 1;
+    this.clearPickTimer();
+    const saved = loadEndless();
+    if (!saved) {
+      this.newEndless();
+      return;
+    }
+    this.unlock();
+    this.mode = "endless";
+    this.end = null;
+    this.posted = false;
+    this.endlessPostFailed = false;
+    this.twists = [];
+    this.runSeed = saved.runSeed;
+    this.rng = new Rng(saved.runSeed + saved.hops * 17 + saved.endlessRound * 31);
+    this.pathNames = normalizeClimbNames(saved.pathNames.length ? saved.pathNames : climbNames(saved.runSeed));
+    this.board = unpackBoard(saved.board);
+    this.laws = saved.laws;
+    this.mods = { ...emptyMods(), ...saved.mods };
+    this.blurb = saved.blurb;
+    this.feltMods = saved.feltMods ?? [];
+    this.hops = saved.hops;
+    this.moves = saved.moves;
+    this.combo = saved.combo;
+    this.boardIndex = saved.boardIndex;
+    this.endlessRound = saved.endlessRound;
+    this.clears = saved.clears;
+    this.pendingTake = saved.pendingTake;
+    this.turn = saved.turn;
+    this.lock = saved.lock;
+    this.selected = saved.lock;
+    this.lastRitesUsed = saved.lastRitesUsed;
+    this.oopsLeft = saved.oopsLeft;
+    this.snapshot = saved.snapshot ? unpackBoard(saved.snapshot) : null;
+    this.snapshotMods = saved.snapshotMods ? cloneMods({ ...emptyMods(), ...saved.snapshotMods }) : null;
+    this.snapshotHops = saved.snapshotHops;
+    this.snapshotMoves = saved.snapshotMoves;
+    this.snapshotLastRites = saved.snapshotLastRites ?? saved.lastRitesUsed;
+    this.snapshotQuiet = saved.snapshotQuiet ?? 0;
+    this.quiet = typeof saved.quiet === "number" ? saved.quiet : 0;
+    this.chaseTold = chaseArmed(this.board);
+    this.skippedJump = !!saved.skippedJump && saved.laws.freeJump;
+    this.idSeq = Math.max(saved.idSeq, this.maxPieceId() + 1);
+    this.log = saved.log;
+    this.offers = LAW_DEFS.filter((d) => saved.offers.includes(d.id));
+    this.thinking = saved.turn === "them";
+    this.animating = false;
+    this.getting = false;
+    this.aiMem = emptyMemory();
+    this.clearAi();
+    this.coachOn = false;
+    this.hideCoach();
+    if (!this.snapshot) this.freeSealedPieces();
+    if (saved.screen === "pick" && (this.offers.length || this.pendingTake)) {
+      this.show("pick");
+      return;
+    }
+    this.show("playing");
+    if (chaseShouldResolve(this.quiet, chaseArmed(this.board))) {
+      if (chaseWinner(this.board) === "you") {
+        this.endChase();
+        return;
+      }
+      this.holdChaseEnd(false);
+      return;
+    }
     if (this.turn === "them") this.scheduleAi(280);
   }
 
@@ -841,19 +1032,75 @@ export class Game {
     this.queueCloud();
   }
 
+  private persistEndless(): void {
+    if (this.mode !== "endless" || this.end) return;
+    if (this.screen !== "playing" && this.screen !== "pick" && this.screen !== "pause") return;
+    saveEndless({
+      v: 1,
+      runSeed: this.runSeed,
+      pathNames: normalizeClimbNames(this.pathNames),
+      board: packBoard(this.board),
+      laws: this.laws,
+      mods: this.mods,
+      blurb: this.blurb,
+      feltMods: this.feltMods,
+      hops: this.hops,
+      moves: this.moves,
+      combo: this.combo,
+      boardIndex: this.boardIndex,
+      turn: this.turn,
+      lock: this.lock,
+      lastRitesUsed: this.lastRitesUsed,
+      oopsLeft: this.oopsLeft,
+      snapshot: this.snapshot ? packBoard(this.snapshot) : null,
+      snapshotMods: this.snapshotMods ? cloneMods(this.snapshotMods) : null,
+      snapshotHops: this.snapshotHops,
+      snapshotMoves: this.snapshotMoves,
+      snapshotLastRites: this.snapshotLastRites,
+      snapshotQuiet: this.snapshotQuiet,
+      quiet: this.quiet,
+      skippedJump: this.skippedJump,
+      idSeq: this.idSeq,
+      log: this.log,
+      offers: this.offers.map((o) => o.id),
+      screen:
+        this.screen === "pick" || this.pendingTake ||
+        (this.offers.length > 0 && piecesOf(this.board, "them").length === 0)
+          ? "pick"
+          : "playing",
+      endlessRound: this.endlessRound,
+      clears: this.clears,
+      pendingTake: this.pendingTake,
+    });
+  }
+
+  private persistCurrent(): void {
+    if (this.mode === "endless") this.persistEndless();
+    else this.persistClimb();
+  }
+
   private async openDaily(): Promise<void> {
+    this.actionGen += 1;
+    this.clearPickTimer();
     this.unlock();
     this.dailyLabel = dailyTitle();
     this.twists = dailyMods();
     const spec = dailySpec();
     this.feltMods = this.uniqueFelt([...(spec.feltMods ?? []), ...this.twists.map(asFelt)]);
     this.show("daily");
-    const board = await fetchBoard(utcDayKey());
-    this.scores = board.scores;
+    const [dailyBoard, endlessBoard] = await Promise.all([
+      fetchBoard(utcDayKey()),
+      fetchEndlessBoard(),
+    ]);
+    this.scores = dailyBoard.scores;
+    this.boardLive = !!dailyBoard.live;
+    this.endlessScores = endlessBoard.scores;
     this.renderDaily();
   }
 
   newDaily(): void {
+    this.actionGen += 1;
+    this.clearPickTimer();
     this.unlock();
     this.mode = "daily";
     this.rng = new Rng(hashSeed(dailySeed() * 97 + 13));
@@ -930,6 +1177,13 @@ export class Game {
     }
   }
 
+  private clearPickTimer(): void {
+    if (this.pickTimer != null) {
+      window.clearTimeout(this.pickTimer);
+      this.pickTimer = null;
+    }
+  }
+
   private resumeAiIfNeeded(): void {
     if (this.screen === "playing" && this.thinking && this.turn === "them" && !this.animating) {
       this.scheduleAi(220);
@@ -955,12 +1209,12 @@ export class Game {
     if (holesEqual(next.holes, this.mods.holes)) return;
     this.mods = next;
     this.feltMods = withHoleMods(this.feltMods, this.mods.holes.length);
-    this.persistClimb();
+    this.persistCurrent();
   }
 
   private modifierCard(title: string, desc: string, side?: "you" | "them"): string {
     const cls = side === "you" ? "help-you" : side === "them" ? "help-them" : "";
-    return `<li class="mod-card ${cls}"><p class="mod-head">${escapeHtml(title)}</p><p class="mod-desc">${escapeHtml(desc)}</p></li>`;
+    return `<li class="mod-card ${cls}"><details><summary class="mod-head">${escapeHtml(title)}</summary><p class="mod-desc">${escapeHtml(desc)}</p></details></li>`;
   }
 
   private extraMen(): number {
@@ -970,9 +1224,10 @@ export class Game {
 
   private loadBoard(): void {
     const openKing = this.laws.openKing || this.rng.chance(notchBonus(this.meta.notches).kingChance);
-    const boardRng = new Rng(hashSeed(this.runSeed + (this.boardIndex + 1) * 104729));
+    const specIndex = this.mode === "endless" ? endlessSpecIndex(this.endlessRound) : this.boardIndex;
+    const boardRng = new Rng(hashSeed(this.runSeed + specIndex * 104729 + (this.mode === "endless" ? this.endlessRound * 13 : 0)));
     const size = this.laws.widePond ? 10 : 8;
-    const spec = boardSpec(this.boardIndex, this.extraMen(), openKing, boardRng, size);
+    const spec = boardSpec(specIndex, this.extraMen(), openKing, boardRng, size);
     this.mods = modsFromSpec(spec, { size });
     if (this.laws.back2Back) this.mods.openingHops = 2;
     this.mods.napUsed = false;
@@ -982,7 +1237,11 @@ export class Game {
     this.feltMods = spec.feltMods ?? [];
     this.board = applyStartLaws(setupBoard(spec, this.pid), this.laws, this.mods);
     this.freeSealedPieces(boardRng);
+    this.mods.lily = null;
     if (this.mode === "run" && this.boardIndex >= 2 && this.boardIndex <= 5) {
+      this.mods.lily = pickLily(boardRng, this.board, this.mods);
+    }
+    if (this.mode === "endless" && endlessLily(this.endlessRound)) {
       this.mods.lily = pickLily(boardRng, this.board, this.mods);
     }
     this.turn = "you";
@@ -1000,10 +1259,13 @@ export class Game {
     this.aiMem = emptyMemory();
     this.clearAi();
     this.log = [];
-    const name = this.pathNames[this.boardIndex] ?? "Next board";
+    const name = this.mode === "endless"
+      ? (this.pathNames[specIndex] ?? "Endless")
+      : (this.pathNames[this.boardIndex] ?? "Next board");
     const openLine = boardOpenLog(name, spec.blurb);
     if (openLine) this.pushLog(openLine);
-    this.persistClimb();
+    if (this.mode === "endless") this.persistEndless();
+    else this.persistClimb();
   }
 
   private pushLog(msg: string): void {
@@ -1172,6 +1434,7 @@ export class Game {
   }
 
   private youLegal(): Move[] {
+    if (this.holdingWipeOops() || this.holdingChaseEnd()) return [];
     return legalMoves(this.board, "you", this.laws, this.lock, this.mods);
   }
 
@@ -1204,19 +1467,19 @@ export class Game {
         this.mods.farJumpUsed = false;
         this.turn = "you";
         this.renderAll();
-        this.persistClimb();
+        this.persistCurrent();
         return;
       }
       this.afterYou();
-      this.persistClimb();
+      this.persistCurrent();
       return;
     }
     this.skippedJump = true;
     this.selected = null;
-    this.pushLog("Jump skipped. Slide a gold ring.");
+    this.pushLog("Jump skipped. Slide onto a spot.");
     this.cheer("Skip!");
     this.renderAll();
-    this.persistClimb();
+    this.persistCurrent();
   }
 
   private canOops(): boolean {
@@ -1235,6 +1498,7 @@ export class Game {
     this.actionGen += 1;
     this.clearAi();
     this.clearWipe();
+    this.clearPickTimer();
     this.cancelDrag();
     document.querySelectorAll(".flyer").forEach((el) => el.remove());
     this.audio.oops();
@@ -1259,7 +1523,7 @@ export class Game {
     this.pushLog("Oops! That hop didn't count.");
     this.cheer("Oops!");
     this.renderAll();
-    this.persistClimb();
+    this.persistCurrent();
   }
 
   private onPointerDown(e: PointerEvent): void {
@@ -1613,11 +1877,11 @@ export class Game {
       this.mods.farJumpUsed = false;
       this.turn = "you";
       this.renderAll();
-      this.persistClimb();
+      this.persistCurrent();
       return;
     }
     this.afterYou();
-    this.persistClimb();
+    this.persistCurrent();
   }
 
   private afterYou(): void {
@@ -1642,11 +1906,12 @@ export class Game {
 
   /** Returns true if the chase clock just ended the board. */
   private tickChase(hadCapture: boolean): boolean {
+    if (chaseShouldResolve(this.quiet, chaseArmed(this.board))) return true;
     if (hadCapture) this.quiet = 0;
     else if (chaseArmed(this.board)) this.quiet += 1;
     else this.quiet = 0;
     this.warnChase();
-    if (chaseArmed(this.board) && this.quiet >= CHASE_HOPS) {
+    if (chaseShouldResolve(this.quiet, chaseArmed(this.board))) {
       this.endChase();
       return true;
     }
@@ -1674,13 +1939,50 @@ export class Game {
     }
     this.pushLog(who === "draw" ? CHASE_END_TIE : CHASE_END_MORE);
     this.cheer(who === "draw" ? "It's a tie!" : "They had more!");
-    this.loseOrHoldOops();
+    this.holdChaseEnd(true);
+  }
+
+  /** Chase clock ran out. Pieces remain — this is not a wipe. */
+  private holdChaseEnd(autoEnd: boolean): void {
+    this.turn = "you";
+    this.thinking = false;
+    this.animating = false;
+    this.lock = null;
+    this.selected = null;
+    this.skippedJump = false;
+    this.clearAi();
+    this.clearWipe();
+    this.renderAll();
+    this.persistCurrent();
+    if (!autoEnd) return;
+    const canUndo = !!(this.snapshot && this.oopsLeft > 0);
+    const wait = wipeAutoEndMs(canUndo);
+    if (wait == null) return;
+    this.wipeTimer = window.setTimeout(() => {
+      this.wipeTimer = null;
+      if (this.end) return;
+      this.finish(false);
+    }, wait);
+  }
+
+  private holdingChaseEnd(): boolean {
+    return (
+      this.screen === "playing" &&
+      !this.end &&
+      chaseShouldResolve(this.quiet, chaseArmed(this.board)) &&
+      chaseWinner(this.board) !== "you"
+    );
   }
 
   private async aiStep(): Promise<void> {
     if (this.screen !== "playing") return;
     const gen = this.actionGen;
-    const skill = this.mode === "daily" ? 0.86 : (CLIMB_SKILL[this.boardIndex] ?? 0.95);
+    const skill =
+      this.mode === "daily"
+        ? 0.86
+        : this.mode === "endless"
+          ? endlessSkill(this.endlessRound)
+          : (CLIMB_SKILL[this.boardIndex] ?? 0.95);
     const move = think(this.board, this.laws, this.rng, skill, this.mods, this.aiMem);
     if (!move) {
       this.boardCleared();
@@ -1737,7 +2039,7 @@ export class Game {
     if (at(this.board, move.to)?.side === "them") remember(this.aiMem, this.board, move);
     this.warnChase();
     this.renderAll();
-    this.persistClimb();
+    this.persistCurrent();
   }
 
   private squareEl(p: Pos): HTMLElement | null {
@@ -1915,7 +2217,7 @@ export class Game {
       this.renderAll();
       if (target) void this.animateCrown(target);
       if (outcome(this.board, "you", this.laws, this.mods) === "them") this.loseOrHoldOops();
-      else this.persistClimb();
+      else this.persistCurrent();
       return;
     }
     this.loseOrHoldOops();
@@ -1939,7 +2241,7 @@ export class Game {
       this.cheer("Out!");
     }
     this.renderAll();
-    this.persistClimb();
+    this.persistCurrent();
     const wait = wipeAutoEndMs(canUndo);
     if (wait == null) return;
     this.wipeTimer = window.setTimeout(() => {
@@ -1960,6 +2262,43 @@ export class Game {
     this.audio.win();
     feel.winBuzz();
     this.cheer("Board clear!");
+    if (this.mode === "endless") {
+      void recordHop({
+        kind: "endless-clear",
+        title: this.pathNames[endlessSpecIndex(this.endlessRound)] ?? "Endless",
+        board: this.endlessRound,
+        hops: this.hops,
+        moves: this.moves,
+        stars: this.meta.notches,
+      });
+      this.clearPickTimer();
+      const gen = this.actionGen;
+      const pool = unusedLaws(this.laws);
+      if (!pool.length) {
+        this.clears += 1;
+        this.endlessRound += 1;
+        this.pendingTake = null;
+        this.loadBoard();
+        this.pickTimer = window.setTimeout(() => {
+          this.pickTimer = null;
+          if (this.stale(gen) || this.mode !== "endless" || this.end) return;
+          if (this.screen !== "playing" && this.screen !== "pick") return;
+          this.show("playing");
+        }, 720);
+        return;
+      }
+      this.rng.shuffle(pool);
+      this.offers = pool.slice(0, Math.min(3, pool.length));
+      this.persistEndless();
+      this.pickTimer = window.setTimeout(() => {
+        this.pickTimer = null;
+        if (this.stale(gen) || this.mode !== "endless" || this.end) return;
+        if (this.screen !== "playing" && this.screen !== "pick") return;
+        this.show("pick");
+        this.persistEndless();
+      }, 720);
+      return;
+    }
     if (this.mode !== "daily" && this.boardIndex < PATH_END - 1) {
       void recordHop({
         kind: "board-clear",
@@ -1970,12 +2309,21 @@ export class Game {
         stars: this.meta.notches,
       });
     }
+    this.clearPickTimer();
+    const gen = this.actionGen;
     if (this.mode === "daily" || this.boardIndex >= PATH_END - 1) {
-      window.setTimeout(() => this.finish(true), 700);
+      this.pickTimer = window.setTimeout(() => {
+        this.pickTimer = null;
+        if (this.stale(gen) || this.end) return;
+        if (this.mode === "daily" || (this.mode === "run" && this.boardIndex >= PATH_END - 1)) this.finish(true);
+      }, 700);
       return;
     }
     const pool = unusedLaws(this.laws);
-    window.setTimeout(() => {
+    this.pickTimer = window.setTimeout(() => {
+      this.pickTimer = null;
+      if (this.stale(gen) || this.mode !== "run" || this.end) return;
+      if (this.screen !== "playing" && this.screen !== "pick") return;
       if (!pool.length) {
         this.boardIndex += 1;
         this.loadBoard();
@@ -1990,6 +2338,8 @@ export class Game {
   }
 
   private finish(win: boolean): void {
+    this.actionGen += 1;
+    this.clearPickTimer();
     this.clearAi();
     this.clearWipe();
     this.thinking = false;
@@ -1997,6 +2347,7 @@ export class Game {
     this.keepSaveSkip = false;
     this.hideCoach();
     this.coachOn = false;
+    let endlessPin: number | null = null;
     if (this.mode === "run") {
       clearClimb();
       const gained = notchesFromRun(this.hops, this.meta.notches);
@@ -2010,6 +2361,7 @@ export class Game {
         notches: this.meta.notches,
         gained,
         board: this.boardIndex + 1,
+        chaseOver: chaseShouldResolve(this.quiet, chaseArmed(this.board)),
       };
       void recordHop(
         {
@@ -2022,6 +2374,28 @@ export class Game {
         },
         { clearClimb: true },
       );
+    } else if (this.mode === "endless") {
+      clearEndless();
+      const gained = notchesFromRun(this.hops, this.meta.notches);
+      this.meta.notches += gained;
+      saveMeta(this.meta);
+      this.end = {
+        win,
+        hops: this.hops,
+        notches: this.meta.notches,
+        gained,
+        board: this.clears,
+        chaseOver: chaseShouldResolve(this.quiet, chaseArmed(this.board)),
+      };
+      void recordHop({
+        kind: "endless-lose",
+        title: "Endless",
+        board: this.clears,
+        hops: this.hops,
+        moves: this.moves,
+        stars: this.meta.notches,
+      });
+      endlessPin = endlessPinRounds(this.clears, "lose");
     } else {
       this.end = {
         win,
@@ -2029,6 +2403,7 @@ export class Game {
         notches: this.moves,
         gained: this.moves,
         board: 1,
+        chaseOver: chaseShouldResolve(this.quiet, chaseArmed(this.board)),
       };
       void recordHop({
         kind: win ? "daily-win" : "daily-lose",
@@ -2053,6 +2428,7 @@ export class Game {
     }
     this.show("end");
     if (this.mode === "daily" && win) void this.refreshScores();
+    if (this.mode === "endless" && endlessPin != null && hasName()) void this.postEndless(endlessPin);
   }
 
   private async refreshScores(): Promise<void> {
@@ -2082,6 +2458,35 @@ export class Game {
     this.renderEnd();
   }
 
+  private async submitEndless(): Promise<void> {
+    if (this.mode !== "endless" || !this.end || this.posted) return;
+    const pin = endlessPinRounds(this.clears, "lose");
+    if (pin == null) return;
+    const input = document.getElementById("player-name");
+    const typed = input instanceof HTMLInputElement ? input.value : "";
+    const picked = tryName(typed) ?? (hasName() ? loadName() : null);
+    if (!picked) {
+      if (input instanceof HTMLInputElement) input.focus();
+      return;
+    }
+    commitName(picked);
+    await this.postEndless(pin);
+  }
+
+  private async postEndless(pin: number): Promise<void> {
+    if (this.posted) return;
+    this.posted = true;
+    this.endlessPostFailed = false;
+    try {
+      const board = await postEndlessScore(loadName(), pin);
+      this.endlessScores = board.scores;
+      this.endlessPostFailed = !board.live;
+    } catch {
+      this.endlessPostFailed = true;
+    }
+    if (this.screen === "end") this.renderEnd();
+  }
+
   private scoreList(limit = 12): string {
     const head = `<li class="head"><b>#</b><span>Name</span><em>Moves</em><i></i></li>`;
     if (!this.scores.length) {
@@ -2107,6 +2512,27 @@ export class Game {
     return head + rows;
   }
 
+  private endlessScoreList(limit = 40): string {
+    const head = `<li class="head"><b>#</b><span>Name</span><em>Rounds</em><i></i></li>`;
+    if (!this.endlessScores.length) {
+      return `${head}<li class="quiet">Win boards in Endless and pin how far you got.</li>`;
+    }
+    const mine = loadName().toLowerCase();
+    const rows = this.endlessScores
+      .slice(0, limit)
+      .map((score, i) => {
+        const me = score.name.toLowerCase() === mine ? " me" : "";
+        const podium = i < 3 ? ` rank-${i + 1}` : "";
+        const hide =
+          score.name.toLowerCase() === mine
+            ? `<i></i>`
+            : `<i><button type="button" class="flag" data-cmd="report" data-name="${escapeHtml(score.name)}">Hide</button></i>`;
+        return `<li class="score${me}${podium}"><b>${i + 1}</b><span>${escapeHtml(score.name)}</span><em>${score.rounds}</em>${hide}</li>`;
+      })
+      .join("");
+    return head + rows;
+  }
+
   show(name: Screen): void {
     if (name !== "playing") this.cancelDrag();
     this.screen = name;
@@ -2125,17 +2551,31 @@ export class Game {
     table?.classList.toggle("hidden", !atTable);
     table?.setAttribute("aria-hidden", atTable ? "false" : "true");
     if (name !== "title") document.querySelector(".title-more")?.removeAttribute("open");
+    if (name === "how") this.paintHow();
     if (name === "title") this.renderTitle();
     if (name === "end") this.renderEnd();
     if (name === "pick") this.renderPick();
     if (name === "daily") this.renderDaily();
     if (name === "playing") this.renderAll();
-    if (name === "pause") this.paintName();
+    if (name === "pause") {
+      this.paintName();
+      const lead = document.getElementById("pause-lead");
+      if (lead) lead.textContent = pauseLead(this.mode === "daily" ? "daily" : this.mode === "endless" ? "endless" : "run");
+    }
     if (name === "account") this.renderAccount();
     if (name === "history") this.renderHistory();
     if (name === "studio") void this.renderStudio();
     this.renderChrome();
     if (name !== "playing") this.audio.screen();
+  }
+
+  private paintHow(): void {
+    const list = document.querySelector('[data-screen="how"] ol.rules');
+    if (!list) return;
+    list.innerHTML = HOW_RULES.map((r) => {
+      const body = escapeHtml(r.body).replace("Skip jump", "<b>Skip jump</b>");
+      return `<li><b>${escapeHtml(r.title)}</b> ${body}</li>`;
+    }).join("");
   }
 
   private renderChrome(): void {
@@ -2161,6 +2601,15 @@ export class Game {
     if (label) label.textContent = saved ? "Continue" : "Play";
     if (sub) sub.textContent = saved ? "This climb" : "New climb";
     if (fresh) fresh.classList.toggle("hidden", !saved);
+    const eMain = document.getElementById("play-endless");
+    const eLabel = document.getElementById("play-endless-label");
+    const eSub = document.getElementById("play-endless-sub");
+    const eFresh = document.getElementById("play-endless-fresh");
+    const eSaved = hasEndless();
+    if (eMain) eMain.setAttribute("data-cmd", eSaved ? "endless-continue" : "endless");
+    if (eLabel) eLabel.textContent = eSaved ? "Continue Endless" : "Endless";
+    if (eSub) eSub.textContent = eSaved ? `Round ${loadEndless()?.endlessRound ?? 1}` : "Keep winning";
+    if (eFresh) eFresh.classList.toggle("hidden", !eSaved);
     const dailyName = document.getElementById("play-daily-name");
     if (dailyName) dailyName.textContent = dailyTitle();
     const hint = document.getElementById("climb-hint");
@@ -2183,6 +2632,14 @@ export class Game {
         ? `${n} hopper${n === 1 ? "" : "s"} on the board. Lowest moves wins.`
         : "The shared board is empty. Win it and pin your move count.";
     }
+    const endlessList = document.getElementById("endless-board");
+    if (endlessList) endlessList.innerHTML = this.endlessScoreList();
+    const endlessCount = document.getElementById("endless-count");
+    if (endlessCount) {
+      endlessCount.textContent = this.endlessScores.length
+        ? "Highest rounds on top."
+        : "Win boards in Endless and pin how far you got.";
+    }
     const mods = document.getElementById("daily-mods");
     if (mods) {
       const list = this.feltMods.length ? this.feltMods : this.twists.map(asFelt);
@@ -2201,11 +2658,35 @@ export class Game {
   private renderPick(): void {
     const box = document.getElementById("pick-body");
     if (!box) return;
+    if (this.mode === "endless" && this.pendingTake) {
+      const held = LAW_DEFS.filter((d) => this.laws[d.id]);
+      const take = LAW_DEFS.find((d) => d.id === this.pendingTake);
+      box.innerHTML = `
+        <p class="kicker">You won the board!</p>
+        <h2>Drop one</h2>
+        <p class="lead">You already hold three. Drop one to take ${escapeHtml(take?.name ?? "the new treat")}.</p>
+        <div class="col">
+          ${held
+            .map(
+              (o, i) => `<button type="button" class="pick-card" data-cmd="drop:${o.id}" style="animation-delay:${i * 70}ms">
+                <span class="pick-icon">${o.icon}</span>
+                <b class="mod-head">${o.name}</b>
+                <small class="mod-desc">${o.desc}</small>
+              </button>`,
+            )
+            .join("")}
+        </div>`;
+      return;
+    }
     const next = this.pathNames[this.boardIndex + 1] ?? "the next board";
     box.innerHTML = `
       <p class="kicker">You won the board!</p>
       <h2>Pick a power</h2>
-      <p class="lead">Nice hops. Choose one treat before ${next}.</p>
+      <p class="lead">${
+        this.mode === "endless"
+          ? `Choose one treat before round ${this.endlessRound + 1}.`
+          : `Nice hops. Choose one treat before ${next}.`
+      }</p>
       <div class="col">
         ${this.offers
           .map(
@@ -2224,6 +2705,41 @@ export class Game {
     const box = document.getElementById("end-body");
     const s = this.end;
     if (!box || !s) return;
+    if (this.mode === "endless") {
+      const session = loadSession();
+      const pin = endlessPinRounds(this.clears, "lose");
+      const postCopy = this.endlessPostFailed
+        ? `<p class="quiet">Your rounds are safe here, but the shared list did not update.</p>`
+        : this.posted
+          ? `<p class="quiet">Pinned as ${escapeHtml(loadName())}.</p>`
+          : pin != null && hasName()
+            ? `<p class="quiet">Pinning ${roundCount(pin)} as ${escapeHtml(loadName())}…</p>`
+            : pin != null
+              ? `<form id="score-form" class="score-form">
+                  <label>Your name <input id="player-name" name="name" maxlength="16" placeholder="Ivory" autocomplete="nickname" /></label>
+                  <button type="submit">Pin ${roundCount(pin)}</button>
+                </form>`
+              : `<p class="quiet">Clear a round to pin a place on the all-time list.</p>`;
+      box.innerHTML = `
+        <p class="kicker">Endless</p>
+        <h2>${roundCount(this.clears)}</h2>
+        <p class="lead">Highest rounds sit on the all-time list. Your next Endless run starts fresh.</p>
+        ${postCopy}
+        <ol class="leaderboard endless-board">${this.endlessScoreList(12)}</ol>
+        ${
+          shouldOfferKeepSave(!!session, "endless") && !this.keepSaveSkip
+            ? keepSaveFormHtml({ idPrefix: "keep", showNotNow: true })
+            : session
+              ? `<p class="quiet">Saving hops for ${escapeHtml(session.email)}.</p>`
+              : ""
+        }`;
+      const extra = document.getElementById("end-actions");
+      if (extra) {
+        extra.innerHTML = `<button data-cmd="endless" type="button">Play Endless again</button>
+          <button class="ghost" data-cmd="title" type="button">Home</button>`;
+      }
+      return;
+    }
     if (this.mode === "daily") {
       const rank = this.scores.findIndex((x) => x.moves === this.moves && x.name.toLowerCase() === loadName().toLowerCase());
       const rankBit = this.posted && rank >= 0 ? `You're #${rank + 1} with ${this.moves} moves.` : "";
@@ -2267,11 +2783,11 @@ export class Game {
       <p class="lead">${
         s.win
           ? "Every Enemy piece is in the box. Sit down tomorrow for a new path."
-          : "Your last player piece hopped off the board. Stars from this try make the next First Hop a little kinder."
+          : climbLoseBlurb(s.chaseOver)
       }</p>
       <ul class="stats">
         <li>Reached ${this.pathNames[s.board - 1] ?? BOARD_NAMES[s.board - 1] ?? ""} (${s.board} / ${PATH_END})</li>
-        <li>${s.hops} captures</li>
+        <li>${captureCount(s.hops)}</li>
         <li class="star-line">Stars +${s.gained} <span>(now ${s.notches})</span></li>
         <li>Next game: ${b.extra ? `+${b.extra} extra man` : "same crew"}${
           b.kingChance > 0.05 ? ` · ${Math.round(b.kingChance * 100)}% a player piece starts as a King` : ""
@@ -2305,12 +2821,17 @@ export class Game {
   private renderHud(): void {
     const you = piecesOf(this.board, "you").length;
     const them = piecesOf(this.board, "them").length;
-    const name = this.mode === "daily" ? this.dailyLabel : (this.pathNames[this.boardIndex] ?? "");
+    const name =
+      this.mode === "daily"
+        ? this.dailyLabel
+        : this.mode === "endless"
+          ? `Round ${this.endlessRound}`
+          : (this.pathNames[this.boardIndex] ?? "");
     const goal = document.getElementById("goal");
     if (goal) goal.textContent = name;
     const path = document.getElementById("path");
     if (path) {
-      path.classList.toggle("hidden", this.mode === "daily");
+      path.classList.toggle("hidden", this.mode === "daily" || this.mode === "endless");
       path.innerHTML = this.pathNames.map(
         (n, i) =>
           `<li class="${i < this.boardIndex ? "done" : i === this.boardIndex ? "now" : ""}" title="${n}">${i + 1}</li>`,
@@ -2329,6 +2850,7 @@ export class Game {
         thinking: this.thinking,
         canOops: this.canOops(),
         wiped,
+        chaseOver: this.holdingChaseEnd(),
         locked: !!this.lock,
         yourTurn: this.turn === "you",
         selected: !!this.selected,
@@ -2343,7 +2865,7 @@ export class Game {
       counts.textContent =
         this.mode === "daily"
           ? `${who}Moves ${this.moves} · you ${you} · Enemy ${them}`
-          : `${who}You ${you} · Enemy ${them} · hops ${this.hops}`;
+          : `${who}You ${you} · Enemy ${them} · ${captureCount(this.hops)}`;
       if (chaseArmed(this.board)) {
         counts.textContent += ` · ${chaseHint(this.quiet)}`;
       }
@@ -2376,7 +2898,7 @@ export class Game {
     }
     const done = document.getElementById("btn-done");
     if (done instanceof HTMLButtonElement) {
-      const hold = this.holdingWipeOops();
+      const hold = this.holdingWipeOops() || this.holdingChaseEnd();
       done.classList.toggle("hidden", !hold);
       done.disabled = !hold;
     }
@@ -2389,11 +2911,11 @@ export class Game {
         const owned = LAW_DEFS.filter((d) => this.laws[d.id]);
         const powers = owned.map(
           (d) =>
-            `<li class="mod-card"><p class="mod-head">${d.icon} ${escapeHtml(d.name)}</p><p class="mod-desc">${escapeHtml(d.desc)}</p></li>`,
+            this.modifierCard(`${d.icon} ${d.name}`, d.desc),
         );
         if (this.mods.lily || this.mods.lilyPending || this.mods.lilyHops > 0) {
           powers.push(
-            `<li class="mod-card"><p class="mod-head">Hop Lily</p><p class="mod-desc">Hop on: 2 extra hops.</p></li>`,
+            this.modifierCard("Hop Lily", "Hop on: 2 extra hops."),
           );
         }
         laws.innerHTML =

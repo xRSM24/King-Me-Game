@@ -4,9 +4,6 @@ import { Rng, hashSeed } from "./rng.ts";
 import {
   CLOSE_QUARTERS_DESC,
   FIRST_JUMP_DESC,
-  FIRST_LANE_CENTER,
-  FIRST_LANE_LEFT,
-  FIRST_LANE_RIGHT,
   HOLE_ONE_DESC,
   JUMP_BACK_BOTH_DESC,
   LONG_KING_DESC,
@@ -97,13 +94,6 @@ function inLane(p: Pos, lane: Lane, size = 8): boolean {
   if (lane === "right") return p.c >= split;
   if (lane === "center") return p.c >= split - 2 && p.c <= split + 1;
   return true;
-}
-
-function laneTitle(lane: Lane): string | null {
-  if (lane === "left") return "Left File";
-  if (lane === "right") return "Right File";
-  if (lane === "center") return "Center Crowd";
-  return null;
 }
 
 function key(p: Pos): string {
@@ -485,6 +475,7 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean, size: number): 
   const jump = openingJump(rng, [], lane, size);
   used.add(key(jump.you));
   used.add(key(jump.them));
+  used.add(key(jump.land));
   const you = 3 + extraYou;
   const youRows = scaleRowsForSize([7, 6], size);
   const themRows = scaleRowsForSize([0, 1], size);
@@ -493,16 +484,6 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean, size: number): 
     ...pickSpots(rng, scaleRowsForSize([7, 6, 5], size), you - 1, [], used, lane, size),
   ];
   const themPos = [jump.them, ...pickSpots(rng, [0, 1, 2], 1, [], used, lane, size)];
-  const file = laneTitle(lane);
-  const feltMods: FeltMod[] = [{ title: "First Jump", desc: FIRST_JUMP_DESC }];
-  if (file) {
-    const laneBlurb =
-      lane === "left" ? FIRST_LANE_LEFT : lane === "right" ? FIRST_LANE_RIGHT : FIRST_LANE_CENTER;
-    feltMods.push({
-      title: file,
-      desc: laneBlurb,
-    });
-  }
   return {
     you,
     them: 2,
@@ -516,7 +497,7 @@ function firstHop(rng: Rng, extraYou: number, openKing: boolean, size: number): 
     youPos,
     themPos,
     blurb: FIRST_JUMP_DESC,
-    feltMods,
+    feltMods: [],
     size,
   };
 }
@@ -550,7 +531,7 @@ export function boardSpec(index: number, extraYou: number, openKing: boolean, rn
     youLane = rng.pick(["left", "right"]);
     themLane = youLane;
     feltMods.push({
-      title: youLane === "left" ? "Left File" : "Right File",
+      title: youLane === "left" ? "Left side" : "Right side",
       desc: laneDesc(youLane),
     });
   } else if (shape < 0.38) {

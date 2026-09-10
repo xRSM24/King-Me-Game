@@ -53,12 +53,19 @@
               </span>
             </button>
             <button class="ghost hidden" id="play-fresh" data-cmd="fresh" type="button">New climb</button>
-            <button class="play-btn daily-play" id="play-daily" data-cmd="daily-play" type="button">
+            <button class="play-btn daily-play" id="play-daily" data-cmd="daily" type="button">
               <span class="play-face">
                 <span>Daily Challenge</span>
                 <small id="play-daily-name">Daily</small>
               </span>
             </button>
+            <button class="play-btn" id="play-endless" data-cmd="endless" type="button">
+              <span class="play-face">
+                <span id="play-endless-label">Endless</span>
+                <small id="play-endless-sub">Keep winning</small>
+              </span>
+            </button>
+            <button class="ghost hidden" id="play-endless-fresh" data-cmd="endless-fresh" type="button">New Endless</button>
           </div>
           <details class="title-more">
             <summary>More</summary>
@@ -85,52 +92,16 @@
           <h2>How to Play</h2>
           <ol class="rules">
             <li>
-              <b>Slide or capture.</b> Quiet slides land on a pip (1 square). A star appears only past an Enemy you can jump — not on every empty diagonal. Drag over an Enemy onto the star to capture them, or drop onto them. You may slide a pip the other way instead. A black pit cannot be sat on — jump over it onto the star past it. Tap the piece, then the spot, if you like.
+              <b>Slide or jump.</b> Slide 1 square onto a cream spot. When you can jump an Enemy, a gold star appears on the square you would land on. Land on that star to hop over them and capture. You can slide onto a spot instead. A black pit cannot be sat on — land on the star past it to jump over. Tap the piece, then the square, if you like.
             </li>
             <li>
-              <b>Jumps are a choice.</b> If a capture is up, you may still slide a pip instead of going over the Enemy. If you do capture and another star appears, you may keep capturing with that same frog, slide, or tap <b>Skip jump</b> to stop. Reach the far row — the edge opposite the ranks you started on — to become a King. Landing in your own starting ranks never makes a King. A King steps
-              <b>1 square</b> on any diagonal. Super King and Long King ride the empty
-              diagonal — <b>up to 7 squares</b>, not 1.
+              <b>Jumps are a choice.</b> You never have to jump. After you capture, you may jump again, slide onto a spot, or tap <b>Skip jump</b>. Reach the far row to become a King. A King steps 1 square on any diagonal.
             </li>
             <li>
-              <b>No endless chase.</b> When only Kings are left, if nobody jumps for 8 hops,
-              whoever has more pieces wins. A lone King cannot run forever.
+              <b>Six boards to the Crown.</b> New climb is a new path. Continue is the same climb you paused. Endless keeps going if you keep winning. You hold three treats, then swap one after each later board.
             </li>
             <li>
-              <b>Six boards to the Crown.</b> Each New climb rolls a new path — different sides,
-              different felt, different names. Continue is the same climb you paused.
-            </li>
-            <li>
-              <b>Oops is OK.</b> One take-back per climb board. Wait for the Enemy to hop,
-              see what happened, then Oops if you want your hop back. If you lose your last piece,
-              Oops still works until you tap That's the game. Today's tough board gives you
-              two unless a modifier says otherwise. If you lose your last piece on the climb, you still get Stars.
-            </li>
-            <li>
-              <b>Today's board is shared.</b> You and your friends hop the same hard felt until midnight
-              UTC. Everyone testing King Me sits on one fewest-moves list. Two Oops unless a daily twist
-              says otherwise. Each day rolls a few modifiers — some help you, some help the Enemy. Win it,
-              pin your move count. Lowest moves sits on top.
-            </li>
-            <li>
-              <b>Your name.</b> Type it on the title and tap That's me. It sits on today's
-              leaderboard. Mean words are blocked. Tap Hide on a name that should not be there.
-            </li>
-            <li>
-              <b>Save your hops.</b> An optional account (a grown-up email and a password)
-              keeps Stars, a paused climb, and your hop history if this phone is cleared.
-              After a Crown or a loss, the end screen may ask: Keep your save? Enter your email!
-              News mail starts checked — uncheck to keep hops only. You can still play with the radio off;
-              the hop book waits until you are back online.
-            </li>
-            <li>
-              <b>Offline.</b> The climb works with the radio off. Daily pins and accounts need a network.
-              Nothing to buy. No ads.
-            </li>
-            <li>
-              <b>Keys and comfort.</b> Arrows move the gold outline. Enter hops. Escape opens Menu.
-              Colorblind paints your maple frogs gold and the Enemy frogs teal. Motion off
-              skips hops and petals.
+              <b>Name and Stars.</b> Type a name on the title if you want it on today's Daily list and the Endless list. Captures become Stars — a little boost for the next First Hop, even if you lose.
             </li>
           </ol>
           <button data-cmd="back" type="button">Back</button>
@@ -147,8 +118,8 @@
             if you switch devices.
           </p>
           <p>
-            A nickname leaves the device if you pin a Daily Challenge score, or if you
-            create an account. Then we keep that name, the email, a password hash, the
+            A nickname leaves the device if you pin a Daily Challenge score or an Endless
+            round count, or if you create an account. Then we keep that name, the email, a password hash, the
             climb, Stars, and a hop log so you can sign in later. News mail starts on for a
             new keep-save unless you uncheck the box. Turn it off in Account or email us.
             We do not sell the list. It is developer mail, not ads. We never ask for a real
@@ -170,8 +141,8 @@
           <p class="kicker">Support · 1.0.0</p>
           <h2>Need a hand?</h2>
           <p class="lead">
-            Six boards to the Crown. Continue waits if you close mid-climb. Daily Challenge
-            is a shared puzzle; the climb is yours alone.
+            Daily is fewest moves today. Endless is most rounds ever. The climb is six boards.
+            Continue waits if you close mid-climb.
           </p>
           <p>
             The climb works offline. Daily pins and accounts need a network. Nothing to buy. If a name
@@ -215,7 +186,7 @@
           <div id="board" role="grid" aria-label="Checkers board"></div>
           <div id="cheer" class="cheer hidden" aria-live="polite"></div>
           <div id="coach" class="coach hidden">
-            <p id="coach-text">A star means a jump over an Enemy. You do not have to take it — slide a pip the other way if you want.</p>
+            <p id="coach-text">A gold star shows a jump you can make. Land on it to hop over that Enemy and capture them, or slide onto a spot the other way.</p>
             <button data-cmd="coach-ok" type="button">Got it</button>
           </div>
         </div>
@@ -242,6 +213,9 @@
           <p class="kicker">Fewest moves</p>
           <p class="quiet" id="daily-count"></p>
           <ol id="daily-board" class="leaderboard"></ol>
+          <p class="kicker">Endless</p>
+          <p class="quiet" id="endless-count"></p>
+          <ol id="endless-board" class="leaderboard"></ol>
         </div>
       </section>
 
@@ -255,7 +229,7 @@
         <div class="veil narrow">
           <p class="kicker">Paused</p>
           <h2>The pieces wait</h2>
-          <p class="lead">Nobody hops until you come back. Go home and this climb waits on this device. Sign in and it can wait on another phone too.</p>
+          <p class="lead" id="pause-lead">Nobody hops until you come back. Go home and this climb waits on this device. Sign in and it can wait on another phone too.</p>
           <form id="pause-name-form" class="name-form compact">
             <label for="pause-name">I'm</label>
             <input

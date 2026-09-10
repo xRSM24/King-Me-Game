@@ -16,6 +16,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/endless"
+  to = "/.netlify/functions/endless"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/report"
   to = "/.netlify/functions/report"
   status = 200

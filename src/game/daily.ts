@@ -36,7 +36,7 @@ const FLAVORS: Flavor[] = [
   { you: 4, them: 7, themKings: 1, holeN: 4, bounce: false, themFly: false, hint: "4 pits in the middle. Nobody may land on them." },
   { you: 3, them: 7, themKings: 2, holeN: 0, bounce: false, themFly: false, hint: "2 Enemy Kings (1 square any diagonal). 3 player pieces. Be tidy." },
   { you: 4, them: 8, themKings: 1, holeN: 0, bounce: true, themFly: false, hint: "Everyone may jump all 4 diagonals. Quiet slides still go forward 1 square." },
-  { you: 4, them: 9, themKings: 1, holeN: 2, bounce: false, themFly: true, hint: "Their King slides up to 7 empty squares on a diagonal. Steal it or get walked." },
+  { you: 4, them: 9, themKings: 1, holeN: 2, bounce: false, themFly: true, hint: "Their King may slide any empty squares on a diagonal. Steal it or get walked." },
 ];
 
 /** One mean board, same for everyone on this UTC day. */

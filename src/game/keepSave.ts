@@ -3,8 +3,8 @@ export const KEEP_SAVE_LEAD =
   "Ask a grown-up. This phone already has the climb. The book lets hops follow another phone.";
 export const KEEP_SAVE_NEWS = "Email me about Daily and King Me news.";
 
-export function shouldOfferKeepSave(signedIn: boolean, mode: "run" | "daily"): boolean {
-  return !signedIn && mode === "run";
+export function shouldOfferKeepSave(signedIn: boolean, mode: "run" | "daily" | "endless"): boolean {
+  return !signedIn && (mode === "run" || mode === "endless");
 }
 
 export function keepSaveFormHtml(opts: { idPrefix: string; showNotNow: boolean }): string {
@@ -20,7 +20,7 @@ export function keepSaveFormHtml(opts: { idPrefix: string; showNotNow: boolean }
       <label class="keep-news"><input id="${p}-news" name="news" type="checkbox" checked /> ${KEEP_SAVE_NEWS}</label>
       <div class="account-actions">
         <button name="intent" value="signup" type="submit">Keep my save</button>
-        <button class="ghost" name="intent" value="login" type="submit">I have a book</button>
+        <button class="ghost" name="intent" value="login" type="submit">I already have a save</button>
       </div>
       ${opts.showNotNow ? `<button class="ghost" data-cmd="skip-keep-save" type="button">Not now</button>` : ""}
       <p class="quiet" id="${p}-save-note"></p>

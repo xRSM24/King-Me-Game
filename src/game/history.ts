@@ -1,7 +1,16 @@
+import { captureCount, roundCount } from "./copy.ts";
+
 const KEY = "jumpgrave-history-v1";
 export const HISTORY_CAP = 200;
 
-export type HopKind = "board-clear" | "climb-win" | "climb-lose" | "daily-win" | "daily-lose";
+export type HopKind =
+  | "board-clear"
+  | "climb-win"
+  | "climb-lose"
+  | "daily-win"
+  | "daily-lose"
+  | "endless-clear"
+  | "endless-lose";
 
 export interface HopEvent {
   id: string;
@@ -14,7 +23,15 @@ export interface HopEvent {
   stars?: number;
 }
 
-const KINDS = new Set<HopKind>(["board-clear", "climb-win", "climb-lose", "daily-win", "daily-lose"]);
+const KINDS = new Set<HopKind>([
+  "board-clear",
+  "climb-win",
+  "climb-lose",
+  "daily-win",
+  "daily-lose",
+  "endless-clear",
+  "endless-lose",
+]);
 
 function hopId(): string {
   try {
@@ -36,7 +53,7 @@ export function cleanHop(raw: unknown): HopEvent | null {
     at: Number(p.at) || Date.now(),
     kind,
     title: String(p.title ?? "").slice(0, 48),
-    board: Math.max(0, Math.min(8, Number(p.board) || 0)),
+    board: Math.max(0, Math.min(999, Number(p.board) || 0)),
     hops: Math.max(0, Math.min(9999, Number(p.hops) || 0)),
     moves: Math.max(0, Math.min(9999, Number(p.moves) || 0)),
     stars: Math.max(0, Math.min(99999, Number(p.stars) || 0)),
@@ -88,9 +105,11 @@ export function addHop(partial: Omit<HopEvent, "id" | "at"> & { id?: string; at?
 
 export function describeHop(e: HopEvent): string {
   if (e.kind === "board-clear") return `Cleared ${e.title || "a board"} · ${e.moves} moves`;
-  if (e.kind === "climb-win") return `Beat the Crown · ${e.hops} hops`;
-  if (e.kind === "climb-lose") return `Fell on board ${e.board || "?"} · ${e.hops} hops`;
+  if (e.kind === "climb-win") return `Beat the Crown · ${captureCount(e.hops)}`;
+  if (e.kind === "climb-lose") return `Fell on board ${e.board || "?"} · ${captureCount(e.hops)}`;
   if (e.kind === "daily-win") return `${e.title || "Daily"} · ${e.moves} moves`;
+  if (e.kind === "endless-clear") return `Cleared ${e.title} · round ${e.board}`;
+  if (e.kind === "endless-lose") return `Endless · ${roundCount(e.board ?? 0)}`;
   return `${e.title || "Daily"}, not this time · ${e.moves} moves`;
 }
 

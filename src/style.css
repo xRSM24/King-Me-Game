@@ -348,7 +348,8 @@ h2 {
   margin-top: 8px;
 }
 
-#play-fresh {
+#play-fresh,
+#play-endless-fresh {
   display: block;
   width: 100%;
   margin: 0;
@@ -1206,6 +1207,9 @@ button small {
   list-style: none;
   font-size: 14px;
   color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 #laws b {
@@ -1227,7 +1231,8 @@ button small {
   list-style: none;
   margin: 0 0 16px;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1255,12 +1260,32 @@ button small {
   line-height: 1.35;
 }
 
-#laws .mod-card {
-  margin: 0 0 8px;
+.mod-card details {
+  margin: 0;
 }
 
-#laws .mod-card:last-child {
-  margin-bottom: 0;
+.mod-card summary.mod-head {
+  cursor: pointer;
+  list-style: none;
+}
+
+.mod-card summary.mod-head::-webkit-details-marker {
+  display: none;
+}
+
+.mod-card summary.mod-head::marker {
+  content: "";
+}
+
+#laws .mod-card,
+.mod-list .mod-card {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+#laws .mod-card:has(details[open]),
+.mod-list .mod-card:has(details[open]) {
+  flex: 1 1 100%;
 }
 
 .coach {
@@ -1459,6 +1484,11 @@ html.calm .petals {
   color: var(--muted);
   font-weight: 600;
   font-size: 0.85em;
+}
+
+#endless-board .score em::after,
+.endless-board .score em::after {
+  content: " rounds";
 }
 
 .leaderboard .head {

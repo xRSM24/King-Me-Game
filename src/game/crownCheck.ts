@@ -268,7 +268,7 @@ assert(
 );
 assert(
   walkAway.every((m) => m.capture || Math.abs(m.to.r - m.from.r) === 1),
-  "the other direction is a slide pip, not a jump star",
+  "the other direction is a slide, not a jump star",
 );
 
 board = blank();
@@ -281,7 +281,7 @@ const locked = legalMoves(afterCombo, "you", emptyLaws(), { r: 3, c: 4 }, std);
 assert(locked.some((m) => m.capture), "you may keep capturing during a combo");
 assert(
   locked.some((m) => !m.capture),
-  "you may slide a pip instead of taking the next Enemy",
+  "you may slide instead of taking the next Enemy",
 );
 assert(
   locked.every((m) => m.from.r === 3 && m.from.c === 4),

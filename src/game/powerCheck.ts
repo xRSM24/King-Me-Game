@@ -1,12 +1,25 @@
 /** Run with: node --experimental-strip-types src/game/powerCheck.ts */
 import { sessionMailOk } from "./account.ts";
 import { KEEP_SAVE_HEAD, keepSaveFormHtml, shouldOfferKeepSave } from "./keepSave.ts";
+import { describeHop } from "./history.ts";
 import { boardSize, cellFromPoint, emptyLaws, emptyMods, inBoard, isDark, SIZE } from "./types.ts";
 import type { Piece } from "./types.ts";
 import { LAW_DEFS, unusedLaws } from "./laws.ts";
 import { getConfirmNotes } from "./audio.ts";
 import { comboAfterHop, comboLog, comboName } from "./combo.ts";
 import {
+  CHASE_END_MORE,
+  CHASE_HOLD_OOPS,
+  JUMP_HOW,
+  HOW_RULES,
+  LONG_KING_DESC,
+  PICK_SUPER_KING,
+  SUPER_KING_DESC,
+  climbLoseBlurb,
+  captureCount,
+  roundCount,
+  chaseHint,
+  pauseLead,
   FIRST_JUMP_DESC,
   FIRST_LANE_CENTER,
   FIRST_LANE_LEFT,
@@ -14,11 +27,13 @@ import {
   OPPOSITE_WINGS_DESC,
   STAR_ELSEWHERE,
   boardOpenLog,
+  chaseShouldResolve,
   climbHintLine,
   hopStatus,
   laneDesc,
   oopsLabel,
   wipeAutoEndMs,
+  climbFeltMods,
 } from "./copy.ts";
 import { getHoldMs, sceneMarkup } from "./getScenes.ts";
 import {
@@ -54,12 +69,62 @@ assert(sessionMailOk({}) === false, "missing mailOk is false");
 assert(KEEP_SAVE_HEAD === "Keep your save? Enter your email!", "keep-save headline is locked");
 assert(shouldOfferKeepSave(false, "run") === true, "unsigned climb end offers keep-save");
 assert(shouldOfferKeepSave(true, "run") === false, "signed-in climb end does not ask again");
+assert(shouldOfferKeepSave(false, "endless") === true, "unsigned endless end offers keep-save");
 assert(shouldOfferKeepSave(false, "daily") === false, "daily end has no keep-save");
 const html = keepSaveFormHtml({ idPrefix: "keep", showNotNow: true });
 assert(html.includes(KEEP_SAVE_HEAD), "form stamps the headline");
 assert(html.includes("type=\"checkbox\"") && html.includes("checked"), "news box starts checked");
 assert(html.includes("Not now"), "end form can dismiss");
 assert(!keepSaveFormHtml({ idPrefix: "acct", showNotNow: false }).includes("Not now"), "Save hops has no Not now");
+assert(html.includes("I already have a save"), "login is I already have a save");
+assert(!html.includes("I have a book"), "login does not say book");
+
+assert(!/\bpip\b/i.test(JUMP_HOW), "coach copy does not say pip");
+assert(!/\bpip\b/i.test(STAR_ELSEWHERE), "star-elsewhere copy does not say pip");
+assert(!/take (a star|it)/i.test(JUMP_HOW), "coach does not say take a star");
+assert(/land/i.test(JUMP_HOW) && /capture/i.test(JUMP_HOW), "coach says land on the star to capture");
+assert(HOW_RULES.length === 4, "How to Play stays four rules");
+assert(
+  HOW_RULES.every((r) => !/take a star/i.test(`${r.title} ${r.body}`)),
+  "How does not say take a star",
+);
+assert(/land/i.test(HOW_RULES[0]!.body) && /capture/i.test(HOW_RULES[0]!.body), "first How rule lands on the star to capture");
+assert(/never have to jump/i.test(HOW_RULES[1]!.body), "second How rule says jumps are optional");
+assert(HOW_RULES[2]!.body.includes("Endless keeps going"), "how names Endless");
+assert(HOW_RULES[3]!.body.includes("Endless"), "how names Endless list");
+assert(!/\bpip\b/i.test(HOW_RULES.map((r) => r.body).join(" ")), "how still no pip");
+assert(/Captures become Stars/i.test(HOW_RULES[3]!.body), "fourth How rule separates Stars from gold stars");
+assert(!/\b7\b/.test(SUPER_KING_DESC), "Super King copy does not say 7");
+assert(!/\b7\b/.test(LONG_KING_DESC), "Long King copy does not say 7");
+assert(!/\b7\b/.test(PICK_SUPER_KING), "pick Super King copy does not say 7");
+assert(chaseHint(0).includes("turns"), "chase clock talks in turns");
+assert(chaseHint(9).includes("Last turn"), "one quiet turn left is Last turn");
+assert(pauseLead("daily").includes("isn't saved"), "daily pause is not the climb wait");
+assert(pauseLead("run").includes("this climb waits"), "climb pause still names the climb");
+assert(pauseLead("endless").includes("Endless waits"), "endless pause lead");
+assert(!pauseLead("endless").includes("board isn't saved"), "endless is not daily pause");
+assert(captureCount(1) === "1 capture", "one capture is singular");
+assert(captureCount(24) === "24 captures", "many captures stay a count");
+assert(roundCount(1) === "1 round", "one round is singular");
+assert(roundCount(11) === "11 rounds", "many rounds stay a count");
+assert(
+  describeHop({
+    id: "t",
+    at: 1,
+    kind: "climb-lose",
+    title: "Neon Harbor",
+    board: 5,
+    hops: 1,
+    moves: 8,
+  }).includes("1 capture"),
+  "climb history says captures, not hops",
+);
+assert(climbFeltMods(0, "First Hop", [{ title: "Left File", desc: "slide a pip" }]).length === 0, "old First Hop cards drop on load");
+assert(climbFeltMods(2, "Velvet Forge", [{ title: "Left File", desc: "Both sides start on the left file." }])[0]?.title === "Left side", "Left File becomes Left side");
+assert(
+  !/\bpip\b/i.test(climbFeltMods(2, "Velvet Forge", [{ title: "First Jump", desc: "or slide a pip." }])[0]?.desc ?? ""),
+  "saved pip copy becomes spot",
+);
 
 function burst(p: Partial<YouBurst> = {}): YouBurst {
   return {
@@ -108,7 +173,7 @@ assert(names.includes("Wide Pond"), "Wide Pond is in the pool");
 assert(names.includes("Nap Time"), "Nap Time is in the pool");
 assert(names.includes("Back 2 Back"), "Back 2 Back is in the pool");
 const superKing = LAW_DEFS.find((d) => d.id === "flyingKings")!;
-assert(superKing.desc.includes("7"), "Super King card says 7");
+assert(!/\b7\b/.test(superKing.desc), "Super King card does not say 7");
 const owned = { ...emptyLaws(), backJump: true };
 assert(
   unusedLaws(owned).every((d) => d.id !== "backJump"),
@@ -205,6 +270,19 @@ assert(scaleRowsForSize([7, 6], 8).join(",") === "7,6", "8-board rows unchanged"
 const spec10 = boardSpec(1, 0, false, new Rng(99), 10);
 assert(spec10.size === 10, "boardSpec stores size 10");
 assert(spec10.youRows.every((r) => r <= 9), "you rows fit a 10-board");
+const first = boardSpec(0, 0, false, new Rng(1));
+assert((first.feltMods?.length ?? 0) === 0, "First Hop has no extra felt cards");
+for (const extra of [0, 1]) {
+  for (let seed = 1; seed <= 40; seed++) {
+    const spec = boardSpec(0, extra, false, new Rng(seed));
+    const laid = setupBoard(spec, () => 1);
+    const hops = legalMoves(laid, "you", emptyLaws(), null, modsFromSpec(spec));
+    assert(
+      hops.some((m) => m.capture),
+      `First Hop extra ${extra} seed ${seed} still has a jump onto a gold star`,
+    );
+  }
+}
 const laid10 = setupBoard(spec10, () => 1);
 assert(laid10.length === 10 && laid10[0]!.length === 10, "laid 10×10");
 const m10 = modsFromSpec(spec10, { size: 10 });
@@ -320,6 +398,7 @@ const idleHop = {
   thinking: false,
   canOops: false,
   wiped: false,
+  chaseOver: false,
   locked: false,
   yourTurn: true,
   selected: false,
@@ -327,22 +406,52 @@ const idleHop = {
   selectedJump: false,
   overHole: false,
 };
+
+assert(chaseShouldResolve(9, true) === false, "9 quiet hops still leave the chase open");
+assert(chaseShouldResolve(10, true) === true, "10 quiet hops close a King chase");
+assert(chaseShouldResolve(16, true) === true, "a leftover long chase is still closed");
+assert(chaseShouldResolve(10, false) === false, "the chase clock does not fire when men remain");
 assert(
-  hopStatus({ ...idleHop, anyJump: true }) === "A jump is ready — you do not have to take it.",
-  "unselected HUD names a ready jump",
+  hopStatus({ ...idleHop, chaseOver: true, canOops: true }) === CHASE_HOLD_OOPS,
+  "chase hold offers Oops, not Out",
+);
+assert(
+  hopStatus({ ...idleHop, chaseOver: true }) === CHASE_END_MORE,
+  "chase hold without Oops does not say You're out",
+);
+assert(
+  hopStatus({ ...idleHop, wiped: true, canOops: true }).includes("You're out"),
+  "a real wipe still says You're out",
+);
+assert(
+  climbLoseBlurb(true).includes("Too long a chase"),
+  "chase loss copy names the clock, not a wipe",
+);
+assert(
+  !climbLoseBlurb(true).includes("hopped off the board"),
+  "chase loss copy does not say the last piece hopped off",
+);
+assert(
+  climbLoseBlurb(false).includes("hopped off the board"),
+  "wipe loss copy still names the last piece",
+);
+assert(
+  hopStatus({ ...idleHop, anyJump: true }) ===
+    "A jump is ready — land on the star to capture, or slide onto a spot.",
+  "unselected HUD names a ready jump as a landing, not something to take",
 );
 assert(
   hopStatus({ ...idleHop, selected: true, anyJump: true, selectedJump: true }) ===
-    "The star is the jump. Slide a pip if you want to go another way.",
-  "selected jumper HUD names the star on this maple",
+    "Land on the star to capture. Slide onto a spot to go another way.",
+  "selected jumper HUD names the star as the capture landing",
 );
 assert(
   hopStatus({ ...idleHop, selected: true, anyJump: true, selectedJump: false }) === STAR_ELSEWHERE,
   "selected non-jumper HUD points at the other maple's star",
 );
 assert(
-  hopStatus({ ...idleHop, selected: true }) === "Slide onto a pip.",
-  "selected maple with only pips does not invent a star",
+  hopStatus({ ...idleHop, selected: true }) === "Slide onto a spot.",
+  "selected maple with only spots does not invent a star",
 );
 
 for (const line of [

@@ -1,13 +1,13 @@
 /** Shared modifier copy. Keep numbers in lockstep with rules.ts. */
 
-import { CHASE_HOPS } from "./types.ts";
+import { CHASE_HOPS, type FeltMod } from "./types.ts";
 
-/** A normal King steps 1 diagonal square. Flying Kings may ride the empty diagonal (k = 1..7 on an 8-board). */
+/** A normal King steps 1 diagonal square. Flying Kings may ride the empty diagonal (k = 1..7 in rules). */
 export const SUPER_KING_DESC =
-  "Your Kings may slide any number of empty squares on a diagonal — up to 7. A normal King only steps 1 square.";
+  "Your Kings may slide any empty squares on a diagonal. A normal King only steps 1 square.";
 
 export const LONG_KING_DESC =
-  "Enemy Kings may slide any number of empty squares on a diagonal — up to 7. A normal King only steps 1 square.";
+  "Enemy Kings may slide any empty squares on a diagonal. A normal King only steps 1 square.";
 
 export const JUMP_BACK_YOU_DESC =
   "Your pieces may jump backward too (all 4 diagonals). Without this, a non-King only jumps toward the Enemy. Kings already jump every way. Quiet slides still go forward.";
@@ -54,7 +54,7 @@ export const TRAPDOOR_DESC =
   "Once this board, after you capture, the square the Enemy sat on becomes a hole. Nobody may sit there. Jump over it onto the star past it.";
 
 export const PICK_JUMP_BACK = "Your maples may jump all 4 diagonals.";
-export const PICK_SUPER_KING = "Your Kings may slide up to 7 empty squares on a diagonal.";
+export const PICK_SUPER_KING = "Your Kings may slide any empty squares on a diagonal.";
 export const PICK_BUDDY_UP = "After you capture, a new maple sits on your back row if a dark square is empty.";
 export const PICK_SECOND_CHANCE = "Once this climb, if you lose every piece, one King comes back on the far row.";
 export const PICK_STARTING_KING = "One of your maples starts every board already a King.";
@@ -70,26 +70,32 @@ export const PICK_BACK_2_BACK = "You hop twice before the Enemy answers.";
 
 export const SCOUT_DESC = "One of your regular pieces starts closer to the middle.";
 
-export const CHASE_START = `Only Kings left. Jump in ${CHASE_HOPS} hops or whoever has more pieces wins.`;
+export const CHASE_START = `Only Kings left. Jump within ${CHASE_HOPS} turns or whoever has more pieces wins.`;
 export const CHASE_END_MORE = "Too long a chase. Most pieces win.";
 export const CHASE_END_TIE = "Too long a chase. Nobody jumped.";
+export const CHASE_HOLD_OOPS = "Too long a chase. Oops that hop — or that's the game.";
+
+export function chaseShouldResolve(quiet: number, armed: boolean): boolean {
+  return armed && quiet >= CHASE_HOPS;
+}
 
 export function chaseHint(quiet: number): string {
   const left = Math.max(0, CHASE_HOPS - quiet);
   if (left <= 0) return CHASE_END_MORE;
-  if (left === 1) return "Last hop with no jump — then most pieces win.";
-  return `Jump in ${left} hops or most pieces win.`;
+  if (left === 1) return "Last turn with no jump — then most pieces win.";
+  return `${left} turns with no jump, or most pieces win.`;
 }
 export const JUMP_HOW =
-  "A star means a jump over an Enemy. You do not have to take it — slide a pip the other way if you want.";
+  "A gold star shows a jump you can make. Land on it to hop over that Enemy and capture them, or slide onto a spot the other way.";
 
-export const STAR_ELSEWHERE = "This maple only has pips. Another maple has the star.";
+export const STAR_ELSEWHERE = "This maple only has spots. Another maple has the star.";
 
 export type HopCue = {
   coachOn: boolean;
   thinking: boolean;
   canOops: boolean;
   wiped: boolean;
+  chaseOver: boolean;
   locked: boolean;
   yourTurn: boolean;
   selected: boolean;
@@ -102,19 +108,22 @@ export type HopCue = {
 export function hopStatus(c: HopCue): string {
   if (c.coachOn) return JUMP_HOW;
   if (c.thinking) return c.canOops ? "Enemy… Oops still works." : "The Enemy is hopping…";
+  if (c.chaseOver) return c.canOops ? CHASE_HOLD_OOPS : CHASE_END_MORE;
   if (c.wiped) return c.canOops ? "You're out. Tap Oops to undo — or that's the game." : "You're out.";
-  if (c.locked) return "Keep capturing, slide a pip, or Skip jump.";
+  if (c.locked) return "Keep capturing, slide onto a spot, or Skip jump.";
   if (c.selected && c.anyJump && !c.selectedJump) return STAR_ELSEWHERE;
   if (c.anyJump) {
     return c.selected
-      ? "The star is the jump. Slide a pip if you want to go another way."
-      : "A jump is ready — you do not have to take it.";
+      ? "Land on the star to capture. Slide onto a spot to go another way."
+      : "A jump is ready — land on the star to capture, or slide onto a spot.";
   }
   if (c.selected) {
-    return c.overHole ? "Jump over the pit onto the star — or drop onto the pit." : "Slide onto a pip.";
+    return c.overHole ? "Jump over the pit onto the star — or drop onto the pit." : "Slide onto a spot.";
   }
   if (c.yourTurn) {
-    return c.canOops ? "Slide a pip, or jump an Enemy — or Oops that hop." : "Slide a pip, or jump an Enemy.";
+    return c.canOops
+      ? "Slide onto a spot, or jump an Enemy — or Oops that hop."
+      : "Slide onto a spot, or jump an Enemy.";
   }
   return "Wait.";
 }
@@ -123,8 +132,66 @@ export function boardOpenLog(_name: string, _blurb: string): string | null {
   return null;
 }
 
+/** How to Play. A gold star is a landing marker, not a thing you take. Stars (capital S) are the boost from captures. */
+export const HOW_RULES: { title: string; body: string }[] = [
+  {
+    title: "Slide or jump.",
+    body: "Slide 1 square onto a cream spot. When you can jump an Enemy, a gold star appears on the square you would land on. Land on that star to hop over them and capture. You can slide onto a spot instead. A black pit cannot be sat on — land on the star past it to jump over. Tap the piece, then the square, if you like.",
+  },
+  {
+    title: "Jumps are a choice.",
+    body: "You never have to jump. After you capture, you may jump again, slide onto a spot, or tap Skip jump. Reach the far row to become a King. A King steps 1 square on any diagonal.",
+  },
+  {
+    title: "Six boards to the Crown.",
+    body: "New climb is a new path. Continue is the same climb you paused. Endless keeps going if you keep winning. You hold three treats, then swap one after each later board.",
+  },
+  {
+    title: "Name and Stars.",
+    body: "Type a name on the title if you want it on today's Daily list and the Endless list. Captures become Stars — a little boost for the next First Hop, even if you lose.",
+  },
+];
+
 export function climbHintLine(dailyName: string): string {
   return `New climb is yours. Daily is ${dailyName}.`;
+}
+
+export function climbLoseBlurb(chaseOver: boolean): string {
+  return chaseOver
+    ? "Too long a chase. Most pieces win. Stars from this try make the next First Hop a little kinder."
+    : "Your last player piece hopped off the board. Stars from this try make the next First Hop a little kinder.";
+}
+
+export function pauseLead(mode: "run" | "daily" | "endless"): string {
+  if (mode === "daily") return "This board isn't saved. The climb still waits on Home.";
+  if (mode === "endless") {
+    return "This run isn't the climb. Go home and Endless waits on this phone. The climb still waits on Home too.";
+  }
+  return "Nobody hops until you come back. Go home and this climb waits on this device. Sign in and it can wait on another phone too.";
+}
+
+export function captureCount(n: number): string {
+  return n === 1 ? "1 capture" : `${n} captures`;
+}
+
+export function roundCount(n: number): string {
+  return n === 1 ? "1 round" : `${n} rounds`;
+}
+
+/** Old climbs stored File / pip cards. First Hop no longer shows extra felt cards. */
+export function sanitizeFeltCopy(mod: FeltMod): FeltMod {
+  const title =
+    mod.title === "Left File" ? "Left side" : mod.title === "Right File" ? "Right side" : mod.title;
+  const desc = mod.desc
+    .replace(/slide a pip/gi, "slide onto a spot")
+    .replace(/\bpips\b/gi, "spots")
+    .replace(/\bpip\b/gi, "spot");
+  return { ...mod, title, desc };
+}
+
+export function climbFeltMods(boardIndex: number, boardName: string, mods: FeltMod[]): FeltMod[] {
+  if (boardIndex === 0 && boardName === "First Hop") return [];
+  return mods.map(sanitizeFeltCopy);
 }
 
 export function oopsLabel(oopsLeft: number, ready: boolean): string {
@@ -139,7 +206,7 @@ export function wipeAutoEndMs(canUndo: boolean): number | null {
 }
 
 export const FIRST_JUMP_DESC =
-  "One of your pieces can jump an Enemy right away. Capture on that star if you want, or slide a pip. You do not have to take them.";
+  "One of your pieces can jump an Enemy right away. Capture on that star if you want, or slide onto a spot. You do not have to take them.";
 
 export const RACE_DESC =
   "Everyone starts closer to the middle. You still sit on the bottom, the Enemy on top. Men walk toward the far edge from their camp and only become King there — never in the rows they started on.";

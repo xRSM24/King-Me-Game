@@ -1,6 +1,6 @@
 # App Store and Google Play
 
-King Me is a **native wrapper** around the bundled game (Capacitor), not a window onto the website. The climb, Stars, Oops, and How to Play run with the radio off. Daily Challenge scores still talk to `https://jumpgrave-ajrr1z.netlify.app` so everyone shares one fewest-moves list.
+King Me is a **native wrapper** around the bundled game (Capacitor), not a window onto the website. The climb, Stars, Oops, and How to Play run with the radio off. Daily Challenge scores and the Endless all-time rounds list still talk to `https://jumpgrave-ajrr1z.netlify.app` so everyone shares one fewest-moves board or rounds list.
 
 This Linux workspace cannot sign an iPhone build. Archive on a Mac with Xcode. Android can be built on any machine with Android Studio.
 
@@ -13,7 +13,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 - Support URL: `https://jumpgrave-ajrr1z.netlify.app/support.html`
 - Contact: ravioli2332@gmail.com
 - Age rating **4+**. Not the Kids Category unless you also add the Kids Category extra contracts.
-- User-generated content: nicknames on the daily board. Mean words are blocked. **Hide** removes a name from the shared list.
+- User-generated content: nicknames on the daily board and Endless rounds list. Mean words are blocked. **Hide** removes a name from the shared list.
 - Encryption question: **No** — only HTTPS to the leaderboard and optional hop book (exempt). The iOS target sets `ITSAppUsesNonExemptEncryption` to false.
 - App Tracking Transparency: do **not** add it. We do not track.
 
@@ -22,7 +22,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 | Type | Linked to identity | Used for tracking | Why |
 | --- | --- | --- | --- |
 | Email | Yes, if they create an account | No | App functionality (restore hops). Developer communications about Daily and King Me unless they uncheck news. Not ads. Not tracking |
-| Name (nickname) | Only if they also make an account | No | Optional daily leaderboard |
+| Name (nickname) | Only if they also make an account | No | Optional daily and Endless leaderboards |
 | Gameplay (climb, Stars, hop log) | Yes, if they create an account | No | Restore hops; anonymous counts for us |
 | Location, contacts, photos, IDFA | — | — | Not collected |
 
@@ -32,7 +32,7 @@ There are **no ads and no in-app purchases**. That is on purpose for a kids’ g
 2. On a Mac: `npm install && npm run icons && npm run sync && npm run ios`
 3. In Xcode: signing team, unique bundle id if needed, iPhone + iPad (portrait).
 4. Screenshots: 6.7" iPhone and 13" iPad, dark felt, title + a mid-climb board. No lorem.
-5. Review notes: “The six-board climb works offline. Daily pins and optional accounts need a network. Type a nickname only if you want it on today’s board. A grown-up email is optional to keep hops. Hide reports a name. No ads, no IAP.”
+5. Review notes: “The six-board climb works offline. Daily and Endless pins and optional accounts need a network. Type a nickname only if you want it on today’s board or the Endless rounds list (Endless pins nickname + rounds cleared). A grown-up email is optional to keep hops. Hide reports a name. No ads, no IAP.”
 6. Archive → App Store Connect.
 
 ## Google Play (Android)
@@ -63,17 +63,17 @@ High-res icon: `public/icon-512.png` (512×512). Feature graphic: `resources/pla
 ### 3. Store listing (paste)
 
 - **App name:** King Me
-- **Short description (80):** `Kid-friendly checkers. Six boards to the Crown. No ads.`
+- **Short description (80):** `Kid-friendly checkers. Daily, Endless, six-board climb. No ads.`
 - **Full description:**
 
 ```
 Hop your pieces. Capture the Enemy. Pick a power. Beat the Crown in six boards.
 
-King Me is a checkers climb for families. Each New climb rolls a fresh path. Continue waits if you close the app. Today’s Daily Challenge is the same hard board for everyone, with a fewest-moves list.
+King Me is a checkers climb for families. Each New climb rolls a fresh path. Continue waits if you close the app. Today’s Daily Challenge is the same hard board for everyone, with a fewest-moves list. Endless keeps going while you win — pick up to three treats (fill, then swap) and pin your round count on an all-time list when you lose or give up.
 
-The climb works with the radio off. Daily pins need a network so the shared board stays fair.
+The climb works with the radio off. Daily and Endless pins need a network so the shared boards stay fair.
 
-No ads. Nothing to buy. An account is optional — a grown-up email keeps Stars and hop history if you switch phones. Type a nickname only if you want it on today’s list. Hide takes a mean name off the board.
+No ads. Nothing to buy. An account is optional — a grown-up email keeps Stars and hop history if you switch phones. Type a nickname only if you want it on today’s list or the Endless rounds list. Hide takes a mean name off the board.
 
 Colorblind and Motion toggles live on the title. One Oops take-back per climb board.
 ```
@@ -94,16 +94,16 @@ IARC questionnaire: this is a board game, no violence beyond capturing pieces, n
 
 | Question | Answer |
 | --- | --- |
-| Does the app collect data? | Yes (Daily pins; optional account) |
+| Does the app collect data? | Yes (Daily pins; Endless rounds list; optional account) |
 | Email | Collected **only** if they create an account. Linked to that account. App functionality (restore hops). Developer communications about Daily and King Me unless they uncheck news. Not for ads. Not tracking |
-| Name | Collected for the public daily board; linked to the account if they signed in |
+| Name | Collected for the public daily board and Endless rounds list; linked to the account if they signed in |
 | Gameplay / app activity | Climb and Stars stay on device. If they have an account, a hop log is saved so they can restore it. Anonymous counts (boards, Crowns) are stored without emails on the public site |
 | Location, contacts, photos, files, audio, health, financial, device IDs | Not collected |
 | Data sold / used for ads / tracking | No |
 | Encrypted in transit | Yes (HTTPS) |
 | Users can request deletion | Yes — Delete in Account, or email ravioli2332@gmail.com |
 
-Internet permission is for the daily board and optional accounts. The climb does not need it.
+Internet permission is for the daily board, Endless rounds list, and optional accounts. The climb does not need it.
 
 ### 6. Closed test, then production
 
@@ -115,7 +115,7 @@ Internet permission is for the daily board and optional accounts. The climb does
 
 ### 7. Review notes (paste)
 
-The six-board climb works offline. Daily Challenge pins and optional accounts need a network to `jumpgrave-ajrr1z.netlify.app`. Nicknames are optional and filtered. Hide reports a name. Accounts are optional. No ads, no IAP. Back key opens Menu, then Home.
+The six-board climb works offline. Daily Challenge and Endless pins and optional accounts need a network to `jumpgrave-ajrr1z.netlify.app`. Nicknames are optional and filtered. Endless pins nickname + rounds cleared. Hide reports a name. Accounts are optional. No ads, no IAP. Back key opens Menu, then Home.
 
 ## After you ship a binary
 

@@ -2,7 +2,7 @@
 
 Kid-friendly checkers with a climb. You hop **player pieces**. The other side is the **Enemy**. Capture, pick a power, and try to beat **the Crown** in six boards.
 
-There are no ads and nothing to buy. The six-board climb works offline. Daily Challenge scores need a network so everyone shares one list.
+There are no ads and nothing to buy. The six-board climb works offline. Daily Challenge and the Endless all-time list need a network so everyone shares one board or rounds list.
 
 ## App Store / Play Store
 
@@ -18,7 +18,7 @@ The live site:
 
 Or wait for the App Store / Play build from **STORE.md**. Add to Home Screen still works.
 
-If Netlify is **private**, the website will ask you to sign in before the board loads. A store binary does **not** need that login to play the climb — only Daily pins talk to the site.
+If Netlify is **private**, the website will ask you to sign in before the board loads. A store binary does **not** need that login to play the climb — only Daily and Endless pins talk to the site.
 
 - **Site password** (best for family): type the password you set under Site configuration → Access control / Password protection.
 - **Team login / SSO**: log in with the same Netlify account that owns the site.
@@ -46,9 +46,9 @@ Free is **300 credits a month**, then the site pauses until the next cycle. Netl
 What spends them:
 
 - **15 credits** per production deploy (`npm run publish`, or auto-deploy from Git)
-- A little for Daily Challenge function calls and page bandwidth
+- A little for Daily Challenge and Endless list function calls and page bandwidth
 
-Playing the climb in the **app** or on `npm run dev` does not use Netlify credits. Only the live website and the shared daily board do.
+Playing the climb in the **app** or on `npm run dev` does not use Netlify credits. Only the live website, the shared daily board, and the Endless list do.
 
 If you are low: in Netlify → Project configuration → Build & deploy, turn **off** auto-publish on git. One live deploy a week is plenty. Other sites on the same Netlify team share the same 300.
 
@@ -65,7 +65,7 @@ Open the URL Vite prints (this project pins **http://127.0.0.1:43181**).
 
 ## The goal
 
-Every game: win six boards in a row. **New climb** rolls a fresh path (new files, new felt color, new names). **Continue** is the same climb you paused. Later felts bring more Enemy pieces, nastier rules, and a sharper Enemy.
+Every game: win six boards in a row. **New climb** rolls a fresh path (new sides, new felt color, new names). **Continue** is the same climb you paused. Later felts bring more Enemy pieces, nastier rules, and a sharper Enemy.
 
 You will lose sometimes. That is OK. Captures become **Stars**, a little permanent boost with a ceiling, so the next First Hop is kinder but you never skip the climb.
 
@@ -74,9 +74,9 @@ You will lose sometimes. That is OK. Captures become **Stars**, a little permane
 - The first climb shows a one-time coach: drag your piece over the Enemy onto the star. That is a jump.
 - Later boards pile on Enemy pieces, holes, bouncing jumps, and flying Kings.
 - Combos yell their names. Crowns fanfare. Beating the Crown bursts petals.
-- Captures are optional. A star appears only on a landing past an Enemy (or a pit). Other directions stay slide pips. After a capture, that frog may slide or Skip jump instead of taking the next Enemy.
+- Captures are optional. A star appears only on a landing past an Enemy (or a pit). Other directions stay slide spots. After a capture, that frog may slide or Skip jump instead of taking the next Enemy.
 - One **Oops** per climb board. Watch the Enemy hop, then take yours back if it stung. Today's board usually gives you **two**, unless a daily modifier says otherwise.
-- When only Kings are left, if nobody jumps for 8 hops, whoever has more pieces wins — a lone King cannot run forever.
+- When only Kings are left, if nobody jumps for 10 turns, whoever has more pieces wins — a lone King cannot run forever.
 - Close the tab mid-climb: **Continue** waits on the title. Give up from Menu if you want Stars now.
 - Colorblind and Motion toggles live on the title. Arrows + Enter hop on a keyboard.
 - Pick a **name** on the title (That's me). It stays on this device and sits on today's leaderboard.
@@ -88,15 +88,19 @@ One hard felt per UTC day, **the same for you and your friends**, so the fewest-
 
 A climb is not shared. Tap **New climb** for a path nobody else has.
 
+## Endless
+
+Keep winning boards as long as you can. After each win you pick a treat for your kit — hold at most **three** (fill, then swap). Lose or Give up to pin your **round count** on the all-time list (most rounds cleared wins). **Continue Endless** on the title is a separate wait from climb **Continue**. Home pauses Endless; it does not pin.
+
 ## Powers
 
 After each win you pick one that lasts the rest of the run:
 
 - **Jump Back** — your pieces may jump all 4 diagonals (not just toward the Enemy). Quiet slides still go forward 1 square.
-- **Super King** — your Kings slide any empty diagonal, up to 7 squares (a normal King steps 1)
+- **Super King** — your Kings slide any empty diagonal (a normal King steps 1)
 - **Buddy Up** — after each capture, a new player piece sits on an empty square of your back row (the edge you started from)
 - **Second Chance** — once this climb, if you lose every piece, one King comes back on the far row and hops every diagonal
-- **Start as King** — every board, one of your pieces starts already a King
+- **Starting King** — every board, one of your pieces starts already a King
 - **Extra Piece** — +1 player piece at the start of every board
 - **Hop Party** — every 4 captures this climb, one random non-King player piece becomes a King
 - **Far Jump** — once each turn, one regular piece may jump farther: over an Enemy, skip the next empty square, and land on the next dark square
@@ -124,14 +128,15 @@ Progress lives in the browser (`localStorage`). Sign in and it also lives in the
 
 | Action | How |
 | --- | --- |
-| Select / slide | Drag a gold ring onto a pip |
-| Hop | Drop on a cream pip, or tap then tap |
+| Select / slide | Drag a gold ring onto a spot |
+| Hop | Drop on a cream spot, or tap then tap |
 | Capture | Drop on a gold star past an Enemy (optional). A star is only that jump, not every diagonal. |
 | Pit | Drop on the star past a black pit |
-| Stop a combo | Slide a pip, or Skip jump |
+| Stop a combo | Slide onto a spot, or Skip jump |
 | Take-back | Oops after the Enemy hops (×1 on the climb, daily follows today's modifier) |
 | Pause / save | Menu → Go home (climb waits) |
-| Today's board | Title → Today's board (same felt for everyone today) |
+| Today's board | Title → Daily Challenge (preview first, then hop today's board) |
+| Endless | Title → Endless (Home waits; pin on lose or Give up) |
 | Keyboard | Arrows, Enter, Escape |
 
 ## License
